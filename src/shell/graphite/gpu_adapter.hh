@@ -2,14 +2,14 @@
 
 #include "platform/platform.hh"
 
-struct ImplTestAdapter;
+struct ImplGPUAdapter;
 
 #ifndef PLATFORM_IMPL
-/* Include platform-specific "ImplTestAdapter" struct */
-#include PLATFORM_H(test)
+/* Include platform-specific Impl struct */
+#include PLATFORM_H(gpu_adapter)
 #endif
 
-class TestAdapter : ImplTestAdapter {
+class GPUAdapter : ImplGPUAdapter {
     int test = 21;
 
 public: /* Platform-agnostic functions */

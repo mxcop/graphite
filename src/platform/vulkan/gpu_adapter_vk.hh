@@ -1,5 +1,5 @@
 #pragma once
 
-struct ImplTestAdapter {
+struct ImplGPUAdapter {
     int number = 104;
 };
