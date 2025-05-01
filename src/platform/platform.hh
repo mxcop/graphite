@@ -11,4 +11,4 @@
 
 /* Platform-specific file include macros */
 #define PLATFORM_H(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .hh))
-#define PLATFORM_C(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .cc))
+// #define PLATFORM_C(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .cc))

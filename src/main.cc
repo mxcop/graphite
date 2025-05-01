@@ -1,12 +1,11 @@
 #include "graphite/gpu_adapter.hh"
 
-#include "volk.h"
-
 #include <cstdio>
+#include <cassert>
 
 int main() {
     GPUAdapter gpu = GPUAdapter();
-    gpu.spc_function();
+    assert(gpu.init() && "failed to init gpu adapter!");
 
     /* TODO: try out 'volk.h' */
     /* TODO: 'volkLoadDeviceTable' can be used per GPUAdapter for better performance! */

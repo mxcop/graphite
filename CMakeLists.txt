@@ -12,19 +12,33 @@ set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Debug>:DEBUG=1>)
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Release>:NDEBUG=1>)
 
+# Target build platform
+set(GRAPHITE_PLATFORM "Vulkan")
+
+if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
+    set(PLATFORM_EXT vk)
+    set(PLATFORM vulkan)
+endif()
+
+target_compile_definitions(graphite PRIVATE PLATFORM_EXT=${PLATFORM_EXT})
+target_compile_definitions(graphite PRIVATE PLATFORM=${PLATFORM})
+
 # Includes
 target_include_directories(graphite PRIVATE "./src/")
 target_include_directories(graphite PUBLIC "./src/shell/")
 
-# Glob all source files
-target_sources(graphite PRIVATE 
-    "src/main.cc"
-    "src/shell/graphite/gpu_adapter.cc"
+# Core source files
+target_sources(graphite PRIVATE
+    src/main.cc
+    # Core components
+    src/shell/graphite/gpu_adapter.cc
 )
 
-# Target build platform
-target_compile_definitions(graphite PRIVATE PLATFORM_EXT=vk)
-target_compile_definitions(graphite PRIVATE PLATFORM=vulkan)
+# Platform source files
+target_sources(graphite PRIVATE
+    # Core components
+    src/platform/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
+)
 
 # External dependencies
 add_subdirectory("extern")

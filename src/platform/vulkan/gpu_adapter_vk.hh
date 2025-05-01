@@ -1,5 +1,10 @@
 #pragma once
 
+#include <volk.h> /* Vulkan API */
+
 struct ImplGPUAdapter {
-    int number = 104;
+    VkInstance instance;
 };
+
+/* Interface header */
+#include "graphite/gpu_adapter.hh"
