@@ -40,6 +40,12 @@ target_sources(graphite PRIVATE
     # Core components
     src/platform/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
 )
+if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
+    target_sources(graphite PRIVATE
+        # Core components
+        src/platform/vulkan/wrapper/extensions_vk.cc
+    )
+endif()
 
 # External dependencies
 add_subdirectory("extern")

@@ -5,7 +5,12 @@
 
 int main() {
     GPUAdapter gpu = GPUAdapter();
-    assert(gpu.init().is_ok() && "failed to init gpu adapter!");
+
+    gpu.init().unwrap();
+    
+    printf("test: %i\n", gpu.agn_function());
+
+    gpu.destroy().unwrap();
 
     /* TODO: try out 'volk.h' */
     /* TODO: 'volkLoadDeviceTable' can be used per GPUAdapter for better performance! */
@@ -25,12 +30,10 @@ int main() {
     // VRAMBank game_bank = gpu.create_vram_bank(MAX_RESOURCES);
     // game_bank.attach_target(swapchain); /* <- attach the swapchain for target sized resources */
     // VRAMBank editor_bank = gpu.create_vram_bank(MAX_RESOURCES);
-    // Image img = game_vrm.create_image(...); /* <- it's just a VRM :) */
+    // Image img = game_bank.create_image(...); /* <- it's just a VRM :) */
 
     /* Initialize a render graph */
     // RenderGraph rg = gpu.create_graph(MAX_NODES);
-
-    printf("test: %i\n", gpu.agn_function());
 
     return 0;
 }

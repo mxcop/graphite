@@ -4,6 +4,9 @@
 
 struct ImplGPUAdapter {
     VkInstance instance {};
+
+    /* Vulkan debug / validation */
+    bool validation = false;
     VkDebugUtilsMessengerEXT debug_messenger {};
 };
 
