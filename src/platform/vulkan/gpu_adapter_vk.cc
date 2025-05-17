@@ -21,7 +21,7 @@ inline VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSever
     return VK_FALSE;
 }
 
-bool GPUAdapter::init(bool debug_mode) {
+Result<void> GPUAdapter::init(bool debug_mode) {
     /* Vulkan app creation info */
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
@@ -48,14 +48,21 @@ bool GPUAdapter::init(bool debug_mode) {
     instance_ci.pApplicationInfo = &app_info;
 
     /* Load Vulkan API functions */
-    if (volkInitialize() != VK_SUCCESS) return false;
+    if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk.");
 
     /* Create a Vulkan instance */
     if (vkCreateInstance(&instance_ci, nullptr, &instance) != VK_SUCCESS) {
-        return false;
+        return Err("failed to create vulkan instance.");
+    }
+
+    /* Load instance Vulkan API functions */
+    volkLoadInstance(instance);
+
+    if (debug_mode) {
+        vkCreateDebugUtilsMessengerEXT(instance, &debug_utils, nullptr, &debug_messenger);
     }
 
     printf("created instance!\n");
 
-    return true;
+    return Ok();
 }

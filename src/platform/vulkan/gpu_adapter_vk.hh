@@ -3,7 +3,8 @@
 #include <volk.h> /* Vulkan API */
 
 struct ImplGPUAdapter {
-    VkInstance instance;
+    VkInstance instance {};
+    VkDebugUtilsMessengerEXT debug_messenger {};
 };
 
 /* Interface header */

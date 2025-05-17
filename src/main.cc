@@ -5,7 +5,7 @@
 
 int main() {
     GPUAdapter gpu = GPUAdapter();
-    assert(gpu.init() && "failed to init gpu adapter!");
+    assert(gpu.init().is_ok() && "failed to init gpu adapter!");
 
     /* TODO: try out 'volk.h' */
     /* TODO: 'volkLoadDeviceTable' can be used per GPUAdapter for better performance! */

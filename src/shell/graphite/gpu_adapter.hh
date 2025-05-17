@@ -2,6 +2,8 @@
 
 #include "platform/platform.hh"
 
+#include "result.hh"
+
 /* Include platform-specific Impl struct */
 struct ImplGPUAdapter;
 #include PLATFORM_H(gpu_adapter)
@@ -13,5 +15,5 @@ public: /* Platform-agnostic functions */
     int agn_function();
 
 public: /* Platform-specific functions */
-    bool init(bool debug_mode = false);
+    Result<void> init(bool debug_mode = false);
 };

@@ -31,6 +31,7 @@ target_include_directories(graphite PUBLIC "./src/shell/")
 target_sources(graphite PRIVATE
     src/main.cc
     # Core components
+    src/shell/graphite/result.cc
     src/shell/graphite/gpu_adapter.cc
 )
 
