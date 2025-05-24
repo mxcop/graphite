@@ -8,9 +8,12 @@
 struct ImplGPUAdapter;
 #include PLATFORM_H(gpu_adapter)
 
+/**
+ * Graphics Processing Unit Adapter.  
+ * Used to find and initialize a GPU.
+ */
 class GPUAdapter : ImplGPUAdapter {
-    int test = 21;
-
+    
 public: /* Platform-agnostic functions */
     int agn_function();
 

@@ -42,7 +42,8 @@ target_sources(graphite PRIVATE
 )
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
-        # Core components
+        # Wrapper components
+        src/platform/vulkan/wrapper/device_selection_vk.cc
         src/platform/vulkan/wrapper/extensions_vk.cc
     )
 endif()

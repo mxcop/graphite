@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "wrapper/extensions_vk.hh"
+#include "wrapper/device_selection_vk.hh"
 
 const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
@@ -34,7 +35,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.apiVersion = VK_API_VERSION_1_0;
     
     /* TODO: Get required extensions from windowing library (e.g. SDL, GLFW) */
 
@@ -76,8 +77,13 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         vkCreateDebugUtilsMessengerEXT(instance, &debug_utils, nullptr, &debug_messenger);
     }
 
-    /* TODO: get physical device (check extension support using "query_extension_support()") */
+    /* Select a suitable physical device */
+    if (const Result r = select_physical_device(instance, device_ext, device_ext_count); r.is_ok()) {
+        physical_device = r.unwrap();
+    } else return Err(r.unwrap_err());
 
+    printf("selected gpu: %s\n", get_physical_device_name(physical_device).c_str());
+    
     printf("initialized gpu adapter!\n");
     return Ok();
 }
