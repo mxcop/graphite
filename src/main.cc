@@ -6,11 +6,17 @@
 int main() {
     GPUAdapter gpu = GPUAdapter();
 
-    gpu.init().unwrap();
-    
-    printf("test: %i\n", gpu.agn_function());
+    /* Set a custom debug logger callback */
+    gpu.set_logger(color_logger, DebugLevel::Verbose);
 
-    gpu.destroy().unwrap();
+    /* Initialize the GPU adapter */
+    if (const Result r = gpu.init(true); r.is_err()) {
+        printf("failed to initialize gpu adapter.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+    
+    /* Cleanup the GPU adapter */
+    gpu.destroy().expect("failed to destroy gpu adapter.");
 
     /* TODO: try out 'volk.h' */
     /* TODO: 'volkLoadDeviceTable' can be used per GPUAdapter for better performance! */
@@ -35,5 +41,5 @@ int main() {
     /* Initialize a render graph */
     // RenderGraph rg = gpu.create_graph(MAX_NODES);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

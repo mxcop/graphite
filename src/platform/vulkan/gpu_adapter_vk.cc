@@ -1,22 +1,30 @@
 #include "gpu_adapter_vk.hh"
 
-#include <cstdio>
-
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
 
 const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
 /* Custom vulkan debug msg callback */
-inline VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void*) {
+VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data) {
+    if (data == nullptr) return VK_FALSE;
+
+    /* Convert the Vulkan severity to the platform agnostic debug severity */
+    DebugSeverity debug_severity = DebugSeverity::Info;
     switch (severity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            printf("[vulkan] warn: %s\n", cb_data->pMessage);
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            printf("[vulkan] err: %s\n", cb_data->pMessage);
-            break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        debug_severity = DebugSeverity::Info; break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        debug_severity = DebugSeverity::Warning; break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        debug_severity = DebugSeverity::Error; break;
     }
+
+    /* Call the debug logger callback function */
+    const DebugLogger* logger = (DebugLogger*)data;
+    if (logger->logger == nullptr) return VK_FALSE;
+    if (passes_level(logger->log_level, debug_severity) == false) return VK_FALSE;
+    logger->logger(debug_severity, cb_data->pMessage, logger->user_data);
 
     return VK_FALSE;
 }
@@ -28,7 +36,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Check if debugging & validation is supported */
     validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_validation_support(VALIDATION_LAYER);
     if (debug_mode && validation == false) {
-        printf("[vulkan] warn: validation layers were requested, but are not supported.\n");
+        log(DebugSeverity::Warning, "validation layers were requested, but are not supported.");
     }
 
     /* Vulkan app creation info */
@@ -43,11 +51,12 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     debug_utils.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debug_utils.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    debug_utils.pUserData = (void*)&logger;
     debug_utils.pfnUserCallback = vk_debug_callback;
 
     /* Vulkan instance extensions & layers */
     const uint32_t instance_ext_count = validation ? 1u : 0u;
-    const char* const instance_ext[1] = {"VK_EXT_DEBUG_UTILS_EXTENSION_NAME"};
+    const char* const instance_ext[1] = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     const uint32_t instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
@@ -82,9 +91,9 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         physical_device = r.unwrap();
     } else return Err(r.unwrap_err());
 
-    printf("selected gpu: %s\n", get_physical_device_name(physical_device).c_str());
+    /* Log the selected physical device name */
+    log(DebugSeverity::Info, ("selected gpu: " + get_physical_device_name(physical_device)).c_str());
     
-    printf("initialized gpu adapter!\n");
     return Ok();
 }
 
@@ -94,6 +103,5 @@ Result<void> GPUAdapter::destroy() {
     }
     vkDestroyInstance(instance, nullptr);
 
-    printf("cleaned up gpu adapter!\n");
     return Ok();
 }
