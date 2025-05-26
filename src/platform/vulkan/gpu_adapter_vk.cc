@@ -3,15 +3,15 @@
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
 
-/* Validation layer to use for debugging */
-const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
-
 /* Windowing instance extension for the current build platform */
 #if defined(_WIN32) || defined(_WIN64)
-const char* WINDOWING_EXTENSION = "VK_KHR_win32_surface";
+const char* WINDOWING_EXTENSION = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 #else
 #error "TODO: provide windowing instance extension for this platform!"
 #endif
+
+/* Validation layer to use for debugging */
+const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
 /* Custom vulkan debug msg callback */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
@@ -80,6 +80,10 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Log the selected physical device name */
     this->log(DebugSeverity::Info, ("selected gpu: " + get_physical_device_name(physical_device)).c_str());
     
+    /* TODO: Gather queue family indices we need using "vkGetPhysicalDeviceWin32PresentationSupportKHR" */
+
+    /* TODO: Create the logical device */
+
     return Ok();
 }
 
@@ -93,13 +97,14 @@ Result<void> GPUAdapter::destroy() {
     return Ok();
 }
 
-/* Vulkan validation layer callback function */
+/* Vulkan validation layer callback function. */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data) {
     if (data == nullptr) return VK_FALSE;
 
     /* Convert the Vulkan severity to the platform agnostic debug severity */
     DebugSeverity debug_severity = DebugSeverity::Info;
     switch (severity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: [[fallthrough]];
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
         debug_severity = DebugSeverity::Info; break;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
