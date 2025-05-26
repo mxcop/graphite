@@ -3,32 +3,20 @@
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
 
+/* Validation layer to use for debugging */
 const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 
+/* Windowing instance extension for the current build platform */
+#if defined(_WIN32) || defined(_WIN64)
+const char* WINDOWING_EXTENSION = "VK_KHR_win32_surface";
+#else
+#error "TODO: provide windowing instance extension for this platform!"
+#endif
+
 /* Custom vulkan debug msg callback */
-VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data) {
-    if (data == nullptr) return VK_FALSE;
+VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
 
-    /* Convert the Vulkan severity to the platform agnostic debug severity */
-    DebugSeverity debug_severity = DebugSeverity::Info;
-    switch (severity) {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        debug_severity = DebugSeverity::Info; break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        debug_severity = DebugSeverity::Warning; break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        debug_severity = DebugSeverity::Error; break;
-    }
-
-    /* Call the debug logger callback function */
-    const DebugLogger* logger = (DebugLogger*)data;
-    if (logger->logger == nullptr) return VK_FALSE;
-    if (passes_level(logger->log_level, debug_severity) == false) return VK_FALSE;
-    logger->logger(debug_severity, cb_data->pMessage, logger->user_data);
-
-    return VK_FALSE;
-}
-
+/* Initialize the GPU adapter. */
 Result<void> GPUAdapter::init(bool debug_mode) {
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
@@ -36,7 +24,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Check if debugging & validation is supported */
     validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_validation_support(VALIDATION_LAYER);
     if (debug_mode && validation == false) {
-        log(DebugSeverity::Warning, "validation layers were requested, but are not supported.");
+        this->log(DebugSeverity::Warning, "validation layers were requested, but are not supported.");
     }
 
     /* Vulkan app creation info */
@@ -45,8 +33,6 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     app_info.pEngineName = "graphite";
     app_info.apiVersion = VK_API_VERSION_1_0;
     
-    /* TODO: Get required extensions from windowing library (e.g. SDL, GLFW) */
-
     /* Debug utilities messenger (for debug mode) */
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
     debug_utils.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
@@ -55,8 +41,8 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     debug_utils.pfnUserCallback = vk_debug_callback;
 
     /* Vulkan instance extensions & layers */
-    const uint32_t instance_ext_count = validation ? 1u : 0u;
-    const char* const instance_ext[1] = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
+    const uint32_t instance_ext_count = validation ? 3u : 2u;
+    const char* const instance_ext[3] = {VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     const uint32_t instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
@@ -92,11 +78,12 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     } else return Err(r.unwrap_err());
 
     /* Log the selected physical device name */
-    log(DebugSeverity::Info, ("selected gpu: " + get_physical_device_name(physical_device)).c_str());
+    this->log(DebugSeverity::Info, ("selected gpu: " + get_physical_device_name(physical_device)).c_str());
     
     return Ok();
 }
 
+/* Destroy the GPU adapter, free all its resources. */
 Result<void> GPUAdapter::destroy() {
     if (validation) { 
         vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
@@ -104,4 +91,28 @@ Result<void> GPUAdapter::destroy() {
     vkDestroyInstance(instance, nullptr);
 
     return Ok();
+}
+
+/* Vulkan validation layer callback function */
+VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data) {
+    if (data == nullptr) return VK_FALSE;
+
+    /* Convert the Vulkan severity to the platform agnostic debug severity */
+    DebugSeverity debug_severity = DebugSeverity::Info;
+    switch (severity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        debug_severity = DebugSeverity::Info; break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        debug_severity = DebugSeverity::Warning; break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        debug_severity = DebugSeverity::Error; break;
+    }
+
+    /* Call the debug logger callback function */
+    const DebugLogger* logger = (DebugLogger*)data;
+    if (logger->logger == nullptr) return VK_FALSE;
+    if (passes_level(logger->log_level, debug_severity) == false) return VK_FALSE;
+    logger->logger(debug_severity, cb_data->pMessage, logger->user_data);
+
+    return VK_FALSE;
 }
