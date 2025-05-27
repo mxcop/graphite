@@ -22,6 +22,32 @@ bool query_debug_support(const char* layer_name) {
     return supported;
 }
 
+/* Query whether the driver supports our required instance extensions. */
+Result<void> query_instance_support(const char* const* extensions, const uint32_t count) {
+    uint32_t n = 0; /* Query all supported extensions */
+    vkEnumerateInstanceExtensionProperties(nullptr, &n, nullptr);
+    VkExtensionProperties* supported_extensions = new VkExtensionProperties[n] {};
+    vkEnumerateInstanceExtensionProperties(nullptr, &n, supported_extensions);
+
+    /* Check if the driver supports the instance extensions */
+    for (uint32_t i = 0u; i < count; ++i) {
+        bool found = false;
+        for (uint32_t j = 0u; j < n; ++j) {
+            if (strcmp(extensions[i], supported_extensions[j].extensionName) == 0) { 
+                found = true;
+                break;
+            }
+        }
+        if (found == false) {
+            delete[] supported_extensions; /* Free the extensions list */
+            return Err("instance does not support the '%s' extension.", extensions[i]);
+        }
+    }
+
+    delete[] supported_extensions; /* Free the extensions list */
+    return Ok();
+}
+
 /* Query whether the instance supports validation layers. */
 bool query_validation_support(const char* layer_name) {
     uint32_t n = 0; /* Query all supported extensions */

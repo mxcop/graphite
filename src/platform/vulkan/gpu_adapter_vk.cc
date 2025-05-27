@@ -46,6 +46,11 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     const uint32_t instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
+    /* Check if all required instance extensions are supported */
+    if (const Result r = query_instance_support(instance_ext, instance_ext_count); r.is_err()) {
+        return Err(r.unwrap_err().c_str());
+    }
+
     /* Vulkan instance creation info */
     VkInstanceCreateInfo instance_ci { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     if (validation) {

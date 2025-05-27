@@ -14,6 +14,9 @@ const uint32_t device_ext_count = sizeof(device_ext) / sizeof(char*);
 /* Query whether the driver supports debug utils. (needed for the debug messenger) */
 bool query_debug_support(const char* layer_name);
 
+/* Query whether the driver supports our required instance extensions. */
+Result<void> query_instance_support(const char* const* extensions, const uint32_t count);
+
 /* Query whether the instance supports validation layers. */
 bool query_validation_support(const char* layer_name);
 
