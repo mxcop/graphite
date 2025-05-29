@@ -1,7 +1,6 @@
 #pragma once
 
-#include <volk.h> /* Vulkan API */
-
+#include "vulkan/api_vk.hh" /* Vulkan API */
 #include "graphite/result.hh"
 
 /* Required Vulkan device extensions */

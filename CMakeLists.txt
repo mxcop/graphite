@@ -25,6 +25,7 @@ target_compile_definitions(graphite PRIVATE PLATFORM=${PLATFORM})
 
 # Includes
 target_include_directories(graphite PRIVATE "./src/")
+target_include_directories(graphite PRIVATE "./src/platform")
 target_include_directories(graphite PUBLIC "./src/shell/")
 
 # Core source files
@@ -45,6 +46,7 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
         # Wrapper components
         src/platform/vulkan/wrapper/device_selection_vk.cc
+        src/platform/vulkan/wrapper/queue_selection_vk.cc
         src/platform/vulkan/wrapper/extensions_vk.cc
     )
 endif()

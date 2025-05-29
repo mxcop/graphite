@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <string_view>
 
 /* Debug message severtiy. */
 enum class DebugSeverity {
@@ -28,3 +29,6 @@ void default_logger(const DebugSeverity severity, const char* msg, void*);
 
 /* Default colored debug logger, simply uses printf to print out a message. */
 void color_logger(const DebugSeverity severity, const char* msg, void*);
+
+/* Format a string with arguments. (like: printf) */
+std::string_view strfmt(const std::string_view fmt, ...);

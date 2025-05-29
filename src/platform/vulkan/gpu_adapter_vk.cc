@@ -84,9 +84,15 @@ Result<void> GPUAdapter::init(bool debug_mode) {
 
     /* Log the selected physical device name */
     this->log(DebugSeverity::Info, ("selected gpu: " + get_physical_device_name(physical_device)).c_str());
-    
-    /* TODO: Gather queue family indices we need using "vkGetPhysicalDeviceWin32PresentationSupportKHR" */
 
+    /* Select the queue families we want from the physical device */
+    if (const Result r = select_queue_families(physical_device); r.is_ok()) {
+        queue_families = r.unwrap();
+    } else return Err(r.unwrap_err());
+    
+    /* Log the selected queue families */
+    this->log(DebugSeverity::Info, strfmt("selected queues: g%u c%u t%u", queue_families.queue_combined, queue_families.queue_compute, queue_families.queue_transfer).data());
+    
     /* TODO: Create the logical device */
 
     return Ok();

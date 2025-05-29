@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include <volk.h> /* Vulkan API */
 
+#include "vulkan/api_vk.hh" /* Vulkan API */
 #include "graphite/result.hh"
 
 /* Vulkan physical device type ranking */
