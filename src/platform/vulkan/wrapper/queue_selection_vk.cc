@@ -7,7 +7,7 @@
 #error "TODO: provide presentation support check for this platform!"
 #endif
 
-/* Get the combined, (async) compute, and transfer queue families. */
+/* Select the combined, (async) compute, and transfer queue families. */
 Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
     /* Get the number of available queues */
     uint32_t queue_count = 0u;
@@ -56,4 +56,13 @@ Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
     out_queues.queue_compute = compute_queue;
     out_queues.queue_transfer = transfer_queue;
     return Ok(out_queues);
+}
+
+/* Get the combined, (async) compute, and transfer queues. */
+VkQueues get_queues(VkDevice device, const VkQueueFamilies& families) {
+    VkQueues queues {};
+    vkGetDeviceQueue(device, families.queue_combined, 0u, &queues.queue_combined);
+    vkGetDeviceQueue(device, families.queue_compute, 0u, &queues.queue_compute);
+    vkGetDeviceQueue(device, families.queue_transfer, 0u, &queues.queue_transfer);
+    return queues;
 }

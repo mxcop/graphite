@@ -127,6 +127,8 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         return Err("failed to create vulkan device.");
     }
 
+    /* Get the logical device queues */
+    queues = get_queues(logical_device, queue_families);
     return Ok();
 }
 

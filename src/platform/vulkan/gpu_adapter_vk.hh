@@ -8,6 +8,7 @@ struct ImplGPUAdapter {
     VkPhysicalDevice physical_device {};
     VkQueueFamilies queue_families {};
     VkDevice logical_device {};
+    VkQueues queues {};
 
     /* Vulkan debug / validation */
     bool validation = false;
