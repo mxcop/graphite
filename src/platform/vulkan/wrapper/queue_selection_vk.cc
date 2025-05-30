@@ -1,5 +1,12 @@
 #include "queue_selection_vk.hh"
 
+/* Presentation support check for the current build platform */
+#if defined(_WIN32) || defined(_WIN64)
+#define vkGetPhysicalDevicePresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR
+#else
+#error "TODO: provide presentation support check for this platform!"
+#endif
+
 /* Get the combined, (async) compute, and transfer queue families. */
 Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
     /* Get the number of available queues */
@@ -20,7 +27,7 @@ Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
 
     for (uint32_t i = 0u; i < queue_count; ++i) {
         /* Check what this queue family supports */
-        const bool supports_present = (vkGetPhysicalDeviceWin32PresentationSupportKHR(device, i) == VK_TRUE);
+        const bool supports_present = (vkGetPhysicalDevicePresentationSupportKHR(device, i) == VK_TRUE);
         const bool supports_graphics = queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
         const bool supports_compute = queues[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
         const bool supports_transfer = queues[i].queueFlags & VK_QUEUE_TRANSFER_BIT;

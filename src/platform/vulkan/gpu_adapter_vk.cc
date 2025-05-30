@@ -91,15 +91,48 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     } else return Err(r.unwrap_err());
     
     /* Log the selected queue families */
-    this->log(DebugSeverity::Info, strfmt("selected queues: g%u c%u t%u", queue_families.queue_combined, queue_families.queue_compute, queue_families.queue_transfer).data());
+    this->log(DebugSeverity::Info, strfmt("selected queues: G%u C%u T%u", queue_families.queue_combined, queue_families.queue_compute, queue_families.queue_transfer).data());
     
     /* TODO: Create the logical device */
+
+    /* Vulkan device queue creation info */
+    const float priority = 0.0f;
+    VkDeviceQueueCreateInfo device_queues_ci[3] {};
+    device_queues_ci[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    device_queues_ci[0].queueFamilyIndex = queue_families.queue_combined;
+    device_queues_ci[0].queueCount = 1u;
+    device_queues_ci[0].pQueuePriorities = &priority;
+    device_queues_ci[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    device_queues_ci[1].queueFamilyIndex = queue_families.queue_compute;
+    device_queues_ci[1].queueCount = 1u;
+    device_queues_ci[1].pQueuePriorities = &priority;
+    device_queues_ci[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    device_queues_ci[2].queueFamilyIndex = queue_families.queue_transfer;
+    device_queues_ci[2].queueCount = 1u;
+    device_queues_ci[2].pQueuePriorities = &priority;
+
+    /* Vulkan device creation info */
+    VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    device_ci.queueCreateInfoCount = 3u;
+    device_ci.pQueueCreateInfos = device_queues_ci;
+    device_ci.enabledLayerCount = instance_layers_count;
+    device_ci.ppEnabledLayerNames = instance_layers;
+    device_ci.enabledExtensionCount = device_ext_count;
+    device_ci.ppEnabledExtensionNames = device_ext;
+
+    /* Create a Vulkan logical device */
+    if (const VkResult r = vkCreateDevice(physical_device, &device_ci, nullptr, &logical_device); r != VK_SUCCESS) {
+        if (r == VK_ERROR_FEATURE_NOT_PRESENT) return Err("failed to create vulkan device. (feature not supported)");
+        if (r == VK_ERROR_EXTENSION_NOT_PRESENT) return Err("failed to create vulkan device. (extension not supported)");
+        return Err("failed to create vulkan device.");
+    }
 
     return Ok();
 }
 
 /* Destroy the GPU adapter, free all its resources. */
 Result<void> GPUAdapter::destroy() {
+    vkDestroyDevice(logical_device, nullptr);
     if (validation) { 
         vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
     }
