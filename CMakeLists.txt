@@ -32,15 +32,18 @@ target_include_directories(graphite PUBLIC "./src/shell/")
 target_sources(graphite PRIVATE
     src/main.cc
     # Core components
+    src/shell/graphite/gpu_adapter.cc
+    src/shell/graphite/vram_bank.cc
+    # Utils
     src/shell/graphite/debug.cc
     src/shell/graphite/result.cc
-    src/shell/graphite/gpu_adapter.cc
 )
 
 # Platform source files
 target_sources(graphite PRIVATE
     # Core components
     src/platform/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
+    src/platform/${PLATFORM}/vram_bank_${PLATFORM_EXT}.cc
 )
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
