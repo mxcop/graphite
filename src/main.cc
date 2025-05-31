@@ -1,10 +1,12 @@
 #include "graphite/gpu_adapter.hh"
+#include "graphite/vram_bank.hh"
 
 #include <cstdio>
 #include <cassert>
 
 int main() {
     GPUAdapter gpu = GPUAdapter();
+    VRAMBank bank = VRAMBank();
 
     /* Set a custom debug logger callback */
     gpu.set_logger(color_logger, DebugLevel::Verbose);
@@ -14,8 +16,15 @@ int main() {
         printf("failed to initialize gpu adapter.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
-    
-    /* Cleanup the GPU adapter */
+
+    /* Initialize the VRAM bank */
+    if (const Result r = bank.init(gpu); r.is_err()) {
+        printf("failed to initialize vram bank.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+
+    /* Cleanup the VRAM bank & GPU adapter */
+    bank.destroy().expect("failed to destroy vram bank.");
     gpu.destroy().expect("failed to destroy gpu adapter.");
 
     /* TODO: try out 'volk.h' */

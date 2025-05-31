@@ -37,6 +37,7 @@ target_sources(graphite PRIVATE
     src/main.cc
     # Core components
     ${SHELL_DIR}/gpu_adapter.cc
+    ${SHELL_DIR}/vram_bank.cc
     ${SHELL_DIR}/render_graph.cc
     ${SHELL_DIR}/render_target.cc
     # Utils
@@ -48,6 +49,7 @@ target_sources(graphite PRIVATE
 target_sources(graphite PRIVATE
     # Core components
     ${PLATFORM_DIR}/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
+    ${PLATFORM_DIR}/${PLATFORM}/vram_bank_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/render_graph_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/render_target_${PLATFORM_EXT}.cc
 )
