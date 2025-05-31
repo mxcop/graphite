@@ -23,31 +23,42 @@ endif()
 target_compile_definitions(graphite PRIVATE PLATFORM_EXT=${PLATFORM_EXT})
 target_compile_definitions(graphite PRIVATE PLATFORM=${PLATFORM})
 
-# Includes
+# Include directories
 target_include_directories(graphite PRIVATE "./src/")
 target_include_directories(graphite PRIVATE "./src/platform")
 target_include_directories(graphite PUBLIC "./src/shell/")
+
+# Source file directories
+set(SHELL_DIR src/shell/graphite)
+set(PLATFORM_DIR src/platform)
 
 # Core source files
 target_sources(graphite PRIVATE
     src/main.cc
     # Core components
-    src/shell/graphite/debug.cc
-    src/shell/graphite/result.cc
-    src/shell/graphite/gpu_adapter.cc
+    ${SHELL_DIR}/gpu_adapter.cc
+    ${SHELL_DIR}/render_graph.cc
+    ${SHELL_DIR}/render_target.cc
+    # Utils
+    ${SHELL_DIR}/debug.cc
+    ${SHELL_DIR}/result.cc
 )
 
-# Platform source files
+# Core platform-specific source files
 target_sources(graphite PRIVATE
     # Core components
-    src/platform/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
+    ${PLATFORM_DIR}/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
+    ${PLATFORM_DIR}/${PLATFORM}/render_graph_${PLATFORM_EXT}.cc
+    ${PLATFORM_DIR}/${PLATFORM}/render_target_${PLATFORM_EXT}.cc
 )
+
+# Additional platform-specific source files
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
         # Wrapper components
-        src/platform/vulkan/wrapper/device_selection_vk.cc
-        src/platform/vulkan/wrapper/queue_selection_vk.cc
-        src/platform/vulkan/wrapper/extensions_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/device_selection_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/queue_selection_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/extensions_vk.cc
     )
 endif()
 
