@@ -15,9 +15,11 @@ struct ImplVRAMBank;
  */
 class VRAMBank : ImplVRAMBank {
 
-public: /* Platform-agnostic functions */
+    /* ===== Platform-agnostic ===== */
+public: 
 
-public: /* Platform-specific functions */
+    /* ===== Platform-specific ===== */
+public:
     /* Initialize the VRAM bank. */
     Result<void> init(GPUAdapter& gpu);
 

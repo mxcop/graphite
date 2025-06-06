@@ -24,7 +24,8 @@ class GPUAdapter : ImplGPUAdapter {
     /* Active debug logger. */
     DebugLogger logger {empty_logger, DebugLevel::Warning, nullptr};
 
-public: /* Platform-agnostic functions */
+    /* ===== Platform-agnostic ===== */
+public:
     /* Set the debug logger callback. */
     void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);
 
@@ -32,7 +33,8 @@ private:
     /* Log a message using the active debug logger. */
     void log(DebugSeverity severity, const char* msg);
 
-public: /* Platform-specific functions */
+    /* ===== Platform-specific ===== */
+public:
     /* Initialize the GPU adapter. */
     Result<void> init(bool debug_mode = false);
 

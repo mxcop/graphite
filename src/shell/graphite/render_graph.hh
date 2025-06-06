@@ -15,9 +15,11 @@ struct ImplRenderGraph;
  */
 class RenderGraph : ImplRenderGraph {
 
-public: /* Platform-agnostic functions */
+    /* ===== Platform-agnostic ===== */
+public:
 
-public: /* Platform-specific functions */
+    /* ===== Platform-specific ===== */
+public:
     /* Initialize the Render Graph. */
     Result<void> init(GPUAdapter& gpu);
 
