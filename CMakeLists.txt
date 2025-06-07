@@ -4,9 +4,9 @@ project(graphite)
 # C++ standard version
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
 
-# Executable target
-add_executable(graphite)
-set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
+# Library target
+add_library(graphite)
+# set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
 
 # Add compiler definitions
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Debug>:DEBUG=1>)
@@ -20,12 +20,12 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     set(PLATFORM vulkan)
 endif()
 
-target_compile_definitions(graphite PRIVATE PLATFORM_EXT=${PLATFORM_EXT})
-target_compile_definitions(graphite PRIVATE PLATFORM=${PLATFORM})
+target_compile_definitions(graphite PUBLIC PLATFORM_EXT=${PLATFORM_EXT})
+target_compile_definitions(graphite PUBLIC PLATFORM=${PLATFORM})
 
 # Include directories
-target_include_directories(graphite PRIVATE "./src/")
-target_include_directories(graphite PRIVATE "./src/platform")
+target_include_directories(graphite PUBLIC "./src/")
+target_include_directories(graphite PUBLIC "./src/platform/")
 target_include_directories(graphite PUBLIC "./src/shell/")
 
 # Source file directories
