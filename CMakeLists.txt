@@ -39,6 +39,8 @@ target_sources(graphite PRIVATE
     ${SHELL_DIR}/gpu_adapter.cc
     ${SHELL_DIR}/vram_bank.cc
     ${SHELL_DIR}/render_graph.cc
+    ${SHELL_DIR}/nodes/node.cc
+    ${SHELL_DIR}/nodes/compute_node.cc
     ${SHELL_DIR}/render_target.cc
     # Utils
     ${SHELL_DIR}/debug.cc
