@@ -1,5 +1,6 @@
 #include "graphite/gpu_adapter.hh"
 #include "graphite/vram_bank.hh"
+#include "graphite/render_target.hh"
 
 #include <cstdio>
 #include <cassert>
@@ -7,6 +8,7 @@
 int main() {
     GPUAdapter gpu = GPUAdapter();
     VRAMBank bank = VRAMBank();
+    RenderTarget rt = RenderTarget();
 
     /* Set a custom debug logger callback */
     gpu.set_logger(color_logger, DebugLevel::Verbose);
@@ -23,7 +25,15 @@ int main() {
         return EXIT_SUCCESS;
     }
 
+    /* Initialize the GPU adapter */
+    TargetDesc target {0u};
+    if (const Result r = rt.init(gpu, target); r.is_err()) {
+        printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+
     /* Cleanup the VRAM bank & GPU adapter */
+    rt.destroy(gpu).expect("failed to destroy render target.");
     bank.destroy().expect("failed to destroy vram bank.");
     gpu.destroy().expect("failed to destroy gpu adapter.");
 

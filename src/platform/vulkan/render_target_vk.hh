@@ -2,6 +2,10 @@
 
 #include "vulkan/api_vk.hh" /* Vulkan API */
 
+struct TargetDesc {
+    HWND window {};
+};
+
 struct ImplRenderTarget {
     VkSurfaceKHR surface {};
 };

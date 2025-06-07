@@ -1,6 +1,6 @@
 #include "debug.hh"
 
-#include <stdarg.h>
+#include <cstdarg>
 
 /* Returns true if the severity should be logged given the level. */
 bool passes_level(const DebugLevel level, const DebugSeverity severity) {
@@ -50,9 +50,9 @@ void color_logger(const DebugSeverity severity, const char *msg, void *) {
 }
 
 /* Format a string with arguments. (like: printf) */
-std::string_view strfmt(const std::string_view fmt, ...) {
+std::string strfmt(const std::string_view fmt, ...) {
     int size = ((int)fmt.size()) * 2 + 50;
-    std::string str;
+    std::string str {};
     va_list ap;
     for (;;) {
         str.resize(size);

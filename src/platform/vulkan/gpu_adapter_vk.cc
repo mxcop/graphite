@@ -69,7 +69,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         return Err("failed to create vulkan instance.");
     }
 
-    /* Load instance Vulkan API functions */
+    /* Load Vulkan instance API functions */
     volkLoadInstanceOnly(instance);
 
     /* Create a debug messenger if debug mode is turned on */
@@ -126,6 +126,9 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         if (r == VK_ERROR_EXTENSION_NOT_PRESENT) return Err("failed to create vulkan device. (extension not supported)");
         return Err("failed to create vulkan device.");
     }
+
+    /* Load Vulkan device API functions */
+    volkLoadDevice(logical_device);
 
     /* Get the logical device queues */
     queues = get_queues(logical_device, queue_families);

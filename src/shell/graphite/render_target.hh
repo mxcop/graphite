@@ -2,8 +2,11 @@
 
 #include "platform/platform.hh"
 
+#include "gpu_adapter.hh"
 #include "result.hh"
-#include "debug.hh"
+
+/* Render target descriptor. (differs per platform!) */
+struct TargetDesc;
 
 /* Include platform-specific Impl struct */
 struct ImplRenderTarget;
@@ -24,10 +27,10 @@ public:
     /* ===== Platform-specific ===== */
 public: 
     /* Initialize the Render Target. */
-    Result<void> init(void* target, uint32_t def_width = 1440u, uint32_t def_height = 810u);
+    Result<void> init(GPUAdapter& gpu, TargetDesc& target, uint32_t def_width = 1440u, uint32_t def_height = 810u);
     
     /* Destroy the Render Target, free all its resources. */
-    Result<void> destroy();
+    Result<void> destroy(GPUAdapter& gpu);
 
 private:
     /* Re-build the Render Target. */

@@ -40,4 +40,6 @@ public:
 
     /* Destroy the GPU adapter, free all its resources. */
     Result<void> destroy();
+
+    friend class RenderTarget;
 };
