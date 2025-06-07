@@ -27,8 +27,20 @@ class RenderGraph : ImplRenderGraph {
     /* ===== Platform-agnostic ===== */
 public:
     /**
+     * @brief Start a new graph, this clear the graph.
+     * 
+     * @param node_count Expected number of nodes in the graph.
+     */
+    void new_graph(uint32_t node_count = 128u);
+
+    /**
+     * @brief End the current graph, this will sort & compile the graph.
+     */
+    Result<void> end_graph();
+
+    /**
      * @brief Add a compute pass to the render graph.
-     *
+     * 
      * @param label Label for this pass. (should be unique)
      * @param file_alias Alias used to find the shader file `shader:my_shader`.
      * @return The new compute node to be customized using the builder pattern.
@@ -40,6 +52,9 @@ public:
     /* Initialize the Render Graph. */
     Result<void> init(GPUAdapter& gpu);
 
+    /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
+    Result<void> dispatch(GPUAdapter& gpu);
+
     /* Destroy the Render Graph, free all its resources. */
-    Result<void> destroy();
+    Result<void> destroy(GPUAdapter& gpu);
 };

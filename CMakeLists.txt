@@ -26,25 +26,25 @@ target_compile_definitions(graphite PUBLIC PLATFORM=${PLATFORM})
 # Include directories
 target_include_directories(graphite PUBLIC "./src/")
 target_include_directories(graphite PUBLIC "./src/platform/")
-target_include_directories(graphite PUBLIC "./src/shell/")
+target_include_directories(graphite PUBLIC "./src/core/")
 
 # Source file directories
-set(SHELL_DIR src/shell/graphite)
+set(CORE_DIR src/core/graphite)
 set(PLATFORM_DIR src/platform)
 
 # Core source files
 target_sources(graphite PRIVATE
     src/main.cc
     # Core components
-    ${SHELL_DIR}/gpu_adapter.cc
-    ${SHELL_DIR}/vram_bank.cc
-    ${SHELL_DIR}/render_graph.cc
-    ${SHELL_DIR}/nodes/node.cc
-    ${SHELL_DIR}/nodes/compute_node.cc
-    ${SHELL_DIR}/render_target.cc
+    ${CORE_DIR}/gpu_adapter.cc
+    ${CORE_DIR}/vram_bank.cc
+    ${CORE_DIR}/render_graph.cc
+    ${CORE_DIR}/nodes/node.cc
+    ${CORE_DIR}/nodes/compute_node.cc
+    ${CORE_DIR}/render_target.cc
     # Utils
-    ${SHELL_DIR}/debug.cc
-    ${SHELL_DIR}/result.cc
+    ${CORE_DIR}/debug.cc
+    ${CORE_DIR}/result.cc
 )
 
 # Core platform-specific source files
