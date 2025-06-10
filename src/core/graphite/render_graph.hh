@@ -6,7 +6,7 @@
 #include "platform/platform.hh"
 
 #include "gpu_adapter.hh"
-#include "result.hh"
+#include "utils/result.hh"
 
 /* Include platform-specific Impl struct */
 struct ImplRenderGraph;

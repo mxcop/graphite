@@ -3,7 +3,7 @@
 #include <string>
 
 #include "vulkan/api_vk.hh" /* Vulkan API */
-#include "graphite/result.hh"
+#include "graphite/utils/result.hh"
 
 /* Vulkan physical device type ranking */
 const int device_ranking[] = { 

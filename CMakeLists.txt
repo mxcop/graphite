@@ -43,8 +43,8 @@ target_sources(graphite PRIVATE
     ${CORE_DIR}/nodes/compute_node.cc
     ${CORE_DIR}/render_target.cc
     # Utils
-    ${CORE_DIR}/debug.cc
-    ${CORE_DIR}/result.cc
+    ${CORE_DIR}/utils/debug.cc
+    ${CORE_DIR}/utils/result.cc
 )
 
 # Core platform-specific source files

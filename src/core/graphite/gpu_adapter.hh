@@ -2,8 +2,8 @@
 
 #include "platform/platform.hh"
 
-#include "result.hh"
-#include "debug.hh"
+#include "utils/result.hh"
+#include "utils/debug.hh"
 
 /* Include platform-specific Impl struct */
 struct ImplGPUAdapter;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vulkan/api_vk.hh" /* Vulkan API */
-#include "graphite/result.hh"
+#include "graphite/utils/result.hh"
 
 /* Required Vulkan device extensions */
 const char* const device_ext[] = { 

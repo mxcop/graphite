@@ -3,7 +3,7 @@
 #include "platform/platform.hh"
 
 #include "gpu_adapter.hh"
-#include "result.hh"
+#include "utils/result.hh"
 
 /* Render target descriptor. (differs per platform!) */
 struct TargetDesc;

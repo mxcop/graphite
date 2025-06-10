@@ -1,9 +1,7 @@
 #pragma once
 
 #include "vulkan/api_vk.hh" /* Vulkan API */
-#include "graphite/result.hh"
-
-/* TODO: write functions for getting queue families. */
+#include "graphite/utils/result.hh"
 
 /* Collection of Vulkan queue families. */
 struct VkQueueFamilies {
