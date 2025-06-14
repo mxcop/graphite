@@ -32,6 +32,12 @@ struct Dependency {
     inline bool is_render_target() const { return has_flag(flags, DependencyFlags::RenderTarget); }
 };
 
+/* Render Graph node type. */
+enum class NodeType : u32 {
+    Invalid = 0u,
+    Compute = 1u, /* Compute pass node. */
+};
+
 /**
  * Render Graph Node.  
  * A base for all other shader pass nodes.
@@ -40,6 +46,8 @@ class Node {
 public:
     /* Unique label. (primarily for debugging) */
     std::string_view label {}; 
+    /* Node type. */
+    NodeType type = NodeType::Invalid;
 
     Node() = delete;
 
@@ -47,5 +55,5 @@ protected:
     /* List of node resource dependencies. */
     std::vector<Dependency> dependencies {};
 
-    Node(std::string_view label);
+    Node(std::string_view label, NodeType type);
 };

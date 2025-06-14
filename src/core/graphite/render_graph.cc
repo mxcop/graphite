@@ -11,6 +11,9 @@ void RenderGraph::new_graph(u32 node_count) {
 }
 
 Result<void> RenderGraph::end_graph() {
+
+    /* TODO: Figure out all dependencies between graph nodes. */
+
     return Ok();
 }
 
