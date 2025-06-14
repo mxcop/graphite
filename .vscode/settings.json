@@ -1,0 +1,26 @@
+{
+    "cmake.environment": {"EXECUTABLE": "true"},
+    "cmake.debugConfig": {
+        "cwd": "${workspaceFolder}"
+    },
+    "cmake.configureOnOpen": false,
+    "cmake.options.advanced": {
+        "configurePreset": {
+            "statusBarVisibility": "visible"
+        },
+        "buildPreset": {
+            "statusBarVisibility": "visible"
+        },
+        "launchTarget": {
+            "statusBarVisibility": "visible"
+        }
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "build": true,
+        "out": true,
+        ".vs": true,
+        "**/**.spv": true
+    },
+    "C_Cpp.autoAddFileAssociations": false
+}
