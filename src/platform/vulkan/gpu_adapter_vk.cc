@@ -41,9 +41,9 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     debug_utils.pfnUserCallback = vk_debug_callback;
 
     /* Vulkan instance extensions & layers */
-    const uint32_t instance_ext_count = validation ? 3u : 2u;
+    const u32 instance_ext_count = validation ? 3u : 2u;
     const char* const instance_ext[3] = {VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
-    const uint32_t instance_layers_count = validation ? 1u : 0u;
+    const u32 instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
     /* Check if all required instance extensions are supported */

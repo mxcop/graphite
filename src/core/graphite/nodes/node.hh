@@ -2,24 +2,34 @@
 
 #include <vector>
 #include <string_view>
+#include <variant>
 
 #include "graphite/resources/handle.hh"
 #include "graphite/utils/enum_flags.hh"
+#include "graphite/utils/types.hh"
+
+class RenderTarget;
 
 /* Render Graph resource dependency flags. */
-enum class DependencyFlags : uint32_t {
+enum class DependencyFlags : u32 {
     None = 0u,
-    Readonly = 1u << 0u,   /* The dependency is read only. */
-    Attachment = 1u << 1u, /* The dependency is used as an attachment. */
+    RenderTarget = 1u << 0u, /* The dependency is a render target. */
+    Readonly = 1u << 1u,     /* The dependency is read only. */
+    Attachment = 1u << 2u,   /* The dependency is used as an attachment. */
 };
 ENUM_CLASS_FLAGS(DependencyFlags);
 
 /* Render Graph resource dependency. */
 struct Dependency {
-    BindHandle resource {};
+    /* The resource is either a video resource described by a handle, or a render target. */
+    std::variant<BindHandle, RenderTarget*> resource {};
     DependencyFlags flags {};
 
     Dependency(BindHandle resource, DependencyFlags flags);
+    Dependency(RenderTarget& render_target, DependencyFlags flags);
+
+    /* Is this a dependency on a render target resource? */
+    inline bool is_render_target() const { return has_flag(flags, DependencyFlags::RenderTarget); }
 };
 
 /**

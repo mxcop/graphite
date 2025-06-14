@@ -4,6 +4,7 @@
 
 #include "gpu_adapter.hh"
 #include "utils/result.hh"
+#include "utils/types.hh"
 
 /* Render target descriptor. (differs per platform!) */
 struct TargetDesc;
@@ -17,17 +18,17 @@ struct ImplRenderTarget;
  * Used to render to a window / display.
  */
 class RenderTarget : ImplRenderTarget {
-    uint32_t width = 0u, height = 0u;
+    u32 width = 0u, height = 0u;
 
     /* ===== Platform-agnostic ===== */
 public: 
     /* Re-size the Render Target. */
-    Result<void> resize(uint32_t new_width, uint32_t new_height);
+    Result<void> resize(u32 new_width, u32 new_height);
 
     /* ===== Platform-specific ===== */
 public: 
     /* Initialize the Render Target. */
-    Result<void> init(GPUAdapter& gpu, TargetDesc& target, uint32_t def_width = 1440u, uint32_t def_height = 810u);
+    Result<void> init(GPUAdapter& gpu, TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
     
     /* Destroy the Render Target, free all its resources. */
     Result<void> destroy(GPUAdapter& gpu);

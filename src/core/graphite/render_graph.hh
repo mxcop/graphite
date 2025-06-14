@@ -7,6 +7,7 @@
 
 #include "gpu_adapter.hh"
 #include "utils/result.hh"
+#include "utils/types.hh"
 
 /* Include platform-specific Impl struct */
 struct ImplRenderGraph;
@@ -31,7 +32,7 @@ public:
      * 
      * @param node_count Expected number of nodes in the graph.
      */
-    void new_graph(uint32_t node_count = 128u);
+    void new_graph(u32 node_count = 128u);
 
     /**
      * @brief End the current graph, this will sort & compile the graph.

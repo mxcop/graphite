@@ -40,7 +40,7 @@ int main() {
     /* Create a window using GLFW */
     glfwInit();
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow* win = glfwCreateWindow(1440, 810, "Tetra", NULL, NULL);
+    GLFWwindow* win = glfwCreateWindow(1440, 810, "Graphite Test Sample", NULL, NULL);
 
     /* Initialize the GPU adapter */
     TargetDesc target { glfwGetWin32Window(win) };
@@ -56,10 +56,10 @@ int main() {
 
         rg.new_graph();
 
-        rg.add_compute_pass("proc", "shader:proc");
-        //     .write(rt);
-        //     .group_size(16, 16)
-        //     .work_size(1440, 810);
+        rg.add_compute_pass("proc", "shader:proc")
+            .write(rt)
+            .group_size(16, 16)
+            .work_size(1440, 810);
 
         rg.end_graph();
         rg.dispatch(gpu);

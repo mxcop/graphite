@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstdint>
+#include "graphite/utils/types.hh"
 
 /* Render Graph Resource Type. */
-enum class ResourceType : uint32_t {
+enum class ResourceType : u32 {
     Invalid = 0u,
     Buffer = 1u,
     Texture = 2u,
@@ -16,12 +16,12 @@ struct OpaqueHandle {
     /* Only let the VRAM Bank access the data inside. */ 
     friend class VRAMBank;
 private:
-    uint32_t    index : 28;
+    u32         index : 28;
     ResourceType type : 4;
 
     /* Resource type helper functions */
-    inline uint32_t get_type_uint() const { return static_cast<uint32_t>(type); }
-    inline void set_type_uint(const uint32_t x) { type = static_cast<ResourceType>(x); }
+    inline u32 get_type_uint() const { return static_cast<u32>(type); }
+    inline void set_type_uint(const u32 x) { type = static_cast<ResourceType>(x); }
     inline bool is_null() const { return type == ResourceType::Invalid; }
     inline bool is_bindable() const { return type != ResourceType::Invalid && type != ResourceType::Texture; }
 };

@@ -5,7 +5,7 @@
 #endif
 
 /* Initialize the Render Target. */
-Result<void> RenderTarget::init(GPUAdapter& gpu, TargetDesc& target, uint32_t def_width, uint32_t def_height) {
+Result<void> RenderTarget::init(GPUAdapter& gpu, TargetDesc& target, u32 def_width, u32 def_height) {
     width = def_width;
     height = def_height;
     
