@@ -42,6 +42,9 @@ int main() {
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* win = glfwCreateWindow(1440, 810, "Graphite Test Sample", NULL, NULL);
 
+    /* TODO: Create RenderTarget through VRAMBank, bank.create_render_target(TargetDesc); */
+    /* Render targets will get their own handle (& type), so its easier to work with. */
+
     /* Initialize the GPU adapter */
     TargetDesc target { glfwGetWin32Window(win) };
     if (const Result r = rt.init(gpu, target); r.is_err()) {

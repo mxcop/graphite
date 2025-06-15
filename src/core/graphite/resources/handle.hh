@@ -5,16 +5,20 @@
 /* Render Graph Resource Type. */
 enum class ResourceType : u32 {
     Invalid = 0u,
-    Buffer = 1u,
-    Texture = 2u,
-    Image = 3u,
-    Sampler = 4u,
+    RenderTarget = 1u,
+    Buffer = 2u,
+    Texture = 3u,
+    Image = 4u,
+    Sampler = 5u,
 };
 
 /* Render Graph Resource Handle (32 bits) */
 struct OpaqueHandle {
     /* Only let the VRAM Bank access the data inside. */ 
     friend class VRAMBank;
+
+    /* Get the raw handle for debugging. */
+    inline u32 raw() const { return index | static_cast<u32>(type); }
 private:
     u32         index : 28;
     ResourceType type : 4;

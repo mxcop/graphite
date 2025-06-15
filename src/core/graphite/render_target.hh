@@ -5,6 +5,7 @@
 #include "gpu_adapter.hh"
 #include "utils/result.hh"
 #include "utils/types.hh"
+#include "resources/handle.hh"
 
 /* Render target descriptor. (differs per platform!) */
 struct TargetDesc;
@@ -18,6 +19,10 @@ struct ImplRenderTarget;
  * Used to render to a window / display.
  */
 class RenderTarget : ImplRenderTarget {
+    /* Resource handle */
+    BindHandle handle {};
+
+    /* Target extent */
     u32 width = 0u, height = 0u;
 
     /* ===== Platform-agnostic ===== */
@@ -36,4 +41,7 @@ public:
 private:
     /* Re-build the Render Target. */
     Result<void> rebuild();
+
+    /* To access the `handle` variable. */
+    friend class Dependency;
 };

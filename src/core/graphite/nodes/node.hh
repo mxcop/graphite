@@ -21,8 +21,7 @@ ENUM_CLASS_FLAGS(DependencyFlags);
 
 /* Render Graph resource dependency. */
 struct Dependency {
-    /* The resource is either a video resource described by a handle, or a render target. */
-    std::variant<BindHandle, RenderTarget*> resource {};
+    BindHandle resource {};
     DependencyFlags flags {};
 
     Dependency(BindHandle resource, DependencyFlags flags);
@@ -56,4 +55,6 @@ protected:
     std::vector<Dependency> dependencies {};
 
     Node(std::string_view label, NodeType type);
+
+    friend class RenderGraph;
 };
