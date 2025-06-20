@@ -47,7 +47,7 @@ int main() {
 
     /* Initialize the GPU adapter */
     TargetDesc target { glfwGetWin32Window(win) };
-    if (const Result r = rt.init(gpu, target); r.is_err()) {
+    if (const Result r = bank.create_render_target(target); r.is_err()) {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }

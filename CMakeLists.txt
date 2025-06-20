@@ -34,7 +34,6 @@ set(PLATFORM_DIR src/platform)
 
 # Core source files
 target_sources(graphite PRIVATE
-    src/main.cc
     # Core components
     ${CORE_DIR}/gpu_adapter.cc
     ${CORE_DIR}/vram_bank.cc

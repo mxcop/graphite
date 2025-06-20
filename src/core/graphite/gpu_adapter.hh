@@ -24,6 +24,9 @@ class GPUAdapter : ImplGPUAdapter {
     /* Active debug logger. */
     DebugLogger logger {empty_logger, DebugLevel::Warning, nullptr};
 
+    /* Reference counter. */
+    u32 ref_counter = 0u;
+
     /* ===== Platform-agnostic ===== */
 public:
     /* Set the debug logger callback. */

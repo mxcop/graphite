@@ -32,16 +32,18 @@ public:
 
     /* ===== Platform-specific ===== */
 public: 
-    /* Initialize the Render Target. */
-    Result<void> init(GPUAdapter& gpu, TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
-    
     /* Destroy the Render Target, free all its resources. */
     Result<void> destroy(GPUAdapter& gpu);
 
 private:
+    /* Initialize the Render Target. */
+    Result<void> init(GPUAdapter& gpu, TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
+
     /* Re-build the Render Target. */
     Result<void> rebuild();
 
     /* To access the `handle` variable. */
     friend class Dependency;
+    /* To access the init function. */
+    friend class VRAMBank;
 };

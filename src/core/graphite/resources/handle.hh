@@ -14,8 +14,7 @@ enum class ResourceType : u32 {
 
 /* Render Graph Resource Handle (32 bits) */
 struct OpaqueHandle {
-    /* Only let the VRAM Bank access the data inside. */ 
-    friend class VRAMBank;
+    OpaqueHandle() = default;
 
     /* Get the raw handle for debugging. */
     inline u32 raw() const { return index | static_cast<u32>(type); }
@@ -23,11 +22,18 @@ private:
     u32         index : 28;
     ResourceType type : 4;
 
+    OpaqueHandle(u32 index, ResourceType type) : index(index), type(type) {}
+
     /* Resource type helper functions */
     inline u32 get_type_uint() const { return static_cast<u32>(type); }
     inline void set_type_uint(const u32 x) { type = static_cast<ResourceType>(x); }
     inline bool is_null() const { return type == ResourceType::Invalid; }
     inline bool is_bindable() const { return type != ResourceType::Invalid && type != ResourceType::Texture; }
+    
+    /* Only let the VRAM Bank & Stock<T> access the data inside. */ 
+    friend class VRAMBank;
+    template<typename T, ResourceType RT>
+    friend class Stock;
 };
 
 /* Resource handle which can be bound to a pass. */
