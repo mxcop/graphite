@@ -6,30 +6,26 @@
 
 #include <graphite/gpu_adapter.hh>
 #include <graphite/vram_bank.hh>
-#include <graphite/render_target.hh>
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
 
+constexpr u32 VRAM_BANKS = 1u;
+
 int main() {
     GPUAdapter gpu = GPUAdapter();
-    VRAMBank bank = VRAMBank();
-    RenderTarget rt = RenderTarget();
     RenderGraph rg = RenderGraph();
 
     /* Set a custom debug logger callback */
     gpu.set_logger(color_logger, DebugLevel::Verbose);
 
     /* Initialize the GPU adapter */
-    if (const Result r = gpu.init(true); r.is_err()) {
+    if (const Result r = gpu.init(VRAM_BANKS, true); r.is_err()) {
         printf("failed to initialize gpu adapter.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
 
-    /* Initialize the VRAM bank */
-    if (const Result r = bank.init(gpu); r.is_err()) {
-        printf("failed to initialize vram bank.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    }
+    /* Get the VRAM bank */
+    VRAMBank& bank = *gpu.get_vram_bank().unwrap();
 
     /* Initialize the Render Graph */
     if (const Result r = rg.init(gpu); r.is_err()) {
@@ -59,10 +55,10 @@ int main() {
 
         rg.new_graph();
 
-        rg.add_compute_pass("proc", "shader:proc")
-            .write(rt)
-            .group_size(16, 16)
-            .work_size(1440, 810);
+        // rg.add_compute_pass("proc", "shader:proc")
+        //     .write(rt)
+        //     .group_size(16, 16)
+        //     .work_size(1440, 810);
 
         rg.end_graph();
         rg.dispatch(gpu);
@@ -73,7 +69,6 @@ int main() {
     }
 
     /* Cleanup the VRAM bank & GPU adapter */
-    rt.destroy(gpu).expect("failed to destroy render target.");
     rg.destroy(gpu).expect("failed to destroy render graph.");
     bank.destroy().expect("failed to destroy vram bank.");
     gpu.destroy().expect("failed to destroy gpu adapter.");

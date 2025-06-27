@@ -1,5 +1,6 @@
 #include "gpu_adapter_vk.hh"
 
+#include "graphite/vram_bank.hh"
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
 
@@ -17,7 +18,12 @@ const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
 
 /* Initialize the GPU adapter. */
-Result<void> GPUAdapter::init(bool debug_mode) {
+Result<void> GPUAdapter::init(u32 vram_bank_count, bool debug_mode) {
+    /* Initialize VRAM banks */
+    if (const Result r = init_vram_banks(vram_bank_count); r.is_err()) {
+        return Err(r.unwrap_err().c_str());
+    }
+
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 

@@ -8,14 +8,11 @@
 #include "graphite/utils/enum_flags.hh"
 #include "graphite/utils/types.hh"
 
-class RenderTarget;
-
 /* Render Graph resource dependency flags. */
 enum class DependencyFlags : u32 {
     None = 0u,
-    RenderTarget = 1u << 0u, /* The dependency is a render target. */
-    Readonly = 1u << 1u,     /* The dependency is read only. */
-    Attachment = 1u << 2u,   /* The dependency is used as an attachment. */
+    Readonly = 1u << 0u,   /* The dependency is read only. */
+    Attachment = 1u << 1u, /* The dependency is used as an attachment. */
 };
 ENUM_CLASS_FLAGS(DependencyFlags);
 
@@ -25,10 +22,6 @@ struct Dependency {
     DependencyFlags flags {};
 
     Dependency(BindHandle resource, DependencyFlags flags);
-    Dependency(RenderTarget& render_target, DependencyFlags flags);
-
-    /* Is this a dependency on a render target resource? */
-    inline bool is_render_target() const { return has_flag(flags, DependencyFlags::RenderTarget); }
 };
 
 /* Render Graph node type. */

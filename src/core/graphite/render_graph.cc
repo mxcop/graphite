@@ -18,10 +18,7 @@ struct Versions {
 };
 
 /* Dependency hashmap key. */
-inline u64 dependency_key(const Dependency& dep) {
-    if (dep.is_render_target()) {
-        return dep.resource.raw() | 0xFFFFFFFF00000000u;
-    }
+inline u32 dependency_key(const Dependency& dep) {
     return dep.resource.raw();
 };
 
@@ -30,7 +27,7 @@ Result<void> RenderGraph::end_graph() {
     /* TODO: Figure out all dependencies between graph nodes. */
     
     /* Resource version hashmap (key: handle/ptr, value: version) */
-    std::unordered_map<u64, u32> version_map {};
+    std::unordered_map<u32, u32> version_map {};
 
     /* Propegate dependency versions through the graph */
     std::vector<Versions> node_versions(nodes.size());
@@ -43,7 +40,7 @@ Result<void> RenderGraph::end_graph() {
         for (u32 j = 0u; j < node->dependencies.size(); ++j) {
             /* Get the dependency and its version */
             const Dependency& dep = node->dependencies[j];
-            const u64 key = dependency_key(dep);
+            const u32 key = dependency_key(dep);
             u32& dep_version = versions.dependencies[j];
 
             /* Set the version of this dependency in the graph */
@@ -77,7 +74,7 @@ Result<void> RenderGraph::end_graph() {
             else printf("  RW 0x%X, v%u", id, dep_version);
             
             /* Log whether this resource is a render target */
-            const bool is_rt = dep.is_render_target();
+            const bool is_rt = dep.resource.get_type() == ResourceType::RenderTarget;
             if (is_rt) printf(", [RT]");
             
             printf("\n");

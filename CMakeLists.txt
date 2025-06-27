@@ -40,7 +40,6 @@ target_sources(graphite PRIVATE
     ${CORE_DIR}/render_graph.cc
     ${CORE_DIR}/nodes/node.cc
     ${CORE_DIR}/nodes/compute_node.cc
-    ${CORE_DIR}/render_target.cc
     # Utils
     ${CORE_DIR}/utils/debug.cc
     ${CORE_DIR}/utils/result.cc
@@ -52,7 +51,6 @@ target_sources(graphite PRIVATE
     ${PLATFORM_DIR}/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/vram_bank_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/render_graph_${PLATFORM_EXT}.cc
-    ${PLATFORM_DIR}/${PLATFORM}/render_target_${PLATFORM_EXT}.cc
 )
 
 # Additional platform-specific source files

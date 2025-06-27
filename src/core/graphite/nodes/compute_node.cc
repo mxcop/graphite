@@ -2,8 +2,8 @@
 
 ComputeNode::ComputeNode(std::string_view label, std::string_view file_alias) : Node(label, NodeType::Compute), compute_sfa(file_alias) {}
 
-ComputeNode& ComputeNode::write(RenderTarget& render_target) {
+ComputeNode& ComputeNode::write(BindHandle& resource) {
     /* Insert the write dependency */
-    dependencies.emplace_back(render_target, DependencyFlags::None);
+    dependencies.emplace_back(resource, DependencyFlags::None);
     return *this;
 }

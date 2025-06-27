@@ -7,6 +7,7 @@
 #include "resources/stock.hh"
 
 struct TargetDesc;
+struct RenderTargetSlot;
 
 /* Include platform-specific Impl struct */
 struct ImplVRAMBank;
@@ -19,19 +20,26 @@ struct ImplVRAMBank;
 class VRAMBank : ImplVRAMBank {
     GPUAdapter* gpu = nullptr;
 
+    /* Index of this VRAM Bank */
+    u32 bank_index = 0u;
+
     /* Resources */
-    Stock<RenderTarget, ResourceType::RenderTarget> render_targets {};
+    Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
 
     /* ===== Platform-agnostic ===== */
 public: 
-    /* Initialize the VRAM bank. */
-    Result<void> init(GPUAdapter& gpu);
-
     /* Create a new render target resource. (aka, swapchain) */
-    Result<RenderTarget*> create_render_target(TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
+    Result<RenderTarget> create_render_target(TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
+
+private:
+    /* Initialize the VRAM bank. */
+    Result<void> init(GPUAdapter& gpu, u32 bank_index);
 
     /* ===== Platform-specific ===== */
 public:
     /* Destroy the VRAM bank, free all its resources. */
     Result<void> destroy();
+
+    /* To access the init function. */
+    friend class GPUAdapter;
 };

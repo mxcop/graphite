@@ -26,8 +26,8 @@ public:
     ComputeNode(const ComputeNode&) = delete;
     ComputeNode& operator=(const ComputeNode&) = delete;
 
-    /* Add a render target as an output for this node. */
-    ComputeNode& write(RenderTarget& render_target);
+    /* Add a bindable resource as an output for this node. */
+    ComputeNode& write(BindHandle& resource);
 
     /* Set the thread group size for this node. */
     inline ComputeNode& group_size(u32 x, u32 y = 1u, u32 z = 1u) { group_x = x; group_y = y; group_z = z; return *this; }

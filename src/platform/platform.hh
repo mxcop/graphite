@@ -1,5 +1,13 @@
 #pragma once
 
+/* Some default platform defines */
+#ifndef PLATFORM
+#define PLATFORM vulkan
+#endif
+#ifndef PLATFORM_EXT
+#define PLATFORM_EXT vk
+#endif
+
 /* Concatenation macros */
 #define __CAT(X,Y) X##Y
 #define CAT(X,Y) __CAT(X,Y)

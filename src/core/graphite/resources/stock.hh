@@ -3,24 +3,25 @@
 #include "graphite/utils/types.hh"
 #include "handle.hh"
 
-template<typename T>
+template<typename Slot, typename Handle>
 struct StockPair {
-    OpaqueHandle handle {};
-    T& data;
-    StockPair(OpaqueHandle handle, T& data) : handle(handle), data(data) {};
+    Handle handle {};
+    Slot& data;
+    StockPair(Handle handle, Slot& data) : handle(handle), data(data) {};
 };
 
 /**
  * Stack Pool. (Stock)  
  * Used for efficiently managing resources using handles.
  */
-template<typename T, ResourceType RT>
+template<typename Slot, typename Handle, ResourceType RType>
 class Stock {
-    OpaqueHandle* stack = nullptr; /* Handle stack. */
-    T* pool = nullptr; /* Data pool. */
+    Handle* stack = nullptr; /* Handle stack. */
+    Slot* pool = nullptr; /* Slot pool. */
 
     u32 stack_ptr = 0u; /* Stack pointer. */
     u32 stack_size = 0u; /* Stack size, same as the pool size. */
+    u32 bank_index = 0u; /* VRAM Bank index. */
 
     Stock() = default;
     ~Stock() { destroy(); }
@@ -30,22 +31,23 @@ class Stock {
     Stock& operator=(const Stock&) = delete;
 
     /* Create a Stack Pool of given size. */
-    Stock(const u32 size) : stack(new OpaqueHandle[size] {}), pool(new T[size] {}), stack_size(size) {
+    Stock(const u32 bank_index, const u32 size) : stack(new Handle[size] {}), pool(new Slot[size] {}), stack_size(size), bank_index(bank_index) {
         /* Initialize the handle stack */
-        for (u32 i = 0u; i < size; ++i) stack[i] = OpaqueHandle(i + 1u, RT);
+        for (u32 i = 0u; i < size; ++i) stack[i] = reinterpret_cast<Handle&>(OpaqueHandle(i + 1u, bank_index, RType));
     }
 
     /* Init the Stack Pool, clears out any existing data. */
-    void init(const u32 size) {
+    void init(const u32 bank_index, const u32 size) {
         destroy(); /* Free existing resources. */
 
         /* Allocate the new resources. */
-        stack = new OpaqueHandle[size] {};
-        pool = new T[size] {};
+        stack = new Handle[size] {};
+        pool = new Slot[size] {};
         stack_size = size;
+        this->bank_index = bank_index;
 
         /* Initialize the handle stack */
-        for (u32 i = 0u; i < size; ++i) stack[i] = OpaqueHandle(i + 1u, RT);
+        for (u32 i = 0u; i < size; ++i) stack[i] = reinterpret_cast<Handle&>(OpaqueHandle(i + 1u, bank_index, RType));
     }
 
     /* Free the Stack Pool resources. */
@@ -58,10 +60,10 @@ class Stock {
     }
 
     /* Pop a new resource off the stack. */
-    StockPair<T> pop() {
+    StockPair<Slot, Handle> pop() {
         /* Pop the handle stack */
-        const OpaqueHandle handle = stack[stack_ptr++];
-        T& data = pool[handle.index - 1u];
+        const Handle handle = stack[stack_ptr++];
+        Slot& data = pool[handle.index - 1u];
         return StockPair(handle, data);
     }
 
