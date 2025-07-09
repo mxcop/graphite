@@ -41,12 +41,32 @@ int main() {
     /* TODO: Create RenderTarget through VRAMBank, bank.create_render_target(TargetDesc); */
     /* Render targets will get their own handle (& type), so its easier to work with. */
 
-    /* Initialize the GPU adapter */
+    /* Initialize the Render Target */
     TargetDesc target { glfwGetWin32Window(win) };
+    RenderTarget rt {};
     if (const Result r = bank.create_render_target(target); r.is_err()) {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    }
+    } else rt = r.unwrap();
+
+    const u32 key_7 = 0x7u;
+    BindHandle dummy_7 = (BindHandle&)key_7;
+    const u32 key_8 = 0x8u;
+    BindHandle dummy_8 = (BindHandle&)key_8;
+    const u32 key_9 = 0x9u;
+    BindHandle dummy_9 = (BindHandle&)key_9;
+    const u32 key_a = 0xAu;
+    BindHandle dummy_a = (BindHandle&)key_a;
+    const u32 key_b = 0xBu;
+    BindHandle dummy_b = (BindHandle&)key_b;
+    const u32 key_c = 0xCu;
+    BindHandle dummy_c = (BindHandle&)key_c;
+    const u32 key_d = 0xDu;
+    BindHandle dummy_d = (BindHandle&)key_d;
+    const u32 key_e = 0xEu;
+    BindHandle dummy_e = (BindHandle&)key_e;
+    const u32 key_f = 0xFu;
+    BindHandle dummy_f = (BindHandle&)key_f;
 
     /* Main loop */
     for (;;) {
@@ -55,9 +75,75 @@ int main() {
 
         rg.new_graph();
 
-        // rg.add_compute_pass("proc", "shader:proc")
+        /* Root A */
+        rg.add_compute_pass("rA", "shader:dummy")
+            .write(dummy_7)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+            
+        /* Root B */
+        rg.add_compute_pass("rB", "shader:dummy")
+            .write(dummy_8)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+        rg.add_compute_pass("c0", "shader:dummy")
+            .read(dummy_8)
+            .write(dummy_9)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+            
+        /* Root C */
+        rg.add_compute_pass("rC", "shader:dummy")
+            .write(dummy_a)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+        rg.add_compute_pass("c1", "shader:dummy")
+            .read(dummy_a)
+            .write(dummy_b)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+
+        /* C2 */
+        rg.add_compute_pass("c2", "shader:dummy")
+            .read(dummy_7)
+            .read(dummy_9)
+            .read(dummy_b)
+            .write(dummy_c)
+            .group_size(16, 8)
+            .work_size(1440, 810); 
+            
+        /* C3 */
+        rg.add_compute_pass("c3", "shader:dummy")
+            .read(dummy_c)
+            .write(dummy_d)
+            .group_size(16, 8)
+            .work_size(1440, 810); 
+        /* C4 */
+        rg.add_compute_pass("c4", "shader:dummy")
+            .read(dummy_c)
+            .write(dummy_e)
+            .group_size(16, 8)
+            .work_size(1440, 810); 
+            
+        /* C5 */
+        rg.add_compute_pass("c5", "shader:dummy")
+            .read(dummy_d)
+            .read(dummy_e)
+            .write(dummy_f)
+            .group_size(16, 8)
+            .work_size(1440, 810); 
+
+        // rg.add_compute_pass("reader", "shader:reader")
+        //     .read(img_b)
+        //     .write(img_a)
+        //     .group_size(16, 8)
+        //     .work_size(1440, 810);
+
+        // rg.add_compute_pass("final", "shader:final")
+        //     .read(img_a)
+        //     .read(img_b)
         //     .write(rt)
-        //     .group_size(16, 16)
+        //     .group_size(16, 8)
         //     .work_size(1440, 810);
 
         rg.end_graph();
@@ -66,6 +152,7 @@ int main() {
         /* Check if we are still running */
         if (glfwWindowShouldClose(win))
             break;
+        break; /* Exit for testing */
     }
 
     /* Cleanup the VRAM bank & GPU adapter */
