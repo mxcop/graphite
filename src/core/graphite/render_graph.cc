@@ -16,10 +16,12 @@ void RenderGraph::new_graph(u32 node_count) {
 struct NodeMeta {
     /* List of versions, one for each dependency. */
     std::vector<u32> versions {};
-    /* List of sources, one for each dependency. */
+    /* List of sources (node indices), one for each dependency. */
     std::vector<u32> sources {};
-    /* Number of source nodes. */
-    u32 source_count = 0u;
+    /* List of destinations (node indices) */
+    std::vector<u32> destinations {};
+    /* Number of input & output nodes. */
+    u32 input_nodes = 0u, output_nodes = 0u;
 };
 
 /* Dependency hashmap key. */
@@ -61,7 +63,9 @@ Result<void> RenderGraph::end_graph() {
                 meta.sources[j] = UINT32_MAX;
             } else {
                 meta.sources[j] = source_map[key];
-                meta.source_count += 1u; /* <- increment source node count */
+                node_meta[meta.sources[j]].destinations.push_back(i); /* <- insert destination */
+                node_meta[meta.sources[j]].output_nodes += 1u;
+                meta.input_nodes += 1u; /* <- increment input node count */
             }
 
             /* Update the version and source hashmaps in case this resource is written to */
@@ -102,7 +106,9 @@ Result<void> RenderGraph::end_graph() {
             
             printf("\n");
         }
-        printf("]\n");
+        printf("]");
+        printf(" %u -> %u", meta.input_nodes, meta.output_nodes);
+        printf("\n");
     }
     
     /* Find node clusters in the graph */
@@ -111,29 +117,23 @@ Result<void> RenderGraph::end_graph() {
         const Node* node = nodes[i];
         const NodeMeta& meta = node_meta[i];
 
-        bool should_split = false;
-        for (u32 j = i; j < nodes.size(); ++j) {
-            for (u32 k = 0u; k < nodes[j]->dependencies.size(); ++k) {
-                if (node_meta[j].sources[k] == i && node_meta[j].source_count > 1u) { 
-                    should_split = true;
-                }
+        /* Look for a fork at this point in the graph */
+        bool is_fork = meta.input_nodes > 1u;
+        for (const u32 j : meta.destinations) {
+            if (node_meta[j].input_nodes > 1u) { 
+                is_fork = true;
+                break;
             }
         }
-        // bool  = false;
-        // for (u32 j = 0u; j < node->dependencies.size(); ++j) {
-        //     if (meta.sources[j] == UINT32_MAX) continue;
-        //     if (node_meta[meta.sources[j]].source_count > 1u) previous_source = false;
-        // }
 
-        /* Continue in this cluster if there's only 1 source */
-        if (meta.source_count <= 1u && should_split == false) continue;
+        /* Continue in this cluster if there's no fork in the graph */
+        if (is_fork == false) continue;
 
         printf("cluster %u: %u..=%u\n", c, s, i);
 
         s = i + 1; /* <- save the new cluster start index */
         c += 1u;
     }
-
 
     return Ok();
 }
