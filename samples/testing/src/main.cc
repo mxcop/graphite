@@ -9,8 +9,6 @@
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
 
-constexpr u32 VRAM_BANKS = 1u;
-
 int main() {
     GPUAdapter gpu = GPUAdapter();
     RenderGraph rg = RenderGraph();
@@ -19,13 +17,13 @@ int main() {
     gpu.set_logger(color_logger, DebugLevel::Verbose);
 
     /* Initialize the GPU adapter */
-    if (const Result r = gpu.init(VRAM_BANKS, true); r.is_err()) {
+    if (const Result r = gpu.init(true); r.is_err()) {
         printf("failed to initialize gpu adapter.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
 
     /* Get the VRAM bank */
-    VRAMBank& bank = *gpu.get_vram_bank().unwrap();
+    VRAMBank& bank = gpu.get_vram_bank();
 
     /* Initialize the Render Graph */
     if (const Result r = rg.init(gpu); r.is_err()) {
@@ -154,6 +152,9 @@ int main() {
             break;
         break; /* Exit for testing */
     }
+
+    /* Cleanup resources */
+    bank.destroy_render_target(rt);
 
     /* Cleanup the VRAM bank & GPU adapter */
     rg.destroy(gpu).expect("failed to destroy render graph.");

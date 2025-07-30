@@ -27,11 +27,10 @@ struct OpaqueHandle {
     inline bool is_bindable() const { return type != ResourceType::Invalid && type != ResourceType::Texture; }
     
 private:
-    u32 index : 24; /* Resource index, at most 16.777.216 resources per Bank. */
-    u32 bank : 4;   /* Bank index, at most 16 banks per GPU Adapter. */
+    u32 index : 28; /* Resource index, at most 268.435.456 resources of each type per GPU. */
     ResourceType type : 4;
 
-    OpaqueHandle(u32 index, u32 bank, ResourceType type) : index(index), bank(bank), type(type) {}
+    OpaqueHandle(u32 index, ResourceType type) : index(index), type(type) {}
 
     /* To access the constructor. */
     template<typename, typename, ResourceType>

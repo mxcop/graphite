@@ -20,29 +20,20 @@ void GPUAdapter::log(DebugSeverity severity, const char *msg) {
     logger.logger(severity, msg, logger.user_data);
 }
 
-Result<void> GPUAdapter::init_vram_banks(u32 count) {
-    /* Safety checks */
-    if (count == 0u) return Err("vram bank count cannot be zero. (gpu adapter)");
-    if (count > 16u) return Err("vram bank count cannot be more than 16. (gpu adapter)");
-    vram_bank_count = count;
+/* Initialize the VRAM bank for this GPU adapter. */
+Result<void> GPUAdapter::init_vram_bank() {
+    /* Safety check */
+    if (vram_bank != nullptr) return Err("tried to initialize vram bank which has already been initialized.");
 
-    /* Free existing VRAM banks if any */
-    if (vram_banks != nullptr) {
-        delete[] vram_banks;
-        vram_banks = nullptr;
-    }
-
-    /* Allocate & initialize VRAM banks */
-    vram_banks = new VRAMBank[count] {};
-    for (u32 i = 0u; i < count; ++i) {
-        if (const Result r = vram_banks[i].init(*this, i); r.is_err()) {
-            return Err(r.unwrap_err().c_str());
-        }
+    /* Allocate & initialize VRAM bank */
+    vram_bank = new VRAMBank {};
+    if (const Result r = vram_bank->init(*this); r.is_err()) {
+        return Err(r.unwrap_err().c_str());
     }
     return Ok();
 }
 
-Result<VRAMBank*> GPUAdapter::get_vram_bank(u32 bank_index) {
-    if (bank_index >= vram_bank_count) return Err("tried to get vram bank that was out of range.");
-    return Ok(&vram_banks[bank_index]);
+/* Get the VRAM bank for this GPU adapter. */
+VRAMBank& GPUAdapter::get_vram_bank() {
+    return *vram_bank;
 }

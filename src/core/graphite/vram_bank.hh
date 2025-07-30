@@ -20,9 +20,6 @@ struct ImplVRAMBank;
 class VRAMBank : ImplVRAMBank {
     GPUAdapter* gpu = nullptr;
 
-    /* Index of this VRAM Bank */
-    u32 bank_index = 0u;
-
     /* Resources */
     Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
 
@@ -30,10 +27,12 @@ class VRAMBank : ImplVRAMBank {
 public: 
     /* Create a new render target resource. (aka, swapchain) */
     Result<RenderTarget> create_render_target(TargetDesc& target, u32 def_width = 1440u, u32 def_height = 810u);
+    /* Destroy a render target resource. (aka, swapchain) */
+    void destroy_render_target(RenderTarget& render_target);
 
 private:
     /* Initialize the VRAM bank. */
-    Result<void> init(GPUAdapter& gpu, u32 bank_index);
+    Result<void> init(GPUAdapter& gpu);
 
     /* ===== Platform-specific ===== */
 public:
