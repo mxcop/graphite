@@ -148,7 +148,7 @@ Result<void> RenderGraph::end_graph() {
             NodeMeta& meta = node_meta[lane];
 
             /* Make sure this node won't be included again */
-            for (u32& version : meta.versions) version = 100000u;
+            for (u32& version : meta.versions) version = UINT32_MAX;
 
             /* Update the resource versions */
             for (u32 i = 0u; i < node->dependencies.size(); ++i) {
