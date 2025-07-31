@@ -4,22 +4,24 @@
 
 #include "nodes/compute_node.hh"
 
+#define DEBUG_LOGGING 1
+
 void RenderGraph::new_graph(u32 node_count) {
     /* Clear out the nodes list */
     for (Node* old_node : nodes)
         delete old_node;
     nodes.clear();
     nodes.reserve(node_count);
+    waves.clear();
+    waves.reserve(node_count);
 }
 
-/* Collection of metadata for a graph node. (used during topology sort) */
+/* Collection of metadata for a graph node. (used during graph compilation) */
 struct NodeMeta {
     /* List of versions, one for each dependency. */
     std::vector<u32> versions {};
     /* List of sources (node indices), one for each dependency. */
     std::vector<u32> sources {};
-    /* List of destinations (node indices) */
-    std::vector<u32> destinations {};
     /* Number of input & output nodes. */
     u32 input_nodes = 0u, output_nodes = 0u;
 };
@@ -30,9 +32,6 @@ inline u32 dependency_key(const Dependency& dep) {
 };
 
 Result<void> RenderGraph::end_graph() {
-
-    /* TODO: Figure out all dependencies between graph nodes. */
-    
     /* Resource version hashmap (key: handle, value: version) */
     std::unordered_map<u32, u32> version_map {};
     /* Resource source hashmap (key: handle, value: source_node_index) */
@@ -63,7 +62,6 @@ Result<void> RenderGraph::end_graph() {
                 meta.sources[j] = UINT32_MAX;
             } else {
                 meta.sources[j] = source_map[key];
-                node_meta[meta.sources[j]].destinations.push_back(i); /* <- insert destination */
                 node_meta[meta.sources[j]].output_nodes += 1u;
                 meta.input_nodes += 1u; /* <- increment input node count */
             }
@@ -76,6 +74,7 @@ Result<void> RenderGraph::end_graph() {
         }
     }
 
+#if DEBUG_LOGGING
     /* Debug logging */
     for (u32 i = 0u; i < nodes.size(); ++i) {
         /* Get the node and its metadata */
@@ -110,31 +109,72 @@ Result<void> RenderGraph::end_graph() {
         printf(" %u -> %u", meta.input_nodes, meta.output_nodes);
         printf("\n");
     }
-    
-    /* Find node clusters in the graph */
-    for (u32 i = 0u, s = 0u, c = 0u; i < nodes.size(); ++i) {
-        /* Get the node and its metadata */
-        const Node* node = nodes[i];
-        const NodeMeta& meta = node_meta[i];
+#endif
 
-        /* Look for a fork at this point in the graph */
-        bool is_fork = meta.input_nodes > 1u;
-        for (const u32 j : meta.destinations) {
-            if (node_meta[j].input_nodes > 1u) { 
-                is_fork = true;
+    /* Re-use the resource version hashmap */
+    version_map.clear();
+
+    /* Compile the nodes into waves using topology sorting */
+    for (u32 wave = 0u;; ++wave) {
+        /* Find lanes with no unresolved dependencies */
+        std::vector<u32> next_wave {};
+        for (u32 lane = 0u; lane < nodes.size(); ++lane) {
+            /* Get the node and its metadata */
+            const Node* node = nodes[lane];
+            const NodeMeta& meta = node_meta[lane];
+
+            /* Look for unresolved dependencies in this node */
+            bool has_deps = false; 
+            for (u32 i = 0u; i < node->dependencies.size(); ++i) {
+                const Dependency& dep = node->dependencies[i];
+
+                if (meta.versions[i] == version_map[dependency_key(dep)]) continue;
+                has_deps = true;
                 break;
             }
+
+            /* Found a node with no unresolved dependencies */
+            if (has_deps == false) next_wave.emplace_back(lane);
         }
 
-        /* Continue in this cluster if there's no fork in the graph */
-        if (is_fork == false) continue;
+        if (next_wave.empty()) break; /* No more waves left */
 
-        printf("cluster %u: %u..=%u\n", c, s, i);
+        /* Update the outputs of this new wave for the next wave */
+        for (const u32 lane : next_wave) {
+            waves.emplace_back(wave, lane);
 
-        s = i + 1; /* <- save the new cluster start index */
-        c += 1u;
+            /* Get the node and its metadata */
+            const Node* node = nodes[lane];
+            NodeMeta& meta = node_meta[lane];
+
+            /* Make sure this node won't be included again */
+            for (u32& version : meta.versions) version = 100000u;
+
+            /* Update the resource versions */
+            for (u32 i = 0u; i < node->dependencies.size(); ++i) {
+                const Dependency& dep = node->dependencies[i];
+
+                if (has_flag(dep.flags, DependencyFlags::Readonly) == false) { 
+                    version_map[dependency_key(dep)] += 1;
+                }
+            }
+        }
     }
 
+#if DEBUG_LOGGING
+    /* Debug logging */
+    const u32 wave_count = waves[waves.size() - 1u].wave + 1u;
+    printf("waves: (%u)\n", wave_count);
+    for (u32 wave = 0u; wave < wave_count; ++wave) {
+        for (u32 i = 0u; i < waves.size(); ++i) {
+            if (waves[i].wave != wave) continue;
+            
+            const Node* node = nodes[waves[i].lane];
+            printf("[%u] node '%s'\n", wave, node->label.data());
+        }
+    }
+#endif
+    
     return Ok();
 }
 

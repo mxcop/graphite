@@ -7,6 +7,8 @@
 #include "resources/stock.hh"
 
 struct TargetDesc;
+
+/* Slots are defined per platform */
 struct RenderTargetSlot;
 
 /* Include platform-specific Impl struct */

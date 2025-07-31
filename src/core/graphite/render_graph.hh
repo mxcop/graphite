@@ -9,6 +9,13 @@
 #include "utils/result.hh"
 #include "utils/types.hh"
 
+/* Graph wave lane pair. */
+struct WaveLane {
+    u32 wave = 0u; /* Index of the wave. */
+    u32 lane = 0u; /* Index of the node. */
+    WaveLane(u32 wave, u32 lane) : wave(wave), lane(lane) {}
+};
+
 /* Include platform-specific Impl struct */
 struct ImplRenderGraph;
 #include PLATFORM_H(render_graph)
@@ -24,6 +31,8 @@ class ComputeNode;
 class RenderGraph : ImplRenderGraph {
     /* List of nodes in the order in which they were queued. */
     std::vector<Node*> nodes {};
+    /* Flattened list of waves and their lanes. (output of topology sorting) */
+    std::vector<WaveLane> waves {};
 
     /* ===== Platform-agnostic ===== */
 public:
