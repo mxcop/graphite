@@ -1,5 +1,6 @@
 #pragma once
 
+#include "graphite/utils/types.hh"
 #include "vulkan/api_vk.hh" /* Vulkan API */
 
 /* Render target descriptor, used during render target creation. */
@@ -13,7 +14,17 @@ struct TargetDesc {
 
 /* Render target resource slot. */
 struct RenderTargetSlot {
+    /* Surface resources */
     VkSurfaceKHR surface {};
+    u32 image_count = 0u;
+    VkFormat format {};
+    VkColorSpaceKHR color_space {};
+
+    /* Swapchain resources */
+    VkSwapchainKHR swapchain {};
+    VkImage* images {};
+    VkImageView* views {};
+    VkExtent2D extent {};
 };
 
 struct ImplVRAMBank {};

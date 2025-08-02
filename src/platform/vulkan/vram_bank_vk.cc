@@ -1,22 +1,97 @@
 #include "vram_bank_vk.hh"
 
+#define MAX(A, B) ((A > B) ? A : B)
+#define MIN(A, B) ((A < B) ? A : B)
+
 Result<void> VRAMBank::destroy() {
     return Ok();
 }
 
-Result<RenderTarget> VRAMBank::create_render_target(TargetDesc& target, u32 def_width, u32 def_height) {
+Result<RenderTarget> VRAMBank::create_render_target(TargetDesc& target, u32 width, u32 height) {
     /* Pop a new render target off the stock */
     StockPair resource = render_targets.pop();
-
-    // VkFormat surface_fmt {};
-    // VkColorSpaceKHR surface_cs {};
-    // VkSwapchainKHR swapchain {};
 
     /* Create a KHR surface */
     VkWin32SurfaceCreateInfoKHR surface_ci { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surface_ci.hwnd = target.window;
     if (vkCreateWin32SurfaceKHR(gpu->instance, &surface_ci, nullptr, &resource.data.surface) != VK_SUCCESS) {
-        return Err("failed to create win32 khr surface.");
+        return Err("failed to create win32 surface.");
+    }
+
+    /* Get the capabilities of the KHR surface */
+    VkSurfaceCapabilitiesKHR surface_features {};
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu->physical_device, resource.data.surface, &surface_features) != VK_SUCCESS) {
+        return Err("failed to get surface capabilities.");
+    }
+
+    /* Use the maximum amount of images that are available */
+    resource.data.image_count = surface_features.maxImageCount;
+
+    /* Set the width and height, with respect to the surface limits */
+    resource.data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    resource.data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+
+    /* Get the available surface formats */
+    u32 format_count = 0u;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->physical_device, resource.data.surface, &format_count, nullptr);
+    VkSurfaceFormatKHR* formats = new VkSurfaceFormatKHR[format_count] {};
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->physical_device, resource.data.surface, &format_count, formats);
+
+    /* Find an RGBA8 unorm format */
+    for (u32 i = 0u; i < format_count; ++i) {
+        if (formats[i].format == VK_FORMAT_R8G8B8A8_UNORM) {
+            resource.data.format = formats[i].format;
+            resource.data.color_space = formats[i].colorSpace;
+            break;
+        }
+    }
+    delete[] formats; /* Free the formats */
+
+    /* Make sure we found the format we need */
+    if (resource.data.format != VK_FORMAT_R8G8B8A8_UNORM) {
+        return Err("failed to find rgba unorm surface format.");
+    }
+
+    /* Swapchain creation info */
+    VkSwapchainCreateInfoKHR swapchain_ci { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    swapchain_ci.surface = resource.data.surface;
+    swapchain_ci.minImageCount = resource.data.image_count;
+    swapchain_ci.imageFormat = resource.data.format;
+    swapchain_ci.imageColorSpace = resource.data.color_space;
+    swapchain_ci.imageExtent = resource.data.extent;
+    swapchain_ci.imageArrayLayers = 1u;
+    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_ci.presentMode = VK_PRESENT_MODE_FIFO_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.clipped = true;
+
+    /* Create the swapchain */
+    if (vkCreateSwapchainKHR(gpu->logical_device, &swapchain_ci, nullptr, &resource.data.swapchain) != VK_SUCCESS) {
+        return Err("failed to create swapchain for render target.");
+    }
+
+    /* Get images from the swapchain */
+    resource.data.images = new VkImage[resource.data.image_count] {};
+    if (vkGetSwapchainImagesKHR(gpu->logical_device, resource.data.swapchain, &resource.data.image_count, resource.data.images) != VK_SUCCESS) {
+        return Err("failed to get swapchain images for render target.");
+    }
+
+    /* Create an image view for each swapchain image */
+    resource.data.views = new VkImageView[resource.data.image_count] {};
+    for (u32 i = 0u; i < resource.data.image_count; ++i) {
+        /* Image view creation info */
+        VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        view_ci.image = resource.data.images[i];
+        view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_ci.format = resource.data.format;
+        view_ci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
+
+        /* Create image view */
+        if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.views[i]) != VK_SUCCESS) {
+            return Err("failed to create image view for render target.");
+        }
     }
 
     return Ok(resource.handle);
@@ -25,6 +100,16 @@ Result<RenderTarget> VRAMBank::create_render_target(TargetDesc& target, u32 def_
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     /* Push the handle back onto the stock, and get its slot for cleanup */
     RenderTargetSlot& slot = render_targets.push(render_target);
+
+    /* Destroy the images & views */
+    delete[] slot.images;
+    for (u32 i = 0u; i < slot.image_count; ++i) {
+        vkDestroyImageView(gpu->logical_device, slot.views[i], nullptr);
+    }
+    delete[] slot.views;
+
+    /* Destroy the swapchain */
+    vkDestroySwapchainKHR(gpu->logical_device, slot.swapchain, nullptr);
 
     /* Destroy the KHR surface */
     vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
