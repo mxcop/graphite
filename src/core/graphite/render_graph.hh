@@ -34,8 +34,10 @@ class RenderGraph : ImplRenderGraph {
     /* Flattened list of waves and their lanes. (output of topology sorting) */
     std::vector<WaveLane> waves {};
 
-    /* ===== Platform-agnostic ===== */
 public:
+    /* Initialize the Render Graph. */
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+
     /**
      * @brief Start a new graph, this clear the graph.
      * 
@@ -57,14 +59,9 @@ public:
      */
     ComputeNode& add_compute_pass(std::string_view label, std::string_view file_alias);
 
-    /* ===== Platform-specific ===== */
-public:
-    /* Initialize the Render Graph. */
-    Result<void> init(GPUAdapter& gpu);
-
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
-    Result<void> dispatch(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> dispatch(GPUAdapter& gpu);
 
     /* Destroy the Render Graph, free all its resources. */
-    Result<void> destroy(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> destroy(GPUAdapter& gpu);
 };

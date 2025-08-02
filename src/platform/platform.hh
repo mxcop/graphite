@@ -1,6 +1,6 @@
 #pragma once
 
-/* Some default platform defines */
+/* Some default platform defines. */
 #ifndef PLATFORM
 #define PLATFORM vulkan
 #endif
@@ -8,15 +8,21 @@
 #define PLATFORM_EXT vk
 #endif
 
-/* Concatenation macros */
+/* 
+ * Indicates a function is **implemented per platform**.
+ * Implementations for these functions can be found in the `platform/` folder.
+ */
+#define PLATFORM_SPECIFIC
+
+/* Concatenation macros. */
 #define __CAT(X,Y) X##Y
 #define CAT(X,Y) __CAT(X,Y)
 #define CAT_7(A, B, C, D, E, F, G) CAT(A, CAT(B, CAT(C, CAT(D, CAT(E, CAT(F, G))))))
 
-/* Stringification macros */
+/* Stringification macros. */
 #define __STR(X) #X
 #define STR(X) __STR(X)
 
-/* Platform-specific file include macros */
+/* Platform-specific file include macros. */
 #define PLATFORM_H(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .hh))
 // #define PLATFORM_C(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .cc))

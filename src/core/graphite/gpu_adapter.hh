@@ -28,27 +28,23 @@ class GPUAdapter : ImplGPUAdapter {
 
     /* VRAM bank for this GPU adapter. */
     VRAMBank* vram_bank = nullptr;
-
-    /* ===== Platform-agnostic ===== */
-public:
-    /* Set the debug logger callback. */
-    void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);
-
-private:
+    
     /* Log a message using the active debug logger. */
     void log(DebugSeverity severity, const char* msg);
 
     /* Initialize the VRAM bank for this GPU adapter. */
     Result<void> init_vram_bank();
 
-    /* ===== Platform-specific ===== */
 public:
     /* Initialize the GPU adapter. */
-    Result<void> init(bool debug_mode = false);
+    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false);
     
+    /* Set the debug logger callback. */
+    void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);
+
     /* Get the VRAM bank for this GPU adapter. */
-    VRAMBank& get_vram_bank();
+    PLATFORM_SPECIFIC VRAMBank& get_vram_bank();
 
     /* Destroy the GPU adapter, free all its resources. */
-    Result<void> destroy();
+    PLATFORM_SPECIFIC Result<void> destroy();
 };
