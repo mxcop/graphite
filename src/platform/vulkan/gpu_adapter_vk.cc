@@ -99,8 +99,6 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Log the selected queue families */
     this->log(DebugSeverity::Info, strfmt("selected queues: G%u C%u T%u", queue_families.queue_combined, queue_families.queue_compute, queue_families.queue_transfer).data());
     
-    /* TODO: Create the logical device */
-
     /* Vulkan device queue creation info */
     const float priority = 0.0f;
     VkDeviceQueueCreateInfo device_queues_ci[3] {};

@@ -6,13 +6,12 @@
 #include "utils/result.hh"
 #include "resources/stock.hh"
 
-struct TargetDesc;
-
 /* Slots are defined per platform */
-struct RenderTargetSlot;
+PLATFORM_SPECIFIC struct TargetDesc;
+PLATFORM_SPECIFIC struct RenderTargetSlot;
 
 /* Include platform-specific Impl struct */
-struct ImplVRAMBank;
+PLATFORM_SPECIFIC struct ImplVRAMBank;
 #include PLATFORM_H(vram_bank)
 
 /**

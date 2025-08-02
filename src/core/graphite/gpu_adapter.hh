@@ -8,7 +8,7 @@
 class VRAMBank;
 
 /* Include platform-specific Impl struct */
-struct ImplGPUAdapter;
+PLATFORM_SPECIFIC struct ImplGPUAdapter;
 #include PLATFORM_H(gpu_adapter)
 
 /* Debug logger data. */
@@ -47,4 +47,7 @@ public:
 
     /* Destroy the GPU adapter, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
+
+    /* To access the hidden graphics resources. */
+    friend class VRAMBank;
 };

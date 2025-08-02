@@ -64,10 +64,17 @@ class Stock {
         return StockPair(handle, data);
     }
 
-    /* Push a resource back onto the stack. */
-    void push(Handle& handle) {
+    /* Get a resource slot from its handle. */
+    Slot& get(Handle handle) {
+        return pool[handle.index - 1u];
+    }
+
+    /* Push a resource back onto the stack. (returns a reference to the now open slot) */
+    Slot& push(Handle& handle) {
         stack[--stack_ptr] = handle;
+        Slot& data = pool[handle.index - 1u];
         handle = Handle();
+        return data;
     }
 
     /* To access the constructor. */

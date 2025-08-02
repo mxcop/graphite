@@ -17,7 +17,7 @@ struct WaveLane {
 };
 
 /* Include platform-specific Impl struct */
-struct ImplRenderGraph;
+PLATFORM_SPECIFIC struct ImplRenderGraph;
 #include PLATFORM_H(render_graph)
 
 /* Graph nodes. */
