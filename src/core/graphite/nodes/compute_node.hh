@@ -38,5 +38,8 @@ public:
     /* Set the work size for this node. (this will be divided by the `group_size` to get the dispatch size) */
     inline ComputeNode& work_size(u32 x, u32 y = 1u, u32 z = 1u) { work_x = x; work_y = y; work_z = z; return *this; }
 
+    /* Get the shader file alias for this compute node. */
+    inline std::string_view get_sfa() const { return compute_sfa; }
+
     friend class RenderGraph;
 };

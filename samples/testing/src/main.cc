@@ -145,7 +145,7 @@ int main() {
         //     .work_size(1440, 810);
 
         rg.end_graph();
-        rg.dispatch(gpu);
+        rg.dispatch();
 
         /* Check if we are still running */
         if (glfwWindowShouldClose(win))
@@ -157,7 +157,7 @@ int main() {
     bank.destroy_render_target(rt);
 
     /* Cleanup the VRAM bank & GPU adapter */
-    rg.destroy(gpu).expect("failed to destroy render graph.");
+    rg.destroy().expect("failed to destroy render graph.");
     bank.destroy().expect("failed to destroy vram bank.");
     gpu.destroy().expect("failed to destroy gpu adapter.");
 

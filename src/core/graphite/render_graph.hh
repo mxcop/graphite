@@ -29,6 +29,8 @@ class ComputeNode;
  * Used to queue and dispatch a graph of render passes.
  */
 class RenderGraph : ImplRenderGraph {
+    GPUAdapter* gpu = nullptr;
+
     /* List of nodes in the order in which they were queued. */
     std::vector<Node*> nodes {};
     /* Flattened list of waves and their lanes. (output of topology sorting) */
@@ -60,8 +62,8 @@ public:
     ComputeNode& add_compute_pass(std::string_view label, std::string_view file_alias);
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
-    PLATFORM_SPECIFIC Result<void> dispatch(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> dispatch();
 
     /* Destroy the Render Graph, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> destroy();
 };

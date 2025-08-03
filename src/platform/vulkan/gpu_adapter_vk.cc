@@ -37,7 +37,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
-    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.apiVersion = VK_API_VERSION_1_2;
     
     /* Debug utilities messenger (for debug mode) */
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
