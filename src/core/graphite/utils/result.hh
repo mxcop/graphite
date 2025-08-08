@@ -37,7 +37,8 @@ inline result::ok<CT> Ok(T&& val) {
 inline result::ok<void> Ok() { return result::ok<void>(); }
 
 /* Function for making an Err result */
-result::err Err(const std::string fmt, ...);
+result::err Err(const std::string_view fmt, ...);
+result::err Err(const std::string msg);
 result::err Err(const char* msg);
 
 /**

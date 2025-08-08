@@ -21,7 +21,7 @@ VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDe
 Result<void> GPUAdapter::init(bool debug_mode) {
     /* Initialize VRAM banks */
     if (const Result r = init_vram_bank(); r.is_err()) {
-        return Err(r.unwrap_err().c_str());
+        return Err(r.unwrap_err());
     }
 
     /* Load Vulkan API functions */
@@ -54,7 +54,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
 
     /* Check if all required instance extensions are supported */
     if (const Result r = query_instance_support(instance_ext, instance_ext_count); r.is_err()) {
-        return Err(r.unwrap_err().c_str());
+        return Err(r.unwrap_err());
     }
 
     /* Vulkan instance creation info */

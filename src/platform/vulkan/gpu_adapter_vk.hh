@@ -4,6 +4,8 @@
 #include "wrapper/queue_selection_vk.hh"
 
 struct ImplGPUAdapter {
+protected:
+    /* Vulkan gpu state */
     VkInstance instance {};
     VkPhysicalDevice physical_device {};
     VkQueueFamilies queue_families {};
@@ -13,6 +15,9 @@ struct ImplGPUAdapter {
     /* Vulkan debug / validation */
     bool validation = false;
     VkDebugUtilsMessengerEXT debug_messenger {};
+
+    /* To access the hidden graphics resources. */
+    friend class PipelineCache;
 };
 
 /* Interface header */

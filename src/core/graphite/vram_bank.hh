@@ -18,7 +18,7 @@ PLATFORM_SPECIFIC struct ImplVRAMBank;
  * Video Memory Bank / Video Resource Manager.  
  * Used to create and manage GPU resources.
  */
-class VRAMBank : ImplVRAMBank {
+class VRAMBank : public ImplVRAMBank {
     GPUAdapter* gpu = nullptr;
 
     /* Resources */

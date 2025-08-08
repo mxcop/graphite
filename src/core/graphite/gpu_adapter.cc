@@ -28,7 +28,7 @@ Result<void> GPUAdapter::init_vram_bank() {
     /* Allocate & initialize VRAM bank */
     vram_bank = new VRAMBank {};
     if (const Result r = vram_bank->init(*this); r.is_err()) {
-        return Err(r.unwrap_err().c_str());
+        return Err(r.unwrap_err());
     }
     return Ok();
 }

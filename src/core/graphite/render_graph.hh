@@ -28,7 +28,7 @@ class ComputeNode;
  * Render Graph.  
  * Used to queue and dispatch a graph of render passes.
  */
-class RenderGraph : ImplRenderGraph {
+class RenderGraph : public ImplRenderGraph {
     GPUAdapter* gpu = nullptr;
 
     /* List of nodes in the order in which they were queued. */

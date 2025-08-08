@@ -22,7 +22,7 @@ struct DebugLogger {
  * Graphics Processing Unit Adapter.  
  * Used to find and initialize a GPU.
  */
-class GPUAdapter : ImplGPUAdapter {
+class GPUAdapter : public ImplGPUAdapter {
     /* Active debug logger. */
     DebugLogger logger {empty_logger, DebugLevel::Warning, nullptr};
 
