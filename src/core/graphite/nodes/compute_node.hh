@@ -10,18 +10,18 @@ class RenderTarget;
  * Render Graph Compute Node.  
  * Used to build a compute shader pass.
  */
-class ComputeNode : Node {
-    /* Compute shader file alias */
-    std::string_view compute_sfa {};
-
-    u32 group_x = 1u, group_y = 1u, group_z = 1u; /* Thread group size */
-    u32 work_x = 1u, work_y = 1u, work_z = 1u; /* Work size */
-    
+class ComputeNode : public Node {
     /* Can only be constructed by the RenderGraph */
     ComputeNode() = default;
     ComputeNode(std::string_view label, std::string_view file_alias);
 
 public:
+    /* Compute shader file alias */
+    std::string_view compute_sfa {};
+
+    u32 group_x = 1u, group_y = 1u, group_z = 1u; /* Thread group size */
+    u32 work_x = 1u, work_y = 1u, work_z = 1u; /* Work size */
+
     /* No copies allowed */
     ComputeNode(const ComputeNode&) = delete;
     ComputeNode& operator=(const ComputeNode&) = delete;
@@ -37,9 +37,6 @@ public:
 
     /* Set the work size for this node. (this will be divided by the `group_size` to get the dispatch size) */
     inline ComputeNode& work_size(u32 x, u32 y = 1u, u32 z = 1u) { work_x = x; work_y = y; work_z = z; return *this; }
-
-    /* Get the shader file alias for this compute node. */
-    inline std::string_view get_sfa() const { return compute_sfa; }
 
     friend class RenderGraph;
 };

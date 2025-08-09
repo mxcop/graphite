@@ -62,6 +62,7 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
         ${PLATFORM_DIR}/vulkan/wrapper/extensions_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/pipeline_cache_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/shader_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/translate_vk.cc
     )
 endif()
 

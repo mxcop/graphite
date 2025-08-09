@@ -16,12 +16,20 @@ enum class DependencyFlags : u32 {
 };
 ENUM_CLASS_FLAGS(DependencyFlags);
 
+/* Render Graph resource dependency stages. */
+enum class DependencyStages : u32 {
+    None = 0u,
+    Compute = 1u << 0u,
+};
+ENUM_CLASS_FLAGS(DependencyStages);
+
 /* Render Graph resource dependency. */
 struct Dependency {
     BindHandle resource {};
     DependencyFlags flags {};
+    DependencyStages stages {};
 
-    Dependency(BindHandle resource, DependencyFlags flags);
+    Dependency(BindHandle resource, DependencyFlags flags, DependencyStages stages);
 };
 
 /* Render Graph node type. */
@@ -38,16 +46,13 @@ class Node {
 public:
     /* Unique label. (primarily for debugging) */
     std::string_view label {}; 
+
     /* Node type. */
     NodeType type = NodeType::Invalid;
 
-    Node() = delete;
-
-protected:
     /* List of node resource dependencies. */
     std::vector<Dependency> dependencies {};
 
+    Node() = delete;
     Node(std::string_view label, NodeType type);
-
-    friend class RenderGraph;
 };
