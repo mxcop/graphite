@@ -36,9 +36,15 @@ class RenderGraph : public ImplRenderGraph {
     /* Flattened list of waves and their lanes. (output of topology sorting) */
     std::vector<WaveLane> waves {};
 
+    /* Path to load shaders from. */
+    std::string shader_path = ".";
+
 public:
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+
+    /* Set the path from which to load shader files. */
+    void set_shader_path(std::string path) { shader_path = path; };
 
     /**
      * @brief Start a new graph, this clear the graph.
@@ -56,10 +62,10 @@ public:
      * @brief Add a compute pass to the render graph.
      * 
      * @param label Label for this pass. (should be unique)
-     * @param file_alias Alias used to find the shader file `shader:my_shader`.
+     * @param shader_path Path to the shader file relative to the shader path set using `set_shader_path(...)`.
      * @return The new compute node to be customized using the builder pattern.
      */
-    ComputeNode& add_compute_pass(std::string_view label, std::string_view file_alias);
+    ComputeNode& add_compute_pass(std::string_view label, std::string_view shader_path);
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch();

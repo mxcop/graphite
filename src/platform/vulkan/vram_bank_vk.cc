@@ -7,7 +7,7 @@ Result<void> VRAMBank::destroy() {
     return Ok();
 }
 
-Result<RenderTarget> VRAMBank::create_render_target(TargetDesc& target, u32 width, u32 height) {
+Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u32 width, u32 height) {
     /* Pop a new render target off the stock */
     StockPair resource = render_targets.pop();
 

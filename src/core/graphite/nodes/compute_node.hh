@@ -13,11 +13,11 @@ class RenderTarget;
 class ComputeNode : public Node {
     /* Can only be constructed by the RenderGraph */
     ComputeNode() = default;
-    ComputeNode(std::string_view label, std::string_view file_alias);
+    ComputeNode(std::string_view label, std::string_view shader_path);
 
 public:
-    /* Compute shader file alias */
-    std::string_view compute_sfa {};
+    /* Compute shader file path */
+    std::string_view compute_path {};
 
     u32 group_x = 1u, group_y = 1u, group_z = 1u; /* Thread group size */
     u32 work_x = 1u, work_y = 1u, work_z = 1u; /* Work size */

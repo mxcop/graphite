@@ -9,8 +9,8 @@
 /* Create a descriptor layout for a compute node. */
 Result<VkDescriptorSetLayout> descriptor_layout(VkDevice device, const ComputeNode& node);
 
-Result<Pipeline> PipelineCache::get_pipeline(const ComputeNode& node) {
-    const std::string key = std::string(node.compute_sfa);
+Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const ComputeNode& node) {
+    const std::string key = std::string(node.compute_path);
 
     /* Check the cache for a hit */
     if (cache.count(key) == 1u) return Ok(cache[key]);
@@ -18,7 +18,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const ComputeNode& node) {
     Pipeline pipeline {};
 
     /* Try to load the shader module for the new pipeline */
-    const Result r_shader = shader::from_alias(gpu->logical_device, node.compute_sfa);
+    const Result r_shader = shader::from_alias(gpu->logical_device, path, node.compute_path);
     if (r_shader.is_err()) return Err(r_shader.unwrap_err());
     const VkShaderModule shader = r_shader.unwrap();
     

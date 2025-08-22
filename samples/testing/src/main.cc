@@ -30,23 +30,22 @@ int main() {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
+    rg.set_shader_path("kernels");
 
     /* Create a window using GLFW */
     glfwInit();
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     GLFWwindow* win = glfwCreateWindow(1440, 810, "Graphite Test Sample", NULL, NULL);
 
-    /* TODO: Create RenderTarget through VRAMBank, bank.create_render_target(TargetDesc); */
-    /* Render targets will get their own handle (& type), so its easier to work with. */
-
     /* Initialize the Render Target */
-    TargetDesc target { glfwGetWin32Window(win) };
+    const TargetDesc target { glfwGetWin32Window(win) };
     RenderTarget rt {};
     if (const Result r = bank.create_render_target(target); r.is_err()) {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
 
+#if 0
     const u32 key_7 = 0x7u;
     BindHandle dummy_7 = (BindHandle&)key_7;
     const u32 key_8 = 0x8u;
@@ -131,19 +130,6 @@ int main() {
             .group_size(16, 8)
             .work_size(1440, 810); 
 
-        // rg.add_compute_pass("reader", "shader:reader")
-        //     .read(img_b)
-        //     .write(img_a)
-        //     .group_size(16, 8)
-        //     .work_size(1440, 810);
-
-        // rg.add_compute_pass("final", "shader:final")
-        //     .read(img_a)
-        //     .read(img_b)
-        //     .write(rt)
-        //     .group_size(16, 8)
-        //     .work_size(1440, 810);
-
         rg.end_graph();
         rg.dispatch();
 
@@ -152,6 +138,29 @@ int main() {
             break;
         break; /* Exit for testing */
     }
+#else
+    /* Main loop */
+    for (;;) {
+        /* Poll events */
+        glfwPollEvents();
+
+        rg.new_graph();
+
+        /* Root A */
+        rg.add_compute_pass("render pass", "test")
+            .write(rt)
+            .group_size(16, 8)
+            .work_size(1440, 810);
+            
+        rg.end_graph();
+        rg.dispatch();
+
+        /* Check if we are still running */
+        if (glfwWindowShouldClose(win))
+            break;
+        break; /* Exit for testing */
+    }
+#endif
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);

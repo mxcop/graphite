@@ -7,3 +7,7 @@
 #endif
 
 #include <volk.h> /* Vulkan API */
+
+/* Divide two numbers, rounding up. */
+template <typename T>
+T div_up(const T x, const T y) { return (x + y - 1) / y; }

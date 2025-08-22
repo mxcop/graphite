@@ -28,19 +28,13 @@ inline Bytes read_binary_file(const std::string_view path) {
 }
 
 /* Convert a shader alias to an asset path. */
-std::string shader_path(const std::string_view alias) {
-    /* Make sure the alias starts with `shader:` */
-    if (alias._Starts_with("shader:") == false) return "";
-
-    /* Convert the alias to an asset path */
-    std::string path = "shaders/slang" + std::string(alias.substr(6u, alias.size() - 6u));
-    for (char& ch : path) ch = (ch == ':' ? '/' : ch);
-    return path + ".spv";
+std::string shader_path(const std::string_view base_path, const std::string_view alias) {
+    return std::string(base_path) + "/" + std::string(alias) + ".spv";
 }
 
-Result<VkShaderModule> from_alias(const VkDevice device, const std::string_view alias) {
+Result<VkShaderModule> from_alias(const VkDevice device, const std::string_view path, const std::string_view alias) {
     /* Try to load the shader as binary */
-    const Bytes bytes = read_binary_file(shader_path(alias));
+    const Bytes bytes = read_binary_file(shader_path(path, alias));
     if (bytes.empty()) return Err("failed to load shader file.");
 
     /* Shader module create info */

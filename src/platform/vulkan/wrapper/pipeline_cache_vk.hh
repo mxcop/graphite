@@ -27,5 +27,5 @@ public:
     PipelineCache(GPUAdapter& gpu) : gpu(&gpu) {}
 
     /* Get a pipeline from the cache, or load the pipeline if it's not already cached. */
-    Result<Pipeline> get_pipeline(const ComputeNode& node);
+    Result<Pipeline> get_pipeline(const std::string_view path, const ComputeNode& node);
 };

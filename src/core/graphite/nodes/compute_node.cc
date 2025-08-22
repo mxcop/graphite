@@ -1,6 +1,6 @@
 #include "compute_node.hh"
 
-ComputeNode::ComputeNode(std::string_view label, std::string_view file_alias) : Node(label, NodeType::Compute), compute_sfa(file_alias) {}
+ComputeNode::ComputeNode(std::string_view label, std::string_view shader_path) : Node(label, NodeType::Compute), compute_path(shader_path) {}
 
 ComputeNode& ComputeNode::write(BindHandle resource) {
     /* Insert the write dependency */
