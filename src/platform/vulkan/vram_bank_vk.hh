@@ -24,6 +24,7 @@ struct RenderTargetSlot {
     VkSwapchainKHR swapchain {};
     VkImage* images {};
     VkImageView* views {};
+    VkSemaphore* acquired_semaphores {};
     VkExtent2D extent {};
 };
 

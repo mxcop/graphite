@@ -8,3 +8,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
 
     return Ok();
 }
+
+RenderTargetSlot& VRAMBank::get_render_target(RenderTarget render_target) {
+    return render_targets.get(render_target);
+}

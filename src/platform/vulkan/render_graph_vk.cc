@@ -1,5 +1,7 @@
 #include "render_graph_vk.hh"
 
+#include "graphite/vram_bank.hh"
+
 Result<void> RenderGraph::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
 
@@ -36,8 +38,10 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
             return Err("failed to allocate command buffer for graph.");
         if (vkCreateFence(gpu.logical_device, &fence_ci, nullptr, &graphs[i].flight_fence) != VK_SUCCESS)
             return Err("failed to create in-flight fence for graph.");
-        if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].ready_semaphore) != VK_SUCCESS)
-            return Err("failed to create ready semaphore for graph.");
+        if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
+            return Err("failed to create start semaphore for graph.");
+        if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].end_semaphore) != VK_SUCCESS)
+            return Err("failed to create end semaphore for graph.");
     }
 
     return Ok();
@@ -54,6 +58,16 @@ Result<void> RenderGraph::dispatch() {
     if (vkWaitForFences(gpu->logical_device, 1u, &graph.flight_fence, true, TIMEOUT) != VK_SUCCESS) {
         return Err("failed while waiting for graph in-flight fence.");
     }
+    
+    /* Get the render target image index for this graph */
+    const bool has_target = target.is_null() == false;
+    u32 image_index = UINT32_MAX;
+    if (has_target) {
+        const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+        if (vkAcquireNextImageKHR(gpu->logical_device, rt.swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &image_index) != VK_SUCCESS) {
+            return Err("failed to acquire next swapchain image for render target.");
+        }
+    }
 
     /* Begin recording commands to the graphs command buffer */
     VkCommandBufferBeginInfo cmd_begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -63,6 +77,8 @@ Result<void> RenderGraph::dispatch() {
     }
 
     // TODO: Queue all the waves of passes here!!!
+
+    // TODO: Insert render target sync barrier here if needed.
 
     /* Finish recording commands to the graphs command buffer */
     vkEndCommandBuffer(graph.cmd);
@@ -75,21 +91,38 @@ Result<void> RenderGraph::dispatch() {
     /* Graph submission info */
     const VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkSubmitInfo submit { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-    // submit.waitSemaphoreCount = 1u; /* Wait for image acquired */
-    // submit.pWaitSemaphores = &frame.image_acquired;
-    // TODO: Add render target semaphores here ^^^
     submit.pWaitDstStageMask = &wait_stage;
     submit.commandBufferCount = 1u;
     submit.pCommandBuffers = &graph.cmd;
     submit.signalSemaphoreCount = 1u; /* Signal when the work completes */
-    submit.pSignalSemaphores = &graph.ready_semaphore;
+    submit.pSignalSemaphores = &graph.end_semaphore;
+    if (has_target) {
+        submit.waitSemaphoreCount = 1u; /* Wait for image acquired */
+        submit.pWaitSemaphores = &graph.start_semaphore;
+    }
 
     /* Submit the graph commands to the queue */
     if (vkQueueSubmit(gpu->queues.queue_combined, 1u, &submit, graph.flight_fence) != VK_SUCCESS) {
         return Err("failed to submit graph commands.");
     }
 
-    // TODO: Queue presentation for all render targets involved in graph.
+    /* Present the graph results after rendering completes */
+    if (has_target) {
+        const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+
+        /* Presentation info */
+        VkPresentInfoKHR present { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+        present.waitSemaphoreCount = 1u; /* Wait for render to complete */
+        present.pWaitSemaphores = &graph.end_semaphore;
+        present.swapchainCount = 1u;
+        present.pSwapchains = &rt.swapchain;
+        present.pImageIndices = &image_index;
+
+        /* Queue presentation */
+        if (vkQueuePresentKHR(gpu->queues.queue_combined, &present) != VK_SUCCESS) {
+            return Err("failed to present to render target.");
+        }
+    }
 
     next_graph++;
     return Ok();
@@ -103,7 +136,8 @@ Result<void> RenderGraph::destroy() {
     vkDestroyCommandPool(gpu->logical_device, cmd_pool, nullptr);
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         vkDestroyFence(gpu->logical_device, graphs[i].flight_fence, nullptr);
-        vkDestroySemaphore(gpu->logical_device, graphs[i].ready_semaphore, nullptr);
+        vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
+        vkDestroySemaphore(gpu->logical_device, graphs[i].end_semaphore, nullptr);
     }
     delete[] graphs;
 

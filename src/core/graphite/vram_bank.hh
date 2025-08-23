@@ -27,6 +27,9 @@ class VRAMBank : public ImplVRAMBank {
     /* Initialize the VRAM bank. */
     Result<void> init(GPUAdapter& gpu);
 
+    /* Get a render target slot by handle. */
+    RenderTargetSlot& get_render_target(RenderTarget render_target);
+
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u);
@@ -39,4 +42,6 @@ public:
 
     /* To access the init function. */
     friend class GPUAdapter;
+    /* To access the getter functions. */
+    friend class RenderGraph;
 };

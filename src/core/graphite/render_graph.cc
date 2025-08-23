@@ -37,6 +37,9 @@ Result<void> RenderGraph::end_graph() {
     /* Resource source hashmap (key: handle, value: source_node_index) */
     std::unordered_map<u32, u32> source_map {};
 
+    /* Reset the current render target to NULL */
+    target = RenderTarget();
+
     /* Propegate dependency versions through the graph */
     std::vector<NodeMeta> node_meta(nodes.size());
     for (u32 i = 0u; i < nodes.size(); ++i) {
@@ -70,6 +73,12 @@ Result<void> RenderGraph::end_graph() {
             if (has_flag(dep.flags, DependencyFlags::Readonly) == false) {
                 version_map[key] += 1u; /* <- increment version */
                 source_map[key] = i; /* <- store source node index */
+
+                /* Save this resource if it is a render target */
+                if (dep.resource.get_type() == ResourceType::RenderTarget) {
+                    if (target.is_null() == false) return Err("multiple render targets are not allowed in the same graph.");
+                    target = (RenderTarget&)dep.resource;
+                }
             }
         }
     }

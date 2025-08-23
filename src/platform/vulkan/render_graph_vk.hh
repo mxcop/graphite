@@ -7,8 +7,10 @@
 /* The execution data for a graph. */
 struct GraphExecution {
     VkCommandBuffer cmd {};
+    /* Triggered when the execution can start. (only used when using swapchain) */
+    VkSemaphore start_semaphore {};
     /* Triggered when the execution has finished. */
-    VkSemaphore ready_semaphore {};
+    VkSemaphore end_semaphore {};
     /* Indicates whether this execution is in flight. */
     VkFence flight_fence {};
 };

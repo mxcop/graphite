@@ -6,6 +6,7 @@
 #include "platform/platform.hh"
 
 #include "gpu_adapter.hh"
+#include "resources/handle.hh"
 #include "utils/result.hh"
 #include "utils/types.hh"
 
@@ -35,6 +36,8 @@ class RenderGraph : public ImplRenderGraph {
     std::vector<Node*> nodes {};
     /* Flattened list of waves and their lanes. (output of topology sorting) */
     std::vector<WaveLane> waves {};
+    /* Each graph can have up to 1 render target. */
+    RenderTarget target {};
 
     /* Path to load shaders from. */
     std::string shader_path = ".";
