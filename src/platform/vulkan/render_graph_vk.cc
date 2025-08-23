@@ -61,10 +61,11 @@ Result<void> RenderGraph::dispatch() {
     
     /* Get the render target image index for this graph */
     const bool has_target = target.is_null() == false;
+    const RenderTargetSlot* rt = nullptr;
     u32 image_index = UINT32_MAX;
     if (has_target) {
-        const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
-        if (vkAcquireNextImageKHR(gpu->logical_device, rt.swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &image_index) != VK_SUCCESS) {
+        rt = &gpu->get_vram_bank().get_render_target(target);
+        if (vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &image_index) != VK_SUCCESS) {
             return Err("failed to acquire next swapchain image for render target.");
         }
     }
@@ -78,7 +79,19 @@ Result<void> RenderGraph::dispatch() {
 
     // TODO: Queue all the waves of passes here!!!
 
-    // TODO: Insert render target sync barrier here if needed.
+    /* Insert render target pipeline barrier at the end of the command buffer */
+    if (has_target) {
+        VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        rt_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        rt_barrier.image = rt->images[image_index];
+        rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
+        vkCmdPipelineBarrier(graph.cmd, 
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            0u, 0u, nullptr, 0u, nullptr, 1u, &rt_barrier
+        );
+    }
 
     /* Finish recording commands to the graphs command buffer */
     vkEndCommandBuffer(graph.cmd);
@@ -108,14 +121,12 @@ Result<void> RenderGraph::dispatch() {
 
     /* Present the graph results after rendering completes */
     if (has_target) {
-        const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
-
         /* Presentation info */
         VkPresentInfoKHR present { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         present.waitSemaphoreCount = 1u; /* Wait for render to complete */
         present.pWaitSemaphores = &graph.end_semaphore;
         present.swapchainCount = 1u;
-        present.pSwapchains = &rt.swapchain;
+        present.pSwapchains = &rt->swapchain;
         present.pImageIndices = &image_index;
 
         /* Queue presentation */
@@ -124,7 +135,9 @@ Result<void> RenderGraph::dispatch() {
         }
     }
 
-    next_graph++;
+    /* Update the next graph index */
+    if (++next_graph >= max_graphs_in_flight) next_graph = 0u;
+    
     return Ok();
 }
 

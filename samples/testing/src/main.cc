@@ -159,7 +159,7 @@ int main() {
         /* Check if we are still running */
         if (glfwWindowShouldClose(win))
             break;
-        break; /* Exit for testing */
+        // break; /* Exit for testing */
     }
 #endif
 
