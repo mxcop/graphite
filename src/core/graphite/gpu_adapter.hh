@@ -50,4 +50,5 @@ public:
 
     /* To access the hidden graphics resources. */
     friend class VRAMBank;
+    friend class RenderGraph;
 };

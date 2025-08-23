@@ -61,7 +61,7 @@ Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
 /* Get the combined, (async) compute, and transfer queues. */
 VkQueues get_queues(VkDevice device, const VkQueueFamilies& families) {
     VkQueues queues {};
-    vkGetDeviceQueue(device, families.queue_compute, 0u, &queues.queue_combined);
+    vkGetDeviceQueue(device, families.queue_combined, 0u, &queues.queue_combined);
     vkGetDeviceQueue(device, families.queue_compute, 0u, &queues.queue_compute);
     vkGetDeviceQueue(device, families.queue_transfer, 0u, &queues.queue_transfer);
     return queues;

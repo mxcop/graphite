@@ -26,11 +26,12 @@ int main() {
     VRAMBank& bank = gpu.get_vram_bank();
 
     /* Initialize the Render Graph */
+    rg.set_shader_path("kernels");
+    rg.set_max_graphs_in_flight(2u); /* Double buffering */
     if (const Result r = rg.init(gpu); r.is_err()) {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
-    rg.set_shader_path("kernels");
 
     /* Create a window using GLFW */
     glfwInit();
@@ -146,7 +147,7 @@ int main() {
 
         rg.new_graph();
 
-        /* Root A */
+        /* Test Pass */
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .group_size(16, 8)

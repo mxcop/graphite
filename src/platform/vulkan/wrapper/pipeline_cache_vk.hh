@@ -24,6 +24,7 @@ class PipelineCache {
     std::unordered_map<std::string, Pipeline> cache {};
 
 public:
+    PipelineCache() = default;
     PipelineCache(GPUAdapter& gpu) : gpu(&gpu) {}
 
     /* Get a pipeline from the cache, or load the pipeline if it's not already cached. */

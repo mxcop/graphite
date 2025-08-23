@@ -39,12 +39,17 @@ class RenderGraph : public ImplRenderGraph {
     /* Path to load shaders from. */
     std::string shader_path = ".";
 
+    /* Maximum number of graphs in flight. */
+    u32 max_graphs_in_flight = 1u;
+
 public:
+    /* Set the path from which to load shader files. (default: `"."`) */
+    void set_shader_path(std::string path) { shader_path = path; };
+    /* Set the maximum number of graphs in flight. (default: `1`) */
+    void set_max_graphs_in_flight(u32 max) { max_graphs_in_flight = max; };
+
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
-
-    /* Set the path from which to load shader files. */
-    void set_shader_path(std::string path) { shader_path = path; };
 
     /**
      * @brief Start a new graph, this clear the graph.

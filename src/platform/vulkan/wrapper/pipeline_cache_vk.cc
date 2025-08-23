@@ -10,11 +10,13 @@
 Result<VkDescriptorSetLayout> descriptor_layout(VkDevice device, const ComputeNode& node);
 
 Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const ComputeNode& node) {
-    const std::string key = std::string(node.compute_path);
+    if (gpu == nullptr) return Err("tried to get pipeline from cache without gpu.");
 
     /* Check the cache for a hit */
+    const std::string key = std::string(node.compute_path);
     if (cache.count(key) == 1u) return Ok(cache[key]);
 
+    /* Fill in the pipeline struct */
     Pipeline pipeline {};
 
     /* Try to load the shader module for the new pipeline */
