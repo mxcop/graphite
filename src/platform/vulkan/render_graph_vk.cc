@@ -1,6 +1,8 @@
 #include "render_graph_vk.hh"
 
 #include "graphite/vram_bank.hh"
+#include "graphite/nodes/node.hh"
+#include "graphite/nodes/compute_node.hh"
 
 Result<void> RenderGraph::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
@@ -44,6 +46,9 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
             return Err("failed to create end semaphore for graph.");
     }
 
+    /* Initialize the pipeline cache */
+    pipeline_cache.init(gpu);
+
     return Ok();
 }
 
@@ -78,6 +83,25 @@ Result<void> RenderGraph::dispatch() {
     }
 
     // TODO: Queue all the waves of passes here!!!
+    for (u32 s = 0u, w = 0u, e = 0u; e <= waves.size(); ++e) {
+        /* If this lane is the start of a new wave */
+        if (e == waves.size() || waves[e].wave != w) {
+            w++;
+            const Result wave_result = queue_wave(graph, s, e);
+            if (wave_result.is_err()) return Err(wave_result.unwrap_err());
+            s = e;
+        }
+    }
+
+    // const u32 wave_count = waves[waves.size() - 1u].wave + 1u;
+    // for (u32 wave = 0u; wave < wave_count; ++wave) {
+    //     for (u32 i = 0u; i < waves.size(); ++i) {
+    //         if (waves[i].wave != wave) continue;
+            
+    //         const Node* node = nodes[waves[i].lane];
+    //         printf("[%u] node '%s'\n", wave, node->label.data());
+    //     }
+    // }
 
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
@@ -137,13 +161,52 @@ Result<void> RenderGraph::dispatch() {
 
     /* Update the next graph index */
     if (++next_graph >= max_graphs_in_flight) next_graph = 0u;
-    
+
+    return Ok();
+}
+
+Result<void> RenderGraph::queue_wave(GraphExecution& graph, u32 start, u32 end) {
+    /* Queue each node in the wave */
+    for (u32 i = start; i < end; ++i) {
+        const Node& node = *nodes[waves[i].lane];
+
+        switch (node.type) {
+            case NodeType::Compute:
+                return queue_compute_node(graph, (const ComputeNode&)node);
+            default:
+                return Err("unknown node type in render graph.");
+        }
+    }
+
+    return Ok();
+}
+
+Result<void> RenderGraph::queue_compute_node(GraphExecution& graph, const ComputeNode& node) {
+    /* Try to get the pipeline for this compute node */
+    const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
+    if (cache_result.is_err()) return Err(cache_result.unwrap_err());
+    const Pipeline pipeline = cache_result.unwrap();
+
+    /* Bind the compute pipeline */
+    vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
+
+    /* Calculate the dispatch size */
+    const u32 dispatch_x = div_up(node.work_x, node.group_x);
+    const u32 dispatch_y = div_up(node.work_y, node.group_y);
+    const u32 dispatch_z = div_up(node.work_z, node.group_z);
+
+    /* Dispatch the compute pipeline */
+    vkCmdDispatch(graph.cmd, dispatch_x, dispatch_y, dispatch_z);
+
     return Ok();
 }
 
 Result<void> RenderGraph::destroy() {
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
+
+    /* Evict the pipeline cache */
+    pipeline_cache.evict();
 
     /* Destroy graph execution resources */
     vkDestroyCommandPool(gpu->logical_device, cmd_pool, nullptr);

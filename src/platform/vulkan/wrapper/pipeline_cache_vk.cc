@@ -4,10 +4,16 @@
 #include "graphite/nodes/compute_node.hh"
 
 #include "shader_vk.hh"
-#include "translate_vk.hh"
+#include "descriptor_vk.hh"
 
-/* Create a descriptor layout for a compute node. */
-Result<VkDescriptorSetLayout> descriptor_layout(VkDevice device, const ComputeNode& node);
+void PipelineCache::evict() {
+    for (const auto& [_, pipeline] : cache) {
+        vkDestroyDescriptorSetLayout(gpu->logical_device, pipeline.descriptors, nullptr);
+        vkDestroyPipelineLayout(gpu->logical_device, pipeline.layout, nullptr);
+        vkDestroyPipeline(gpu->logical_device, pipeline.pipeline, nullptr);
+    }
+    cache.clear();
+}
 
 Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const ComputeNode& node) {
     if (gpu == nullptr) return Err("tried to get pipeline from cache without gpu.");
@@ -25,7 +31,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     const VkShaderModule shader = r_shader.unwrap();
     
     /* Create the descriptor layout for the new pipeline */
-    const Result r_layout = descriptor_layout(gpu->logical_device, node);
+    const Result r_layout = node_descriptor_layout(gpu->logical_device, node);
     if (r_layout.is_err()) return Err(r_layout.unwrap_err());
     pipeline.descriptors = r_layout.unwrap();
 
@@ -62,53 +68,4 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     /* Save the new pipeline to our cache and return it */
     cache[key] = pipeline;
     return Ok(pipeline);
-}
-
-/* Create a descriptor layout binding for a render target resource. */
-VkDescriptorSetLayoutBinding render_target(u32 slot, const Dependency& dep) {
-    VkDescriptorSetLayoutBinding binding {};
-    binding.binding = slot;
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    binding.descriptorCount = 1u;
-    binding.stageFlags = translate::stage_flags(dep.stages);
-    return binding;
-}
-
-/* Create a descriptor layout for a compute node. */
-Result<VkDescriptorSetLayout> descriptor_layout(VkDevice device, const ComputeNode& node) {
-    /* Descriptor bindings */
-    std::vector<VkDescriptorSetLayoutBinding> bindings {};
-
-    /* Create a binding for each dependency */
-    for (const Dependency& dep : node.dependencies) {
-        const ResourceType rtype = dep.resource.get_type();
-        const u32 slot = (u32)bindings.size();
-
-        switch (rtype) {
-            case ResourceType::RenderTarget:
-                bindings.push_back(render_target(slot, dep));
-                break;
-            // case ResourceType::Buffer:
-            //     bindings.push_back(buffer_binding((uint32)bindings.size(), dep));
-            //     break;
-            // case ResourceType::Image:
-            //     bindings.push_back(image_binding((uint32)bindings.size(), dep));
-            //     break;
-            default:
-                return Err("invalid resource type used in graph.");
-        }
-    }
-
-    /* Descriptor set layout creation info (using push descriptors) */
-    VkDescriptorSetLayoutCreateInfo layout_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    layout_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-    layout_ci.bindingCount = (u32)bindings.size();
-    layout_ci.pBindings = bindings.data();
-
-    /* Create the descriptor set layout */
-    VkDescriptorSetLayout layout {};
-    if (vkCreateDescriptorSetLayout(device, &layout_ci, nullptr, &layout) != VK_SUCCESS) {
-        return Err("failed to create descriptor set layout for '%s' node.", node.label.data());
-    }
-    return Ok(layout);
 }

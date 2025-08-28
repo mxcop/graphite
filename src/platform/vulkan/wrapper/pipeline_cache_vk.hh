@@ -25,7 +25,12 @@ class PipelineCache {
 
 public:
     PipelineCache() = default;
-    PipelineCache(GPUAdapter& gpu) : gpu(&gpu) {}
+
+    /* Initialize the pipeline cache. */
+    void init(GPUAdapter& gpu) { this->gpu = &gpu; };
+
+    /* Evict any pipelines from the pipeline cache. */
+    void evict();
 
     /* Get a pipeline from the cache, or load the pipeline if it's not already cached. */
     Result<Pipeline> get_pipeline(const std::string_view path, const ComputeNode& node);

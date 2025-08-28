@@ -7,7 +7,9 @@
 /* Required Vulkan device extensions */
 const char* const device_ext[] = { 
     /* Swapchain extension */
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    /* Push descriptors */
+    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 };
 const u32 device_ext_count = sizeof(device_ext) / sizeof(char*);
 

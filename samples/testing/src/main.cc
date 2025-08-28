@@ -26,7 +26,7 @@ int main() {
     VRAMBank& bank = gpu.get_vram_bank();
 
     /* Initialize the Render Graph */
-    rg.set_shader_path("kernels");
+    rg.set_shader_path("samples/testing/kernels");
     rg.set_max_graphs_in_flight(2u); /* Double buffering */
     if (const Result r = rg.init(gpu); r.is_err()) {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
@@ -154,12 +154,12 @@ int main() {
             .work_size(1440, 810);
             
         rg.end_graph();
-        rg.dispatch();
+        rg.dispatch().expect("failed to dispatch render graph.");
 
         /* Check if we are still running */
         if (glfwWindowShouldClose(win))
             break;
-        // break; /* Exit for testing */
+        break; /* Exit for testing */
     }
 #endif
 

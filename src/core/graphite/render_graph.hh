@@ -17,6 +17,9 @@ struct WaveLane {
     WaveLane(u32 wave, u32 lane) : wave(wave), lane(lane) {}
 };
 
+/* The execution data for a graph. */
+PLATFORM_SPECIFIC struct GraphExecution;
+
 /* Include platform-specific Impl struct */
 PLATFORM_SPECIFIC struct ImplRenderGraph;
 #include PLATFORM_H(render_graph)
@@ -44,6 +47,12 @@ class RenderGraph : public ImplRenderGraph {
 
     /* Maximum number of graphs in flight. */
     u32 max_graphs_in_flight = 1u;
+
+    /* Queue all lanes for a given wave. */
+    PLATFORM_SPECIFIC Result<void> queue_wave(GraphExecution& graph, u32 start, u32 end);
+
+    /* Queue commands for a compute node. */
+    PLATFORM_SPECIFIC Result<void> queue_compute_node(GraphExecution& graph, const ComputeNode& node);
 
 public:
     /* Set the path from which to load shader files. (default: `"."`) */

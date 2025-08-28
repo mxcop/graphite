@@ -172,15 +172,13 @@ Result<void> RenderGraph::end_graph() {
 
 #if DEBUG_LOGGING
     /* Debug logging */
-    const u32 wave_count = waves[waves.size() - 1u].wave + 1u;
-    printf("waves: (%u)\n", wave_count);
-    for (u32 wave = 0u; wave < wave_count; ++wave) {
-        for (u32 i = 0u; i < waves.size(); ++i) {
-            if (waves[i].wave != wave) continue;
-            
-            const Node* node = nodes[waves[i].lane];
-            printf("[%u] node '%s'\n", wave, node->label.data());
+    for (u32 lane = 0u, wave = UINT32_MAX; lane < waves.size(); ++lane) {
+        if (waves[lane].wave != wave) {
+            wave = waves[lane].wave;
+            printf("wave %u:\n", wave);
         }
+        const Node* node = nodes[waves[lane].lane];
+        printf("[%u] node '%s'\n", wave, node->label.data());
     }
 #endif
     
