@@ -48,6 +48,10 @@ class RenderGraph : public ImplRenderGraph {
     /* Maximum number of graphs in flight. */
     u32 max_graphs_in_flight = 1u;
 
+    /* List of graph executions */
+    GraphExecution* graphs = nullptr;
+    u32 next_graph = 0u;
+
     /* Queue all lanes for a given wave. */
     PLATFORM_SPECIFIC Result<void> queue_wave(GraphExecution& graph, u32 start, u32 end);
 

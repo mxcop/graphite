@@ -1,5 +1,6 @@
 #include "descriptor_vk.hh"
 
+#include "graphite/vram_bank.hh"
 #include "graphite/nodes/node.hh"
 #include "translate_vk.hh"
 

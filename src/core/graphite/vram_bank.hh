@@ -28,7 +28,9 @@ class VRAMBank : public ImplVRAMBank {
     Result<void> init(GPUAdapter& gpu);
 
     /* Get a render target slot by handle. */
-    RenderTargetSlot& get_render_target(RenderTarget render_target);
+    RenderTargetSlot& get_render_target(OpaqueHandle render_target);
+    /* Get a render target slot by handle. */
+    const RenderTargetSlot& get_render_target(OpaqueHandle render_target) const;
 
 public:
     /* Create a new render target resource. (aka, swapchain) */

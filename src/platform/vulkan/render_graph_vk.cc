@@ -3,6 +3,7 @@
 #include "graphite/vram_bank.hh"
 #include "graphite/nodes/node.hh"
 #include "graphite/nodes/compute_node.hh"
+#include "wrapper/translate_vk.hh"
 
 Result<void> RenderGraph::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
@@ -66,11 +67,10 @@ Result<void> RenderGraph::dispatch() {
     
     /* Get the render target image index for this graph */
     const bool has_target = target.is_null() == false;
-    const RenderTargetSlot* rt = nullptr;
-    u32 image_index = UINT32_MAX;
+    RenderTargetSlot* rt = nullptr;
     if (has_target) {
         rt = &gpu->get_vram_bank().get_render_target(target);
-        if (vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &image_index) != VK_SUCCESS) {
+        if (vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image) != VK_SUCCESS) {
             return Err("failed to acquire next swapchain image for render target.");
         }
     }
@@ -108,7 +108,7 @@ Result<void> RenderGraph::dispatch() {
         VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         rt_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        rt_barrier.image = rt->images[image_index];
+        rt_barrier.image = rt->images[rt->current_image];
         rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
         vkCmdPipelineBarrier(graph.cmd, 
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -151,7 +151,7 @@ Result<void> RenderGraph::dispatch() {
         present.pWaitSemaphores = &graph.end_semaphore;
         present.swapchainCount = 1u;
         present.pSwapchains = &rt->swapchain;
-        present.pImageIndices = &image_index;
+        present.pImageIndices = &rt->current_image;
 
         /* Queue presentation */
         if (vkQueuePresentKHR(gpu->queues.queue_combined, &present) != VK_SUCCESS) {
@@ -189,6 +189,57 @@ Result<void> RenderGraph::queue_compute_node(GraphExecution& graph, const Comput
 
     /* Bind the compute pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
+    // bind_node_resources(graph, node);
+
+    /* Allocate memory for all the write commands and descriptors */
+    const u32 binding_count = (u32)node.dependencies.size();
+    std::vector<VkWriteDescriptorSet> writes(binding_count);
+    std::vector<VkDescriptorBufferInfo> buffer_info(binding_count);
+    std::vector<VkDescriptorImageInfo> texture_info(binding_count);
+
+    /* Fill-in push descriptor write commands */
+    u32 bindings = 0u;
+    for (u32 i = 0u; i < binding_count; ++i) {
+        const Dependency& dep = node.dependencies[i];
+        const ResourceType rtype = dep.resource.get_type();
+
+        /* Attachments are not bound as descriptors */
+        if (has_flag(dep.flags, DependencyFlags::Attachment)) continue;
+
+        /* Create the write command */
+        VkWriteDescriptorSet& write = writes[bindings];
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.descriptorCount = 1u;
+        write.dstBinding = bindings;
+
+        switch (rtype) {
+            case ResourceType::RenderTarget: {
+                const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+                texture_info[bindings].sampler = VK_NULL_HANDLE;
+                texture_info[bindings].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+                texture_info[bindings].imageView = rt.views[rt.current_image];
+                // TODO: Not sure if this should always be a storage image.
+                write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                write.pImageInfo = &texture_info[bindings];
+                break;
+            }
+            // case ResourceType::eBuffer:
+            //     buffer_push(dep, buffer_info[binding], write);
+            //     break;
+            // case ResourceType::eImage:
+            //     image_push(dep, texture_info[binding], write);
+            //     break;
+            default:
+                return Err("unknown resource type for push descriptors.");
+        }
+
+        bindings++;
+    }
+
+    /* Push the descriptor writes onto the command buffer */
+    const VkPipelineBindPoint bind_point = translate::pipeline_bind_point(node.type);
+    if (bind_point == VK_PIPELINE_BIND_POINT_MAX_ENUM) return Err("unknown pipeline bind point from node type.");
+    vkCmdPushDescriptorSetKHR(graph.cmd, bind_point, pipeline.layout, 0u, bindings, writes.data());
 
     /* Calculate the dispatch size */
     const u32 dispatch_x = div_up(node.work_x, node.group_x);

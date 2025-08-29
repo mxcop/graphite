@@ -9,4 +9,14 @@ VkShaderStageFlags stage_flags(DependencyStages stages) {
     return flags;
 }
 
+/* Convert the platform-agnostic node type to Vulkan pipeline bind point. */
+VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
+    switch (node_type) {
+        case NodeType::Compute:
+            return VK_PIPELINE_BIND_POINT_COMPUTE;
+        default:
+            return VK_PIPELINE_BIND_POINT_MAX_ENUM;
+    }
+}
+
 } /* translate */

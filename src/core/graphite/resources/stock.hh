@@ -65,7 +65,12 @@ class Stock {
     }
 
     /* Get a resource slot from its handle. */
-    Slot& get(Handle handle) {
+    Slot& get(OpaqueHandle handle) {
+        return pool[handle.index - 1u];
+    }
+
+    /* Get a resource slot from its handle. */
+    const Slot& get(OpaqueHandle handle) const {
         return pool[handle.index - 1u];
     }
 

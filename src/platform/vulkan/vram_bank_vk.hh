@@ -26,6 +26,7 @@ struct RenderTargetSlot {
     VkImageView* views {};
     VkSemaphore* acquired_semaphores {};
     VkExtent2D extent {};
+    u32 current_image = 0u;
 };
 
 struct ImplVRAMBank {};

@@ -21,10 +21,6 @@ struct ImplRenderGraph {
 
     /* GPU command pool */
     VkCommandPool cmd_pool {};
-
-    /* List of graph executions */
-    GraphExecution* graphs = nullptr;
-    u32 next_graph = 0u;
 };
 
 /* Interface header */

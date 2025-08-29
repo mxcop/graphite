@@ -98,6 +98,9 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
 }
 
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
+    /* Wait for the queue to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    
     /* Push the handle back onto the stock, and get its slot for cleanup */
     RenderTargetSlot& slot = render_targets.push(render_target);
 
