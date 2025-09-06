@@ -83,5 +83,6 @@ class Stock {
     }
 
     /* To access the constructor. */
+    friend class AgnVRAMBank;
     friend class VRAMBank;
 };

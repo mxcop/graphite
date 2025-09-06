@@ -10,10 +10,8 @@
 #include <graphite/nodes/compute_node.hh>
 
 int main() {
-    GPUAdapter gpu = GPUAdapter();
-    RenderGraph rg = RenderGraph();
-
     /* Set a custom debug logger callback */
+    GPUAdapter gpu = GPUAdapter();
     gpu.set_logger(color_logger, DebugLevel::Verbose);
 
     /* Initialize the GPU adapter */
@@ -22,16 +20,17 @@ int main() {
         return EXIT_SUCCESS;
     }
 
-    /* Get the VRAM bank */
-    VRAMBank& bank = gpu.get_vram_bank();
-
     /* Initialize the Render Graph */
+    RenderGraph rg = RenderGraph();
     rg.set_shader_path("samples/testing/kernels");
     rg.set_max_graphs_in_flight(2u); /* Double buffering */
     if (const Result r = rg.init(gpu); r.is_err()) {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
+
+    /* Get the VRAM bank */
+    VRAMBank& bank = gpu.get_vram_bank();
 
     /* Create a window using GLFW */
     glfwInit();

@@ -12,7 +12,13 @@
  * Indicates a function is **implemented per platform**.
  * Implementations for these functions can be found in the `platform/` folder.
  */
-#define PLATFORM_SPECIFIC
+#define PLATFORM_SPECIFIC virtual
+
+/* 
+ * Indicates a struct is **defined per platform**.
+ * Definitions for these structs can be found in the `platform/` folder.
+ */
+#define PLATFORM_STRUCT
 
 /* Concatenation macros. */
 #define __CAT(X,Y) X##Y
@@ -23,6 +29,5 @@
 #define __STR(X) #X
 #define STR(X) __STR(X)
 
-/* Platform-specific file include macros. */
-#define PLATFORM_H(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .hh))
-// #define PLATFORM_C(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .cc))
+/* Platform-specific file include macro. */
+#define PLATFORM_INCLUDE(BASE) STR(CAT_7(platform/, PLATFORM, /, BASE, _, PLATFORM_EXT, .hh))

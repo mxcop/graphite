@@ -7,18 +7,17 @@
 #include "resources/stock.hh"
 
 /* Slots are defined per platform */
-PLATFORM_SPECIFIC struct TargetDesc;
-PLATFORM_SPECIFIC struct RenderTargetSlot;
+PLATFORM_STRUCT struct TargetDesc;
+PLATFORM_STRUCT struct RenderTargetSlot;
 
-/* Include platform-specific Impl struct */
-PLATFORM_SPECIFIC struct ImplVRAMBank;
-#include PLATFORM_H(vram_bank)
+class GPUAdapter;
 
 /**
- * Video Memory Bank / Video Resource Manager.  
- * Used to create and manage GPU resources.
+ * @warning Never use this class directly!
+ * This is an interface for the platform-specific class.
  */
-class VRAMBank : public ImplVRAMBank {
+class AgnVRAMBank {
+protected:
     GPUAdapter* gpu = nullptr;
 
     /* Resources */
@@ -34,16 +33,18 @@ class VRAMBank : public ImplVRAMBank {
 
 public:
     /* Create a new render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u);
+    PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;
 
     /* Destroy a render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
+    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
 
     /* Destroy the VRAM bank, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    PLATFORM_SPECIFIC Result<void> destroy() = 0;
 
     /* To access the init function. */
-    friend class GPUAdapter;
+    friend class AgnGPUAdapter;
     /* To access the getter functions. */
     friend class RenderGraph;
 };
+
+#include PLATFORM_INCLUDE(vram_bank)

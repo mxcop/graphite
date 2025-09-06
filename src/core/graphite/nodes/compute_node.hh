@@ -38,5 +38,6 @@ public:
     /* Set the work size for this node. (this will be divided by the `group_size` to get the dispatch size) */
     inline ComputeNode& work_size(u32 x, u32 y = 1u, u32 z = 1u) { work_x = x; work_y = y; work_z = z; return *this; }
 
-    friend class RenderGraph;
+    /* To access constructors */
+    friend class AgnRenderGraph;
 };

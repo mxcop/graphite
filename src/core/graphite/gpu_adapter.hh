@@ -7,10 +7,6 @@
 
 class VRAMBank;
 
-/* Include platform-specific Impl struct */
-PLATFORM_SPECIFIC struct ImplGPUAdapter;
-#include PLATFORM_H(gpu_adapter)
-
 /* Debug logger data. */
 struct DebugLogger {
     DebugLoggerFn logger = nullptr;
@@ -19,10 +15,11 @@ struct DebugLogger {
 };
 
 /**
- * Graphics Processing Unit Adapter.  
- * Used to find and initialize a GPU.
+ * @warning Never use this class directly!
+ * This is an interface for the platform-specific class.
  */
-class GPUAdapter : public ImplGPUAdapter {
+class AgnGPUAdapter {
+protected:
     /* Active debug logger. */
     DebugLogger logger {empty_logger, DebugLevel::Warning, nullptr};
 
@@ -37,18 +34,16 @@ class GPUAdapter : public ImplGPUAdapter {
 
 public:
     /* Initialize the GPU adapter. */
-    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false);
+    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false) = 0;
     
     /* Set the debug logger callback. */
     void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);
 
     /* Get the VRAM bank for this GPU adapter. */
-    PLATFORM_SPECIFIC VRAMBank& get_vram_bank();
+    VRAMBank& get_vram_bank();
 
     /* Destroy the GPU adapter, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
-
-    /* To access the hidden graphics resources. */
-    friend class VRAMBank;
-    friend class RenderGraph;
+    PLATFORM_SPECIFIC Result<void> destroy() = 0;
 };
+
+#include PLATFORM_INCLUDE(gpu_adapter)

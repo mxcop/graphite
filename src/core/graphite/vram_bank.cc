@@ -1,6 +1,6 @@
 #include "vram_bank.hh"
 
-Result<void> VRAMBank::init(GPUAdapter& gpu) {
+Result<void> AgnVRAMBank::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
 
     /* Initialize the Stack Pools */
@@ -9,10 +9,10 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     return Ok();
 }
 
-RenderTargetSlot& VRAMBank::get_render_target(OpaqueHandle render_target) {
+RenderTargetSlot& AgnVRAMBank::get_render_target(OpaqueHandle render_target) {
     return render_targets.get(render_target);
 }
 
-const RenderTargetSlot &VRAMBank::get_render_target(OpaqueHandle render_target) const {
+const RenderTargetSlot &AgnVRAMBank::get_render_target(OpaqueHandle render_target) const {
     return render_targets.get(render_target);
 }

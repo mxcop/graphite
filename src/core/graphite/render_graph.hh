@@ -18,21 +18,18 @@ struct WaveLane {
 };
 
 /* The execution data for a graph. */
-PLATFORM_SPECIFIC struct GraphExecution;
-
-/* Include platform-specific Impl struct */
-PLATFORM_SPECIFIC struct ImplRenderGraph;
-#include PLATFORM_H(render_graph)
+PLATFORM_STRUCT struct GraphExecution;
 
 /* Graph nodes. */
 class Node;
 class ComputeNode;
 
 /**
- * Render Graph.  
- * Used to queue and dispatch a graph of render passes.
+ * @warning Never use this class directly!
+ * This is an interface for the platform-specific class.
  */
-class RenderGraph : public ImplRenderGraph {
+class AgnRenderGraph {
+protected:
     GPUAdapter* gpu = nullptr;
 
     /* List of nodes in the order in which they were queued. */
@@ -52,12 +49,6 @@ class RenderGraph : public ImplRenderGraph {
     GraphExecution* graphs = nullptr;
     u32 next_graph = 0u;
 
-    /* Queue all lanes for a given wave. */
-    PLATFORM_SPECIFIC Result<void> queue_wave(GraphExecution& graph, u32 start, u32 end);
-
-    /* Queue commands for a compute node. */
-    PLATFORM_SPECIFIC Result<void> queue_compute_node(GraphExecution& graph, const ComputeNode& node);
-
 public:
     /* Set the path from which to load shader files. (default: `"."`) */
     void set_shader_path(std::string path) { shader_path = path; };
@@ -65,7 +56,7 @@ public:
     void set_max_graphs_in_flight(u32 max) { max_graphs_in_flight = max; };
 
     /* Initialize the Render Graph. */
-    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
 
     /**
      * @brief Start a new graph, this clear the graph.
@@ -89,8 +80,10 @@ public:
     ComputeNode& add_compute_pass(std::string_view label, std::string_view shader_path);
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
-    PLATFORM_SPECIFIC Result<void> dispatch();
+    PLATFORM_SPECIFIC Result<void> dispatch() = 0;
 
     /* Destroy the Render Graph, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    PLATFORM_SPECIFIC Result<void> destroy() = 0;
 };
+
+#include PLATFORM_INCLUDE(render_graph)

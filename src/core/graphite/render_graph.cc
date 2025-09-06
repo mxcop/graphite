@@ -6,7 +6,7 @@
 
 #define DEBUG_LOGGING 1
 
-void RenderGraph::new_graph(u32 node_count) {
+void AgnRenderGraph::new_graph(u32 node_count) {
     /* Clear out the nodes list */
     for (Node* old_node : nodes)
         delete old_node;
@@ -31,7 +31,7 @@ inline u32 dependency_key(const Dependency& dep) {
     return dep.resource.raw();
 };
 
-Result<void> RenderGraph::end_graph() {
+Result<void> AgnRenderGraph::end_graph() {
     /* Resource version hashmap (key: handle, value: version) */
     std::unordered_map<u32, u32> version_map {};
     /* Resource source hashmap (key: handle, value: source_node_index) */
@@ -185,7 +185,7 @@ Result<void> RenderGraph::end_graph() {
     return Ok();
 }
 
-ComputeNode& RenderGraph::add_compute_pass(std::string_view label, std::string_view shader_path) {
+ComputeNode& AgnRenderGraph::add_compute_pass(std::string_view label, std::string_view shader_path) {
     /* Create the new compute node, and insert it into the nodes list. */
     ComputeNode* new_node = new ComputeNode(label, shader_path);
     nodes.emplace_back((Node*)new_node);
