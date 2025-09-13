@@ -84,10 +84,10 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
 
         switch (rtype) {
             case ResourceType::RenderTarget: {
-                const RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
+                RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
                 texture_info[bindings].sampler = VK_NULL_HANDLE;
                 texture_info[bindings].imageLayout = translate::desired_image_layout(dep.flags);
-                texture_info[bindings].imageView = rt.views[rt.current_image];
+                texture_info[bindings].imageView = rt.view();
                 write.descriptorType = translate::desired_image_type(dep.flags);
                 write.pImageInfo = &texture_info[bindings];
                 break;
@@ -108,7 +108,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
     /* Push the descriptor writes onto the command buffer */
     const VkPipelineBindPoint bind_point = translate::pipeline_bind_point(node.type);
     if (bind_point == VK_PIPELINE_BIND_POINT_MAX_ENUM) return Err("unknown pipeline bind point from node type.");
-    vkCmdPushDescriptorSetKHR(rg.graphs[rg.next_graph].cmd, bind_point, pipeline.layout, 0u, bindings, writes.data());
+    vkCmdPushDescriptorSetKHR(rg.active_graph().cmd, bind_point, pipeline.layout, 0u, bindings, writes.data());
     return Ok();
 }
 
@@ -128,16 +128,16 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
 
             switch (rtype) {
                 case ResourceType::RenderTarget: {
-                    const RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
+                    RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
                     barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
                     barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
                     barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
-                    barrier.oldLayout = rt.old_layouts[rt.current_image];
+                    barrier.oldLayout = rt.old_layout();
                     barrier.newLayout = translate::desired_image_layout(dep.flags);
-                    rt.old_layouts[rt.current_image] = barrier.newLayout;
-                    barrier.image = rt.images[rt.current_image];
+                    rt.old_layout() = barrier.newLayout;
+                    barrier.image = rt.image();
                     barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
                     break;
                 }
@@ -161,6 +161,6 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
     dep_info.pImageMemoryBarriers = tex_barriers.data();
     
     /* Insert the wave sync barrier */
-    vkCmdPipelineBarrier2KHR(rg.graphs[rg.next_graph].cmd, &dep_info);
+    vkCmdPipelineBarrier2KHR(rg.active_graph().cmd, &dep_info);
     return Ok();
 }

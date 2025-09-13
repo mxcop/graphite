@@ -30,10 +30,10 @@ class RenderGraph : public AgnRenderGraph {
     VkCommandPool cmd_pool {};
 
     /* Queue all lanes for a given wave. */
-    Result<void> queue_wave(GraphExecution& graph, u32 start, u32 end);
+    Result<void> queue_wave(const GraphExecution& graph, u32 start, u32 end);
 
     /* Queue commands for a compute node. */
-    Result<void> queue_compute_node(GraphExecution& graph, const ComputeNode& node);
+    Result<void> queue_compute_node(const GraphExecution& graph, const ComputeNode& node);
 
 public:
     /* Initialize the Render Graph. */

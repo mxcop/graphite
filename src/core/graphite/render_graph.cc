@@ -6,6 +6,8 @@
 
 #define DEBUG_LOGGING 1
 
+const GraphExecution &AgnRenderGraph::active_graph() const { return graphs[active_graph_index]; }
+
 void AgnRenderGraph::new_graph(u32 node_count) {
     /* Clear out the nodes list */
     for (Node* old_node : nodes)
@@ -29,7 +31,7 @@ struct NodeMeta {
 /* Dependency hashmap key. */
 inline u32 dependency_key(const Dependency& dep) {
     return dep.resource.raw();
-};
+}
 
 Result<void> AgnRenderGraph::end_graph() {
     /* Resource version hashmap (key: handle, value: version) */

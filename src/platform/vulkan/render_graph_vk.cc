@@ -20,7 +20,7 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 
     /* Allocate graph executions ring buffer */
     graphs = new GraphExecution[max_graphs_in_flight] {};
-    next_graph = 0u;
+    active_graph_index = 0u;
 
     /* Command buffer allocation info */
     VkCommandBufferAllocateInfo cmd_ai { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -55,7 +55,7 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 
 Result<void> RenderGraph::dispatch() {
     /* Get the next graph in the graph executions ring buffer */
-    GraphExecution& graph = graphs[next_graph];
+    const GraphExecution& graph = active_graph();
 
     /* In nanoseconds (one second) */
     constexpr uint64_t TIMEOUT = 1'000'000'000u;
@@ -102,10 +102,10 @@ Result<void> RenderGraph::dispatch() {
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
         VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        rt_barrier.oldLayout = rt->old_layouts[rt->current_image];
+        rt_barrier.oldLayout = rt->old_layout();
         rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        rt->old_layouts[rt->current_image] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        rt_barrier.image = rt->images[rt->current_image];
+        rt->old_layout() = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        rt_barrier.image = rt->image();
         rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
         vkCmdPipelineBarrier(graph.cmd, 
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -157,13 +157,13 @@ Result<void> RenderGraph::dispatch() {
         }
     }
 
-    /* Update the next graph index */
-    if (++next_graph >= max_graphs_in_flight) next_graph = 0u;
+    /* Update the active graph index */
+    next_graph();
 
     return Ok();
 }
 
-Result<void> RenderGraph::queue_wave(GraphExecution& graph, u32 start, u32 end) {
+Result<void> RenderGraph::queue_wave(const GraphExecution& graph, u32 start, u32 end) {
     /* Insert sync barriers for wave descriptors */
     wave_sync_descriptors(*this, start, end);
 
@@ -182,7 +182,7 @@ Result<void> RenderGraph::queue_wave(GraphExecution& graph, u32 start, u32 end) 
     return Ok();
 }
 
-Result<void> RenderGraph::queue_compute_node(GraphExecution& graph, const ComputeNode& node) {
+Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const ComputeNode& node) {
     /* Try to get the pipeline for this compute node */
     const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());

@@ -47,7 +47,12 @@ protected:
 
     /* List of graph executions */
     GraphExecution* graphs = nullptr;
-    u32 next_graph = 0u;
+    u32 active_graph_index = 0u;
+    
+    /* Get a reference to the active graph execution. */
+    const GraphExecution& active_graph() const;
+    /* Move on to the next graph execution, should be called at the end of `dispatch()`. */
+    inline void next_graph() { if (++active_graph_index >= max_graphs_in_flight) active_graph_index = 0u; };
 
 public:
     /* Set the path from which to load shader files. (default: `"."`) */

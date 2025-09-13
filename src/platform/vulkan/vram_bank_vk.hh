@@ -55,7 +55,11 @@ struct RenderTargetSlot {
     VkImage* images {};
     VkImageView* views {};
     VkImageLayout* old_layouts {};
-    VkSemaphore* acquired_semaphores {};
     VkExtent2D extent {};
     u32 current_image = 0u;
+
+    /* Current image getters */
+    inline VkImage& image() { return images[current_image]; };
+    inline VkImageView& view() { return views[current_image]; };
+    inline VkImageLayout& old_layout() { return old_layouts[current_image]; };
 };
