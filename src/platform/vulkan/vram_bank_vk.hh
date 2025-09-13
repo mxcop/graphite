@@ -6,6 +6,9 @@
 #include "graphite/utils/types.hh"
 #include "vulkan/api_vk.hh" /* Vulkan API */
 
+class Node;
+struct Pipeline;
+
 /* Render target descriptor, used during render target creation. */
 struct TargetDesc {
 #if defined(_WIN32) || defined(_WIN64)
@@ -29,6 +32,11 @@ public:
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
+
+    /* To access resource getters. "./wrapper/descriptor_vk.cc" */
+    friend Result<void> node_push_descriptors(VkCommandBuffer cmd, RenderTarget& target, const VRAMBank& bank, const Pipeline& pipeline, const Node& node);
+    /* To access resource getters. */
+    friend class RenderGraph;
 };
 
 /* Render target resource slot. */

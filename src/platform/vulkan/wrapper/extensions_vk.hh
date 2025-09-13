@@ -9,7 +9,9 @@ const char* const device_ext[] = {
     /* Swapchain extension */
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     /* Push descriptors */
-    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+    VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+    /* For SPIR-V "StorageImageReadWithoutFormat" and "StorageImageWriteWithoutFormat" */
+    VK_KHR_FORMAT_FEATURE_FLAGS_2_EXTENSION_NAME
 };
 const u32 device_ext_count = sizeof(device_ext) / sizeof(char*);
 

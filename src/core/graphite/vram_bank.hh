@@ -43,8 +43,6 @@ public:
 
     /* To access the init function. */
     friend class AgnGPUAdapter;
-    /* To access the getter functions. */
-    friend class RenderGraph;
 };
 
 #include PLATFORM_INCLUDE(vram_bank)

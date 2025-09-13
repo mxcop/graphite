@@ -189,57 +189,8 @@ Result<void> RenderGraph::queue_compute_node(GraphExecution& graph, const Comput
 
     /* Bind the compute pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
-    // bind_node_resources(graph, node);
-
-    /* Allocate memory for all the write commands and descriptors */
-    const u32 binding_count = (u32)node.dependencies.size();
-    std::vector<VkWriteDescriptorSet> writes(binding_count);
-    std::vector<VkDescriptorBufferInfo> buffer_info(binding_count);
-    std::vector<VkDescriptorImageInfo> texture_info(binding_count);
-
-    /* Fill-in push descriptor write commands */
-    u32 bindings = 0u;
-    for (u32 i = 0u; i < binding_count; ++i) {
-        const Dependency& dep = node.dependencies[i];
-        const ResourceType rtype = dep.resource.get_type();
-
-        /* Attachments are not bound as descriptors */
-        if (has_flag(dep.flags, DependencyFlags::Attachment)) continue;
-
-        /* Create the write command */
-        VkWriteDescriptorSet& write = writes[bindings];
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.descriptorCount = 1u;
-        write.dstBinding = bindings;
-
-        switch (rtype) {
-            case ResourceType::RenderTarget: {
-                const RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
-                texture_info[bindings].sampler = VK_NULL_HANDLE;
-                texture_info[bindings].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                texture_info[bindings].imageView = rt.views[rt.current_image];
-                // TODO: Not sure if this should always be a storage image.
-                write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-                write.pImageInfo = &texture_info[bindings];
-                break;
-            }
-            // case ResourceType::eBuffer:
-            //     buffer_push(dep, buffer_info[binding], write);
-            //     break;
-            // case ResourceType::eImage:
-            //     image_push(dep, texture_info[binding], write);
-            //     break;
-            default:
-                return Err("unknown resource type for push descriptors.");
-        }
-
-        bindings++;
-    }
-
-    /* Push the descriptor writes onto the command buffer */
-    const VkPipelineBindPoint bind_point = translate::pipeline_bind_point(node.type);
-    if (bind_point == VK_PIPELINE_BIND_POINT_MAX_ENUM) return Err("unknown pipeline bind point from node type.");
-    vkCmdPushDescriptorSetKHR(graph.cmd, bind_point, pipeline.layout, 0u, bindings, writes.data());
+    const Result push_result = node_push_descriptors(graph.cmd, target, gpu->get_vram_bank(), pipeline, node);
+    if (push_result.is_err()) return Err(push_result.unwrap_err());
 
     /* Calculate the dispatch size */
     const u32 dispatch_x = div_up(node.work_x, node.group_x);
