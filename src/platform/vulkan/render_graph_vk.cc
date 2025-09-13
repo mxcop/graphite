@@ -65,12 +65,18 @@ Result<void> RenderGraph::dispatch() {
         return Err("failed while waiting for graph in-flight fence.");
     }
     
-    /* Get the render target image index for this graph */
+    /* If this graph has a render target, fetch it */
     const bool has_target = target.is_null() == false;
     RenderTargetSlot* rt = nullptr;
     if (has_target) {
+        /* Acquire the next render target image from the swapchain */
         rt = &gpu->get_vram_bank().get_render_target(target);
-        if (vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image) != VK_SUCCESS) {
+        const VkResult swapchain_result = vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image);
+
+        /* Don't render anything if the swapchain is out of date */
+        if (swapchain_result == VK_ERROR_OUT_OF_DATE_KHR) return Ok();
+
+        if (swapchain_result != VK_SUCCESS) {
             return Err("failed to acquire next swapchain image for render target.");
         }
     }
@@ -82,7 +88,7 @@ Result<void> RenderGraph::dispatch() {
         return Err("failed to begin recording command buffer for graph.");
     }
 
-    // TODO: Queue all the waves of passes here!!!
+    /* Process all waves in the render graph */
     for (u32 s = 0u, w = 0u, e = 0u; e <= waves.size(); ++e) {
         /* If this lane is the start of a new wave */
         if (e == waves.size() || waves[e].wave != w) {
@@ -92,16 +98,6 @@ Result<void> RenderGraph::dispatch() {
             s = e;
         }
     }
-
-    // const u32 wave_count = waves[waves.size() - 1u].wave + 1u;
-    // for (u32 wave = 0u; wave < wave_count; ++wave) {
-    //     for (u32 i = 0u; i < waves.size(); ++i) {
-    //         if (waves[i].wave != wave) continue;
-            
-    //         const Node* node = nodes[waves[i].lane];
-    //         printf("[%u] node '%s'\n", wave, node->label.data());
-    //     }
-    // }
 
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
@@ -154,8 +150,9 @@ Result<void> RenderGraph::dispatch() {
         present.pSwapchains = &rt->swapchain;
         present.pImageIndices = &rt->current_image;
 
-        /* Queue presentation */
-        if (vkQueuePresentKHR(gpu->queues.queue_combined, &present) != VK_SUCCESS) {
+        /* Queue presentation (ignore the out of date error) */
+        const VkResult present_result = vkQueuePresentKHR(gpu->queues.queue_combined, &present);
+        if (present_result != VK_SUCCESS && present_result != VK_ERROR_OUT_OF_DATE_KHR) {
             return Err("failed to present to render target.");
         }
     }
