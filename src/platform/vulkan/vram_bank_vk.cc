@@ -60,7 +60,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     swapchain_ci.imageColorSpace = resource.data.color_space;
     swapchain_ci.imageExtent = resource.data.extent;
     swapchain_ci.imageArrayLayers = 1u;
-    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -80,6 +80,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
 
     /* Create an image view for each swapchain image */
     resource.data.views = new VkImageView[resource.data.image_count] {};
+    resource.data.old_layouts = new VkImageLayout[resource.data.image_count] {};
     for (u32 i = 0u; i < resource.data.image_count; ++i) {
         /* Image view creation info */
         VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
@@ -87,6 +88,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
         view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
         view_ci.format = resource.data.format;
         view_ci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
+        resource.data.old_layouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;
 
         /* Create image view */
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.views[i]) != VK_SUCCESS) {
@@ -106,6 +108,7 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
 
     /* Destroy the images & views */
     delete[] slot.images;
+    delete[] slot.old_layouts;
     for (u32 i = 0u; i < slot.image_count; ++i) {
         vkDestroyImageView(gpu->logical_device, slot.views[i], nullptr);
     }

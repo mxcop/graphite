@@ -44,4 +44,8 @@ public:
 
     /* Destroy the Render Graph, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
+
+    /* To access nodes and waves. "./wrapper/descriptor_vk.cc" */
+    friend Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node& node);
+    friend Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end);
 };

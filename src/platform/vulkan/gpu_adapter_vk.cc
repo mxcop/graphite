@@ -115,8 +115,13 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     device_queues_ci[2].queueCount = 1u;
     device_queues_ci[2].pQueuePriorities = &priority;
 
+    /* Enable synchronization 2.0 features */
+    VkPhysicalDeviceSynchronization2Features sync_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    sync_features.synchronization2 = true;
+
     /* Vulkan device creation info */
     VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    device_ci.pNext = &sync_features;
     device_ci.queueCreateInfoCount = 3u;
     device_ci.pQueueCreateInfos = device_queues_ci;
     device_ci.enabledLayerCount = instance_layers_count;

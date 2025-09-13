@@ -9,6 +9,19 @@ VkShaderStageFlags stage_flags(DependencyStages stages) {
     return flags;
 }
 
+/* Convert the platform-agnostic dependency flags to a desired image layout. */
+VkImageLayout desired_image_layout(DependencyFlags flags) {
+    if (has_flag(flags, DependencyFlags::Attachment)) return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+    if (has_flag(flags, DependencyFlags::Readonly)) return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    return VK_IMAGE_LAYOUT_GENERAL;
+}
+
+/* Convert the platform-agnostic dependency flags to a desired image descriptor type. */
+VkDescriptorType desired_image_type(DependencyFlags flags) {
+    if (has_flag(flags, DependencyFlags::Readonly)) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+}
+
 /* Convert the platform-agnostic node type to Vulkan pipeline bind point. */
 VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
     switch (node_type) {

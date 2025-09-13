@@ -7,6 +7,8 @@
 #include "vulkan/api_vk.hh" /* Vulkan API */
 
 class Node;
+
+struct GraphExecution;
 struct Pipeline;
 
 /* Render target descriptor, used during render target creation. */
@@ -34,7 +36,8 @@ public:
     PLATFORM_SPECIFIC Result<void> destroy();
 
     /* To access resource getters. "./wrapper/descriptor_vk.cc" */
-    friend Result<void> node_push_descriptors(VkCommandBuffer cmd, RenderTarget& target, const VRAMBank& bank, const Pipeline& pipeline, const Node& node);
+    friend Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node& node);
+    friend Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end);
     /* To access resource getters. */
     friend class RenderGraph;
 };
@@ -51,6 +54,7 @@ struct RenderTargetSlot {
     VkSwapchainKHR swapchain {};
     VkImage* images {};
     VkImageView* views {};
+    VkImageLayout* old_layouts {};
     VkSemaphore* acquired_semaphores {};
     VkExtent2D extent {};
     u32 current_image = 0u;

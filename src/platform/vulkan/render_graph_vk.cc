@@ -106,8 +106,9 @@ Result<void> RenderGraph::dispatch() {
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
         VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        rt_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        rt_barrier.oldLayout = rt->old_layouts[rt->current_image];
         rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        rt->old_layouts[rt->current_image] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         rt_barrier.image = rt->images[rt->current_image];
         rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
         vkCmdPipelineBarrier(graph.cmd, 
@@ -166,6 +167,9 @@ Result<void> RenderGraph::dispatch() {
 }
 
 Result<void> RenderGraph::queue_wave(GraphExecution& graph, u32 start, u32 end) {
+    /* Insert sync barriers for wave descriptors */
+    wave_sync_descriptors(*this, start, end);
+
     /* Queue each node in the wave */
     for (u32 i = start; i < end; ++i) {
         const Node& node = *nodes[waves[i].lane];
@@ -189,7 +193,7 @@ Result<void> RenderGraph::queue_compute_node(GraphExecution& graph, const Comput
 
     /* Bind the compute pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
-    const Result push_result = node_push_descriptors(graph.cmd, target, gpu->get_vram_bank(), pipeline, node);
+    const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return Err(push_result.unwrap_err());
 
     /* Calculate the dispatch size */
