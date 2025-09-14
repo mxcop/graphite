@@ -4,7 +4,7 @@
 
 #include "nodes/compute_node.hh"
 
-#define DEBUG_LOGGING 1
+#define DEBUG_LOGGING 0
 
 const GraphExecution &AgnRenderGraph::active_graph() const { return graphs[active_graph_index]; }
 

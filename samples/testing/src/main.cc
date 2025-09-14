@@ -3,6 +3,8 @@
 #include <glfw/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <glfw/glfw3native.h>
+#include <dwmapi.h>
+#pragma comment(lib, "dwmapi")
 
 #include <graphite/gpu_adapter.hh>
 #include <graphite/vram_bank.hh>
@@ -35,7 +37,10 @@ int main() {
     /* Create a window using GLFW */
     glfwInit();
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow* win = glfwCreateWindow(1440, 810, "Graphite Test Sample", NULL, NULL);
+    BOOL dark = TRUE;
+    DwmSetWindowAttribute(glfwGetWin32Window(win), 20, &dark, sizeof(BOOL));
 
     /* Initialize the Render Target */
     const TargetDesc target { glfwGetWin32Window(win) };
@@ -158,7 +163,7 @@ int main() {
         /* Check if we are still running */
         if (glfwWindowShouldClose(win))
             break;
-        break; /* Exit for testing */
+        // break; /* Exit for testing */
     }
 #endif
 

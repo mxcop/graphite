@@ -24,8 +24,8 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
         return Err("failed to get surface capabilities.");
     }
 
-    /* Use the maximum amount of images that are available */
-    resource.data.image_count = surface_features.maxImageCount;
+    /* Use up to 4 images that are available, this allows for triple buffering */
+    resource.data.image_count = MIN(4, MAX(1, surface_features.maxImageCount));
 
     /* Set the width and height, with respect to the surface limits */
     resource.data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
