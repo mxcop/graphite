@@ -10,9 +10,9 @@ inline int rank_device_type(VkPhysicalDevice physical_device) {
 }
 
 /* Select the most suitable, available, physical device. */
-Result<VkPhysicalDevice> select_physical_device(VkInstance instance, const char* const* extensions, const uint32_t count) {
+Result<VkPhysicalDevice> select_physical_device(VkInstance instance, const char* const* extensions, const u32 count) {
     /* Get the number of available physical devices */
-    uint32_t device_count = 0u;
+    u32 device_count = 0u;
     if (vkEnumeratePhysicalDevices(instance, &device_count, nullptr) != VK_SUCCESS) {
         return Err("failed to query available physical device count.");
     }
@@ -29,7 +29,7 @@ Result<VkPhysicalDevice> select_physical_device(VkInstance instance, const char*
 
     /* Select the most suitable physical device */
     VkPhysicalDevice selected = nullptr;
-    for (uint32_t i = 0u; i < device_count; ++i) {
+    for (u32 i = 0u; i < device_count; ++i) {
         /* Query if this physical device supports all required extensions */
         if (query_extension_support(devices[i], extensions, count).is_err()) continue;
 

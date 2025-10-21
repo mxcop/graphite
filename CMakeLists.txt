@@ -4,9 +4,9 @@ project(graphite)
 # C++ standard version
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
 
-# Executable target
-add_executable(graphite)
-set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
+# Library target
+add_library(graphite)
+# set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
 
 # Add compiler definitions
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Debug>:DEBUG=1>)
@@ -20,29 +20,29 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     set(PLATFORM vulkan)
 endif()
 
-target_compile_definitions(graphite PRIVATE PLATFORM_EXT=${PLATFORM_EXT})
-target_compile_definitions(graphite PRIVATE PLATFORM=${PLATFORM})
+target_compile_definitions(graphite PUBLIC PLATFORM_EXT=${PLATFORM_EXT})
+target_compile_definitions(graphite PUBLIC PLATFORM=${PLATFORM})
 
 # Include directories
-target_include_directories(graphite PRIVATE "./src/")
-target_include_directories(graphite PRIVATE "./src/platform")
-target_include_directories(graphite PUBLIC "./src/shell/")
+target_include_directories(graphite PUBLIC "./src/")
+target_include_directories(graphite PUBLIC "./src/platform/")
+target_include_directories(graphite PUBLIC "./src/core/")
 
 # Source file directories
-set(SHELL_DIR src/shell/graphite)
+set(CORE_DIR src/core/graphite)
 set(PLATFORM_DIR src/platform)
 
 # Core source files
 target_sources(graphite PRIVATE
-    src/main.cc
     # Core components
-    ${SHELL_DIR}/gpu_adapter.cc
-    ${SHELL_DIR}/vram_bank.cc
-    ${SHELL_DIR}/render_graph.cc
-    ${SHELL_DIR}/render_target.cc
+    ${CORE_DIR}/gpu_adapter.cc
+    ${CORE_DIR}/vram_bank.cc
+    ${CORE_DIR}/render_graph.cc
+    ${CORE_DIR}/nodes/node.cc
+    ${CORE_DIR}/nodes/compute_node.cc
     # Utils
-    ${SHELL_DIR}/debug.cc
-    ${SHELL_DIR}/result.cc
+    ${CORE_DIR}/utils/debug.cc
+    ${CORE_DIR}/utils/result.cc
 )
 
 # Core platform-specific source files
@@ -51,17 +51,25 @@ target_sources(graphite PRIVATE
     ${PLATFORM_DIR}/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/vram_bank_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/render_graph_${PLATFORM_EXT}.cc
-    ${PLATFORM_DIR}/${PLATFORM}/render_target_${PLATFORM_EXT}.cc
 )
 
 # Additional platform-specific source files
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
         # Wrapper components
+        ${PLATFORM_DIR}/vulkan/wrapper/descriptor_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/device_selection_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/queue_selection_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/extensions_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/pipeline_cache_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/shader_vk.cc
+        ${PLATFORM_DIR}/vulkan/wrapper/translate_vk.cc
     )
+endif()
+
+# If in vscode, add the samples so we can run them
+if($ENV{EXECUTABLE})
+    add_subdirectory("samples")
 endif()
 
 # External dependencies

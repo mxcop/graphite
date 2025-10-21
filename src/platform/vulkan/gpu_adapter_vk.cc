@@ -1,5 +1,6 @@
 #include "gpu_adapter_vk.hh"
 
+#include "graphite/vram_bank.hh"
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
 
@@ -18,6 +19,11 @@ VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDe
 
 /* Initialize the GPU adapter. */
 Result<void> GPUAdapter::init(bool debug_mode) {
+    /* Initialize VRAM banks */
+    if (const Result r = init_vram_bank(); r.is_err()) {
+        return Err(r.unwrap_err());
+    }
+
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
@@ -31,7 +37,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
-    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.apiVersion = VK_API_VERSION_1_2;
     
     /* Debug utilities messenger (for debug mode) */
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -41,14 +47,14 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     debug_utils.pfnUserCallback = vk_debug_callback;
 
     /* Vulkan instance extensions & layers */
-    const uint32_t instance_ext_count = validation ? 3u : 2u;
+    const u32 instance_ext_count = validation ? 3u : 2u;
     const char* const instance_ext[3] = {VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
-    const uint32_t instance_layers_count = validation ? 1u : 0u;
+    const u32 instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
     /* Check if all required instance extensions are supported */
     if (const Result r = query_instance_support(instance_ext, instance_ext_count); r.is_err()) {
-        return Err(r.unwrap_err().c_str());
+        return Err(r.unwrap_err());
     }
 
     /* Vulkan instance creation info */
@@ -69,7 +75,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         return Err("failed to create vulkan instance.");
     }
 
-    /* Load instance Vulkan API functions */
+    /* Load Vulkan instance API functions */
     volkLoadInstanceOnly(instance);
 
     /* Create a debug messenger if debug mode is turned on */
@@ -93,8 +99,6 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Log the selected queue families */
     this->log(DebugSeverity::Info, strfmt("selected queues: G%u C%u T%u", queue_families.queue_combined, queue_families.queue_compute, queue_families.queue_transfer).data());
     
-    /* TODO: Create the logical device */
-
     /* Vulkan device queue creation info */
     const float priority = 0.0f;
     VkDeviceQueueCreateInfo device_queues_ci[3] {};
@@ -111,8 +115,13 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     device_queues_ci[2].queueCount = 1u;
     device_queues_ci[2].pQueuePriorities = &priority;
 
+    /* Enable synchronization 2.0 features */
+    VkPhysicalDeviceSynchronization2Features sync_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    sync_features.synchronization2 = true;
+
     /* Vulkan device creation info */
     VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    device_ci.pNext = &sync_features;
     device_ci.queueCreateInfoCount = 3u;
     device_ci.pQueueCreateInfos = device_queues_ci;
     device_ci.enabledLayerCount = instance_layers_count;
@@ -126,6 +135,9 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         if (r == VK_ERROR_EXTENSION_NOT_PRESENT) return Err("failed to create vulkan device. (extension not supported)");
         return Err("failed to create vulkan device.");
     }
+
+    /* Load Vulkan device API functions */
+    volkLoadDevice(logical_device);
 
     /* Get the logical device queues */
     queues = get_queues(logical_device, queue_families);

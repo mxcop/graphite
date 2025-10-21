@@ -10,7 +10,7 @@
 /* Select the combined, (async) compute, and transfer queue families. */
 Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
     /* Get the number of available queues */
-    uint32_t queue_count = 0u;
+    u32 queue_count = 0u;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_count, nullptr);
 
     /* Exit if no queues were found */
@@ -21,11 +21,11 @@ Result<VkQueueFamilies> select_queue_families(VkPhysicalDevice device) {
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_count, queues);
 
     /* Look for suitable queues for different operations */
-    uint32_t combined_queue = queue_count;
-    uint32_t compute_queue = queue_count;
-    uint32_t transfer_queue = queue_count;
+    u32 combined_queue = queue_count;
+    u32 compute_queue = queue_count;
+    u32 transfer_queue = queue_count;
 
-    for (uint32_t i = 0u; i < queue_count; ++i) {
+    for (u32 i = 0u; i < queue_count; ++i) {
         /* Check what this queue family supports */
         const bool supports_present = (vkGetPhysicalDevicePresentationSupportKHR(device, i) == VK_TRUE);
         const bool supports_graphics = queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
