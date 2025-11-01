@@ -55,15 +55,18 @@ struct RenderTargetSlot {
 
     /* Swapchain resources */
     VkSwapchainKHR swapchain {};
-    VkSemaphore* semaphores {};
-    VkImage* images {};
-    VkImageView* views {};
-    VkImageLayout* old_layouts {};
     VkExtent2D extent {};
     u32 current_image = 0u;
+    
+    /* Swapchain image resources */
+    VkImageLayout* old_layouts {};
+    VkSemaphore* semaphores {};
+    VkImageView* views {};
+    VkImage* images {};
 
     /* Current image getters */
     inline VkImage& image() { return images[current_image]; };
     inline VkImageView& view() { return views[current_image]; };
+    inline VkSemaphore& semaphore() { return semaphores[current_image]; };
     inline VkImageLayout& old_layout() { return old_layouts[current_image]; };
 };

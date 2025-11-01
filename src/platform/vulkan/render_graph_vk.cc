@@ -128,7 +128,7 @@ Result<void> RenderGraph::dispatch() {
     submit.pCommandBuffers = &graph.cmd;
     if (has_target) {
         submit.signalSemaphoreCount = 1u; /* Signal when the work completes */
-        submit.pSignalSemaphores = &rt->semaphores[rt->current_image];
+        submit.pSignalSemaphores = &rt->semaphore();
         submit.waitSemaphoreCount = 1u; /* Wait for image acquired */
         submit.pWaitSemaphores = &graph.start_semaphore;
     }
@@ -143,7 +143,7 @@ Result<void> RenderGraph::dispatch() {
         /* Presentation info */
         VkPresentInfoKHR present { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         present.waitSemaphoreCount = 1u; /* Wait for render to complete */
-        present.pWaitSemaphores = &rt->semaphores[rt->current_image];
+        present.pWaitSemaphores = &rt->semaphore();
         present.swapchainCount = 1u;
         present.pSwapchains = &rt->swapchain;
         present.pImageIndices = &rt->current_image;
