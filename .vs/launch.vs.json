@@ -1,0 +1,20 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "sample-testing.exe (samples\\Debug\\sample-testing.exe)",
+      "name": "sample-testing.exe (samples\\Debug\\sample-testing.exe)",
+      "currentDir": "${workspaceRoot}"
+    },
+    {
+      "type": "default",
+      "project": "CMakeLists.txt",
+      "projectTarget": "sample-testing.exe (samples\\Release\\sample-testing.exe)",
+      "name": "sample-testing.exe (samples\\Release\\sample-testing.exe)",
+      "currentDir": "${workspaceRoot}"
+    }
+  ]
+}

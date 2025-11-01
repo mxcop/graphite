@@ -67,10 +67,7 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     )
 endif()
 
-# If in vscode, add the samples so we can run them
-if($ENV{EXECUTABLE})
-    add_subdirectory("samples")
-endif()
+add_subdirectory("samples")
 
 # External dependencies
 add_subdirectory("extern")
