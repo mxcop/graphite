@@ -78,7 +78,11 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
         return Err("failed to get swapchain images for render target.");
     }
 
+    /* Semaphore creation info */
+    const VkSemaphoreCreateInfo sema_ci { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
     /* Create an image view for each swapchain image */
+    resource.data.semaphores = new VkSemaphore[resource.data.image_count] {};
     resource.data.views = new VkImageView[resource.data.image_count] {};
     resource.data.old_layouts = new VkImageLayout[resource.data.image_count] {};
     for (u32 i = 0u; i < resource.data.image_count; ++i) {
@@ -93,6 +97,10 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
         /* Create image view */
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.views[i]) != VK_SUCCESS) {
             return Err("failed to create image view for render target.");
+        }
+        /* Create image presentation semaphore */
+        if (vkCreateSemaphore(gpu->logical_device, &sema_ci, nullptr, &resource.data.semaphores[i]) != VK_SUCCESS) {
+            return Err("failed to create semaphore for render target.");
         }
     }
 
@@ -177,8 +185,10 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     delete[] slot.old_layouts;
     for (u32 i = 0u; i < slot.image_count; ++i) {
         vkDestroyImageView(gpu->logical_device, slot.views[i], nullptr);
+        vkDestroySemaphore(gpu->logical_device, slot.semaphores[i], nullptr);
     }
     delete[] slot.views;
+    delete[] slot.semaphores;
 
     /* Destroy the swapchain */
     vkDestroySwapchainKHR(gpu->logical_device, slot.swapchain, nullptr);

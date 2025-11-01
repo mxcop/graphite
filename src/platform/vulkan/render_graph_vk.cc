@@ -43,8 +43,6 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
             return Err("failed to create in-flight fence for graph.");
         if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
             return Err("failed to create start semaphore for graph.");
-        if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].end_semaphore) != VK_SUCCESS)
-            return Err("failed to create end semaphore for graph.");
     }
 
     /* Initialize the pipeline cache */
@@ -128,9 +126,9 @@ Result<void> RenderGraph::dispatch() {
     submit.pWaitDstStageMask = &wait_stage;
     submit.commandBufferCount = 1u;
     submit.pCommandBuffers = &graph.cmd;
-    submit.signalSemaphoreCount = 1u; /* Signal when the work completes */
-    submit.pSignalSemaphores = &graph.end_semaphore;
     if (has_target) {
+        submit.signalSemaphoreCount = 1u; /* Signal when the work completes */
+        submit.pSignalSemaphores = &rt->semaphores[rt->current_image];
         submit.waitSemaphoreCount = 1u; /* Wait for image acquired */
         submit.pWaitSemaphores = &graph.start_semaphore;
     }
@@ -145,7 +143,7 @@ Result<void> RenderGraph::dispatch() {
         /* Presentation info */
         VkPresentInfoKHR present { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         present.waitSemaphoreCount = 1u; /* Wait for render to complete */
-        present.pWaitSemaphores = &graph.end_semaphore;
+        present.pWaitSemaphores = &rt->semaphores[rt->current_image];
         present.swapchainCount = 1u;
         present.pSwapchains = &rt->swapchain;
         present.pImageIndices = &rt->current_image;
@@ -220,7 +218,6 @@ Result<void> RenderGraph::destroy() {
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         vkDestroyFence(gpu->logical_device, graphs[i].flight_fence, nullptr);
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
-        vkDestroySemaphore(gpu->logical_device, graphs[i].end_semaphore, nullptr);
     }
     delete[] graphs;
 

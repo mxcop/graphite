@@ -55,6 +55,7 @@ struct RenderTargetSlot {
 
     /* Swapchain resources */
     VkSwapchainKHR swapchain {};
+    VkSemaphore* semaphores {};
     VkImage* images {};
     VkImageView* views {};
     VkImageLayout* old_layouts {};
