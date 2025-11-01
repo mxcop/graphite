@@ -1,4 +1,5 @@
 build/
-.vs
+.vs/
+!.vs/launch.vs.json
 out/
 *.spv
