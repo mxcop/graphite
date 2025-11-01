@@ -28,6 +28,9 @@ class VRAMBank : public AgnVRAMBank {
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u);
+    
+    /* Resize a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
 
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);

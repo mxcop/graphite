@@ -11,6 +11,18 @@
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
 
+struct WindowUserData {
+    VRAMBank* bank {};
+    RenderTarget rt {};
+};
+
+/* Called when the window is resized */
+void win_resize_cb(GLFWwindow* win, int width, int height) {
+    if (width == 0 || height == 0) return; /* Don't resize when minimized */
+    WindowUserData* user_data = (WindowUserData*)glfwGetWindowUserPointer(win);
+    user_data->bank->resize_render_target(user_data->rt, width, height);
+}
+
 int main() {
     /* Set a custom debug logger callback */
     GPUAdapter gpu = GPUAdapter();
@@ -36,7 +48,7 @@ int main() {
 
     /* Create a window using GLFW */
     glfwInit();
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     GLFWwindow* win = glfwCreateWindow(1440, 810, "Graphite Test Sample", NULL, NULL);
     BOOL dark = TRUE;
@@ -49,6 +61,21 @@ int main() {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
+
+    /* Setup the framebuffer resize callback */ 
+    WindowUserData user_data { &bank, rt };
+    glfwSetWindowUserPointer(win, &user_data);
+    glfwSetFramebufferSizeCallback(win, win_resize_cb);
+
+    /* Initialize the immediate mode GUI */
+    // ImGUI imgui = ImGUI();
+    // if (const Result r = imgui.init(gpu); r.is_err()) {
+    //     printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
+    //     return EXIT_SUCCESS;
+    // }
+    // /* Add viewport image to ImGUI */
+    // imgui.bind_image(Image);
+    // imgui.unbind_image(Image);
 
 #if 0
     const u32 key_7 = 0x7u;
@@ -148,6 +175,8 @@ int main() {
     for (;;) {
         /* Poll events */
         glfwPollEvents();
+        int win_w, win_h;
+        glfwGetWindowSize(win, &win_w, &win_h);
 
         rg.new_graph();
 
@@ -155,7 +184,10 @@ int main() {
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .group_size(16, 8)
-            .work_size(1440, 810);
+            .work_size(win_w, win_h);
+
+        /* ImGUI Pass */
+        // rg.add_imgui_pass(imgui, rt);
             
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");

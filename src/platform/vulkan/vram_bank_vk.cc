@@ -99,6 +99,72 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     return Ok(resource.handle);
 }
 
+Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 width, u32 height) {
+    /* Wait for the queue to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    RenderTargetSlot& data = render_targets.get(render_target);
+
+    /* Get the capabilities of the KHR surface */
+    VkSurfaceCapabilitiesKHR surface_features {};
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu->physical_device, data.surface, &surface_features) != VK_SUCCESS) {
+        return Err("failed to get surface capabilities.");
+    }
+
+    /* Set the width and height, with respect to the surface limits */
+    data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+
+    /* Swapchain re-creation info */
+    VkSwapchainCreateInfoKHR swapchain_ci { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+    swapchain_ci.surface = data.surface;
+    swapchain_ci.minImageCount = data.image_count;
+    swapchain_ci.imageFormat = data.format;
+    swapchain_ci.imageColorSpace = data.color_space;
+    swapchain_ci.imageExtent = data.extent;
+    swapchain_ci.imageArrayLayers = 1u;
+    swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapchain_ci.presentMode = VK_PRESENT_MODE_FIFO_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.clipped = true;
+    swapchain_ci.oldSwapchain = data.swapchain;
+
+    /* Create the swapchain */
+    if (vkCreateSwapchainKHR(gpu->logical_device, &swapchain_ci, nullptr, &data.swapchain) != VK_SUCCESS) {
+        return Err("failed to re-create swapchain for render target.");
+    }
+
+    /* Destroy the old swapchain */
+    vkDestroySwapchainKHR(gpu->logical_device, swapchain_ci.oldSwapchain, nullptr);
+
+    /* Get images from the swapchain */
+    if (vkGetSwapchainImagesKHR(gpu->logical_device, data.swapchain, &data.image_count, data.images) != VK_SUCCESS) {
+        return Err("failed to get swapchain images for render target.");
+    }
+
+    /* Create an image view for each swapchain image */
+    for (u32 i = 0u; i < data.image_count; ++i) {
+        /* Image view creation info */
+        VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        view_ci.image = data.images[i];
+        view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_ci.format = data.format;
+        view_ci.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
+        data.old_layouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        /* Destroy old image view */
+        vkDestroyImageView(gpu->logical_device, data.views[i], nullptr);
+
+        /* Create new image view */
+        if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &data.views[i]) != VK_SUCCESS) {
+            return Err("failed to create image view for render target.");
+        }
+    }
+
+    return Ok();
+}
+
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
