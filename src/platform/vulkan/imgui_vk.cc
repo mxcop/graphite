@@ -1,9 +1,5 @@
 #include "imgui_vk.hh"
 
-// #define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-// #define IMGUI_IMPL_VULKAN_USE_VOLK
-// #include <imgui_impl_vulkan.h>
-
 #include "graphite/gpu_adapter.hh"
 #include "graphite/vram_bank.hh"
 
@@ -22,13 +18,15 @@ const VkDescriptorPoolSize DESC_POOL_SIZES[] {
     {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 256u}
 };
 
+/* ImGUI vulkan pipeline info */
 struct ImGui_ImplVulkan_PipelineInfo {
-    VkRenderPass                    RenderPass;
-    uint32_t                        Subpass; 
-    VkSampleCountFlagBits           MSAASamples = {};
+    VkRenderPass RenderPass;
+    uint32_t Subpass; 
+    VkSampleCountFlagBits MSAASamples = {};
     VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
 };
 
+/* ImGUI vulkan init info */
 struct ImGui_ImplVulkan_InitInfo {
     uint32_t ApiVersion;
     VkInstance Instance;
@@ -50,8 +48,34 @@ struct ImGui_ImplVulkan_InitInfo {
     VkShaderModuleCreateInfo CustomShaderFragCreateInfo;
 };
 
+/* ImGUI graphics init function. */
+bool ImGui_ImplGraphics_Init(ImGUIFunctions functions, ImGui_ImplVulkan_InitInfo* init_info) {
+    return reinterpret_cast<bool(*)(void*)>(functions.graphics_init)(init_info);
+}
+
+/* ImGUI graphics load functions function. */
+bool ImGui_ImplGraphics_LoadFunctions(ImGUIFunctions functions, uint32_t api_version, void* loader, void* userdata) {
+    return reinterpret_cast<bool(*)(uint32_t, void*, void*)>(functions.load_functions)(api_version, loader, userdata);
+}
+
+/* ImGUI graphics new frame function. */
+void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
+    reinterpret_cast<void(*)()>(functions.new_frame)();
+}
+
+/* ImGUI graphics shutdown function. */
+void ImGui_ImplGraphics_Shutdown(ImGUIFunctions functions) {
+    reinterpret_cast<void(*)()>(functions.graphics_shutdown)();
+}
+
+/* Vulkan function loader. */
+void* function_loader(const char* function_name, void* vulkan_instance) {
+    return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(vulkan_instance)), function_name);
+}
+
 Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) {
     this->gpu = &gpu;
+    this->functions = functions;
 
     /* Allocate the imgui descriptor pool */
     VkDescriptorPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -63,6 +87,7 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functi
         return Err("failed to create imgui descriptor pool.");
     }
 
+    /* Get the render target information */
     const RenderTargetSlot& rt_data = gpu.get_vram_bank().get_render_target(rt);
 
     /* Initialize imgui */
@@ -85,13 +110,14 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functi
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &rt_data.format;
 
-    bool (*ImGui_ImplGraphics_Init)(void*) = reinterpret_cast<bool(*)(void*)>(
-        reinterpret_cast<uintptr_t>(functions.GraphicsInit)
-    );
+    /* Load ImGUI graphics API functions */
+    ImGui_ImplGraphics_LoadFunctions(functions, init_info.ApiVersion, function_loader, &gpu.instance);
 
-    if (!ImGui_ImplGraphics_Init(&init_info)) {
+    /* Initialize ImGUI */
+    if (!ImGui_ImplGraphics_Init(functions, &init_info)) {
         return Err("failed to init imgui for vulkan.");
     }
+
     // if (!ImGui_ImplVulkan_CreateFontsTexture()) {
     //     return Err("failed to create fonts & textures for imgui.");
     // }
@@ -113,6 +139,12 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functi
     return Ok();
 }
 
+void ImGUI::new_frame() {
+    ImGui_ImplGraphics_NewFrame(functions);
+}
+
 Result<void> ImGUI::destroy() {
+    vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);
+    ImGui_ImplGraphics_Shutdown(functions);
     return Ok();
 }

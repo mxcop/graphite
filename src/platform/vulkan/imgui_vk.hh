@@ -17,6 +17,9 @@ public:
     /* Initialize the immediate mode GUI. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions);
     
+    /* Start a new immediate frame. */
+    PLATFORM_SPECIFIC void new_frame();
+    
     /* Destroy the immediate mode GUI, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
 };
