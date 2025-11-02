@@ -75,7 +75,7 @@ int main() {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForVulkan(win, true);
     ImGUI imgui = ImGUI();
-    ImGUIFunctions func { ImGui_ImplVulkan_Init, ImGui_ImplVulkan_LoadFunctions, ImGui_ImplVulkan_NewFrame, ImGui_ImplVulkan_Shutdown };
+    ImGUIFunctions func { ImGui_ImplVulkan_Init, ImGui_ImplVulkan_NewFrame, ImGui_ImplVulkan_Shutdown };
     if (const Result r = imgui.init(gpu, rt, func); r.is_err()) {
         printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;

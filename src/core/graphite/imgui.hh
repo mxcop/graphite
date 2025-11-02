@@ -11,8 +11,6 @@ class GPUAdapter;
 struct ImGUIFunctions {
     /* e.g. ImGui_ImplVulkan_Init */
     void* graphics_init {};
-    /* e.g. ImGui_ImplVulkan_LoadFunctions */
-    void* load_functions {};
     /* e.g. ImGui_ImplVulkan_NewFrame */
     void* new_frame {};
     /* e.g. ImGui_ImplVulkan_Shutdown */

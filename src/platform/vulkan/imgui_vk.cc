@@ -53,11 +53,6 @@ bool ImGui_ImplGraphics_Init(ImGUIFunctions functions, ImGui_ImplVulkan_InitInfo
     return reinterpret_cast<bool(*)(void*)>(functions.graphics_init)(init_info);
 }
 
-/* ImGUI graphics load functions function. */
-bool ImGui_ImplGraphics_LoadFunctions(ImGUIFunctions functions, uint32_t api_version, void* loader, void* userdata) {
-    return reinterpret_cast<bool(*)(uint32_t, void*, void*)>(functions.load_functions)(api_version, loader, userdata);
-}
-
 /* ImGUI graphics new frame function. */
 void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.new_frame)();
@@ -66,11 +61,6 @@ void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
 /* ImGUI graphics shutdown function. */
 void ImGui_ImplGraphics_Shutdown(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.graphics_shutdown)();
-}
-
-/* Vulkan function loader. */
-void* function_loader(const char* function_name, void* vulkan_instance) {
-    return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(vulkan_instance)), function_name);
 }
 
 Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) {
@@ -109,9 +99,6 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functi
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &rt_data.format;
-
-    /* Load ImGUI graphics API functions */
-    ImGui_ImplGraphics_LoadFunctions(functions, init_info.ApiVersion, function_loader, &gpu.instance);
 
     /* Initialize ImGUI */
     if (!ImGui_ImplGraphics_Init(functions, &init_info)) {
