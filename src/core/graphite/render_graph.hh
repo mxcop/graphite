@@ -5,7 +5,6 @@
 
 #include "platform/platform.hh"
 
-#include "gpu_adapter.hh"
 #include "resources/handle.hh"
 #include "utils/result.hh"
 #include "utils/types.hh"
@@ -16,6 +15,8 @@ struct WaveLane {
     u32 lane = 0u; /* Index of the node. */
     WaveLane(u32 wave, u32 lane) : wave(wave), lane(lane) {}
 };
+
+class GPUAdapter;
 
 /* The execution data for a graph. */
 PLATFORM_STRUCT struct GraphExecution;
