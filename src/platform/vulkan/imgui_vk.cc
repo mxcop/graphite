@@ -1,8 +1,8 @@
 #include "imgui_vk.hh"
 
-#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
-#define IMGUI_IMPL_VULKAN_USE_VOLK
-#include <imgui_impl_vulkan.h>
+// #define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+// #define IMGUI_IMPL_VULKAN_USE_VOLK
+// #include <imgui_impl_vulkan.h>
 
 #include "graphite/gpu_adapter.hh"
 #include "graphite/vram_bank.hh"
@@ -22,7 +22,35 @@ const VkDescriptorPoolSize DESC_POOL_SIZES[] {
     {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 256u}
 };
 
-Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt) {
+struct ImGui_ImplVulkan_PipelineInfo {
+    VkRenderPass                    RenderPass;
+    uint32_t                        Subpass; 
+    VkSampleCountFlagBits           MSAASamples = {};
+    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
+};
+
+struct ImGui_ImplVulkan_InitInfo {
+    uint32_t ApiVersion;
+    VkInstance Instance;
+    VkPhysicalDevice PhysicalDevice;
+    VkDevice Device;
+    uint32_t QueueFamily;
+    VkQueue Queue;
+    VkDescriptorPool DescriptorPool;     
+    uint32_t DescriptorPoolSize;    
+    uint32_t MinImageCount;      
+    uint32_t ImageCount;      
+    VkPipelineCache PipelineCache; 
+    ImGui_ImplVulkan_PipelineInfo PipelineInfoMain;
+    bool UseDynamicRendering;
+    const VkAllocationCallbacks* Allocator;
+    void (*CheckVkResultFn)(VkResult err);
+    VkDeviceSize MinAllocationSize;
+    VkShaderModuleCreateInfo CustomShaderVertCreateInfo;
+    VkShaderModuleCreateInfo CustomShaderFragCreateInfo;
+};
+
+Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) {
     this->gpu = &gpu;
 
     /* Allocate the imgui descriptor pool */
@@ -57,7 +85,11 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt) {
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &rt_data.format;
 
-    if (!ImGui_ImplVulkan_Init(&init_info)) {
+    bool (*ImGui_ImplGraphics_Init)(void*) = reinterpret_cast<bool(*)(void*)>(
+        reinterpret_cast<uintptr_t>(functions.GraphicsInit)
+    );
+
+    if (!ImGui_ImplGraphics_Init(&init_info)) {
         return Err("failed to init imgui for vulkan.");
     }
     // if (!ImGui_ImplVulkan_CreateFontsTexture()) {

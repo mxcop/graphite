@@ -15,7 +15,7 @@ class ImGUI : public AgnImGUI {
 
 public:
     /* Initialize the immediate mode GUI. */
-    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt);
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions);
     
     /* Destroy the immediate mode GUI, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();

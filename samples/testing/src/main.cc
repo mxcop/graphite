@@ -3,7 +3,6 @@
 #include <glfw/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <glfw/glfw3native.h>
-#include <backends/imgui_impl_glfw.h>
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi")
 
@@ -12,6 +11,9 @@
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
 #include <graphite/imgui.hh>
+
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 
 struct WindowUserData {
     VRAMBank* bank {};
@@ -68,11 +70,12 @@ int main() {
     WindowUserData user_data { &bank, rt };
     glfwSetWindowUserPointer(win, &user_data);
     glfwSetFramebufferSizeCallback(win, win_resize_cb);
-    // ImGui_ImplGlfw_InitForVulkan(win, true);
+    ImGui_ImplGlfw_InitForVulkan(win, true);
 
     /* Initialize the immediate mode GUI */
     ImGUI imgui = ImGUI();
-    if (const Result r = imgui.init(gpu, rt); r.is_err()) {
+    ImGUIFunctions func { ImGui_ImplVulkan_Init };
+    if (const Result r = imgui.init(gpu, rt, func); r.is_err()) {
         printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
