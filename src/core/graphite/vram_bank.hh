@@ -30,9 +30,14 @@ protected:
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
 
     /* Get a render target slot by handle. */
-    RenderTargetSlot& get_render_target(OpaqueHandle render_target);
+    RenderTargetSlot& get_render_target(BindHandle render_target);
     /* Get a render target slot by handle. */
-    const RenderTargetSlot& get_render_target(OpaqueHandle render_target) const;
+    const RenderTargetSlot& get_render_target(BindHandle render_target) const;
+
+    /* Get a buffer sloy by handle. */
+    BufferSlot& get_buffer(BindHandle buffer);
+    /* Get a buffer sloy by handle. */
+    const BufferSlot& get_buffer(BindHandle buffer) const;
 
 public:
     /* Create a new render target resource. (aka, swapchain) */
@@ -60,6 +65,9 @@ public:
 
     /* To access the init function. */
     friend class AgnGPUAdapter;
+
+    /* To access the get_buffer() function. */
+    friend Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node& node);
 };
 
 #include PLATFORM_INCLUDE(vram_bank)

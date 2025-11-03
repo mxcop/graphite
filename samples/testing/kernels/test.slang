@@ -1,7 +1,13 @@
+struct BufferData
+{
+    float time;
+};
+
 RWTexture2D<float4> out_texture;
+ConstantBuffer<BufferData> test_buffer;
 
 static const float2 size = float2(1440, 810);
-static const float iTime = 1.0;
+//static const float iTime = 1.0;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
 
@@ -27,7 +33,7 @@ float2 turbulence(float2 p) {
     // Loop through turbulence octaves
     for (float i = 0.0; i < TURB_NUM; i++) {
         // Scroll along the rotated y coordinate
-        float phase = freq * mul(rot, p).y + TURB_SPEED * iTime + i;
+        float phase = freq * mul(rot, p).y + TURB_SPEED * test_buffer.time + i;
         // Add a perpendicular sine wave offset
         p += TURB_AMP * rot[0] * sin(phase) / freq;
 

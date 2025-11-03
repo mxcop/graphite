@@ -10,10 +10,11 @@ struct GraphExecution;
 
 class Node;
 class VRAMBank;
+class GPUAdapter;
 class RenderGraph;
 
 /* Create the descriptor layout for a render graph node. */
-Result<VkDescriptorSetLayout> node_descriptor_layout(VkDevice device, const Node& node);
+Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node& node);
 
 /* Push all descriptors for a render graph node onto the command buffer. */
 Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node& node);

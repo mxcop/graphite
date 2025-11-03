@@ -32,9 +32,19 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     render_targets.init(8u);
     buffers.init(8u);
 
+    /* Command pool creation info */
+    VkCommandPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    pool_ci.queueFamilyIndex = gpu.queue_families.queue_transfer;
+
+    /* Create command pool for command buffers */
+    if (vkCreateCommandPool(gpu.logical_device, &pool_ci, nullptr, &upload_cmd_pool) != VK_SUCCESS) {
+        return Err("failed to create command pool for render graph.");
+    }
+
     /* Allocate upload command buffer */
     VkCommandBufferAllocateInfo cmd_ai { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    cmd_ai.commandPool = gpu.cmd_pool;
+    cmd_ai.commandPool = upload_cmd_pool;
     cmd_ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmd_ai.commandBufferCount = 1u;
 
@@ -88,6 +98,8 @@ bool VRAMBank::end_upload()
 }
 
 Result<void> VRAMBank::destroy() {
+    vkDestroyCommandPool(gpu->logical_device, upload_cmd_pool, nullptr);
+
     vkDestroyFence(gpu->logical_device, upload_fence, nullptr);
 
     vmaDestroyAllocator(vma_allocator);
@@ -286,7 +298,7 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
 
 Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride){
     /* Make sure the buffer usage is valid */
-    if (usage == BufferUsage::eInvalid) return Err("invalid buffer usage.");
+    if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
 
     StockPair resource = buffers.pop();
     resource.data.usage = usage;
@@ -316,9 +328,10 @@ Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count,
 Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size){
     if (size == 0u) return Err("size is 0.");
 
-    const BufferSlot& slot = buffers.get(buffer);
+    BufferSlot& slot = buffers.get(buffer);
+    slot.size = size;
 
-    if (has_flag(slot.usage, BufferUsage::eTransferDst) == false)
+    if (has_flag(slot.usage, BufferUsage::TransferDst) == false)
         return Err("the set buffer usage flags do not support transferring to.");
 
     /* Create staging buffer */

@@ -28,7 +28,8 @@ class VRAMBank : public AgnVRAMBank {
     /* VMA Resources */
     VmaAllocator vma_allocator {};
 
-    /* Upload command buffer */
+    /* Upload Resources */
+    VkCommandPool upload_cmd_pool {};
     VkCommandBuffer upload_cmd {};
     VkFence upload_fence {};
 

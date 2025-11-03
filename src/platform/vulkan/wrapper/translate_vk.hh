@@ -24,4 +24,7 @@ VkPipelineBindPoint pipeline_bind_point(NodeType node_type);
 /* Convert the platform-agnostic buffer usage to buffer usage flags. */
 VkBufferUsageFlags buffer_usage(const BufferUsage usage);
 
+/* Convert the platform-agnostic buffer usage to Vulkan buffer descriptor type. */
+VkDescriptorType buffer_descriptor_type(const BufferUsage usage);
+
 } /* translate */

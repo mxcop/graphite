@@ -31,7 +31,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     const VkShaderModule shader = r_shader.unwrap();
     
     /* Create the descriptor layout for the new pipeline */
-    const Result r_layout = node_descriptor_layout(gpu->logical_device, node);
+    const Result r_layout = node_descriptor_layout(*gpu, node);
     if (r_layout.is_err()) return Err(r_layout.unwrap_err());
     pipeline.descriptors = r_layout.unwrap();
 
