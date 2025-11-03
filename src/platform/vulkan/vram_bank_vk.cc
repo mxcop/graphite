@@ -1,7 +1,37 @@
+#define VMA_IMPLEMENTATION
 #include "vram_bank_vk.hh"
 
 #define MAX(A, B) ((A > B) ? A : B)
 #define MIN(A, B) ((A < B) ? A : B)
+
+Result<void> VRAMBank::init(GPUAdapter& gpu) {
+    this->gpu = &gpu;
+
+    /* Initialize VMA */
+    {
+        VmaVulkanFunctions vulkan_functions{};
+
+        VmaAllocatorCreateInfo vma_info{};
+        vma_info.flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+        vma_info.vulkanApiVersion = VK_API_VERSION;
+        vma_info.physicalDevice = gpu.physical_device;
+        vma_info.device = gpu.logical_device;
+        vma_info.instance = gpu.instance;
+
+        if (vmaImportVulkanFunctionsFromVolk(&vma_info, &vulkan_functions) != VK_SUCCESS)
+            return Err("Failed to import vulakn functions from volk (required for VMA init).");
+
+        vma_info.pVulkanFunctions = &vulkan_functions;
+
+        if (vmaCreateAllocator(&vma_info, &vma_allocator) != VK_SUCCESS)
+            return Err("Failed to initialise VMA.");
+    }
+
+    /* Initialize the Stack Pools */
+    render_targets.init(8u);
+
+    return Ok();
+}
 
 Result<void> VRAMBank::destroy() {
     return Ok();

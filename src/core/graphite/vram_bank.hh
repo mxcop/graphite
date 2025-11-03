@@ -24,7 +24,7 @@ protected:
     Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
 
     /* Initialize the VRAM bank. */
-    Result<void> init(GPUAdapter& gpu);
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
 
     /* Get a render target slot by handle. */
     RenderTargetSlot& get_render_target(OpaqueHandle render_target);

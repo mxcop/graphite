@@ -19,11 +19,6 @@ VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDe
 
 /* Initialize the GPU adapter. */
 Result<void> GPUAdapter::init(bool debug_mode) {
-    /* Initialize VRAM banks */
-    if (const Result r = init_vram_bank(); r.is_err()) {
-        return Err(r.unwrap_err());
-    }
-
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
@@ -37,7 +32,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.apiVersion = VK_API_VERSION;
     
     /* Debug utilities messenger (for debug mode) */
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -141,6 +136,12 @@ Result<void> GPUAdapter::init(bool debug_mode) {
 
     /* Get the logical device queues */
     queues = get_queues(logical_device, queue_families);
+
+    /* Initialize VRAM banks */
+    if (const Result r = init_vram_bank(); r.is_err()) {
+        return Err(r.unwrap_err());
+    }
+
     return Ok();
 }
 
