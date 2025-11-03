@@ -1,16 +1,23 @@
 #pragma once
 
+// #include <unordered_map>
+
 #include "platform/platform.hh"
 
 #include "resources/handle.hh"
 #include "utils/result.hh"
 #include "utils/debug.hh"
+#include "utils/types.hh"
 
 class GPUAdapter;
 
 struct ImGUIFunctions {
     /* e.g. ImGui_ImplVulkan_Init */
     void* graphics_init {};
+    /* e.g. ImGui_ImplVulkan_AddTexture */
+    void* add_texture {};
+    /* e.g. ImGui_ImplVulkan_RemoveTexture */
+    void* remove_texture {};
     /* e.g. ImGui_ImplVulkan_NewFrame */
     void* new_frame {};
     /* ImGui::GetDrawData */
@@ -32,12 +39,21 @@ protected:
     /* Collection of imgui functions. */
     ImGUIFunctions functions {};
 
+    /* Map of texture resources mapped to imgui. */
+    // std::unordered_map<Texture, u64> texture_map {};
+
 public:
     /* Initialize the immediate mode GUI. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) = 0;
     
     /* Start a new immediate frame. */
     PLATFORM_SPECIFIC void new_frame() = 0;
+    
+    /* Add a texture resource to the immediate mode GUI. */
+    PLATFORM_SPECIFIC u64 add_texture(Texture texture) = 0;
+    
+    /* Remove a texture resource from the immediate mode GUI. */
+    PLATFORM_SPECIFIC void remove_texture(Texture texture) = 0;
     
     /* Destroy the immediate mode GUI, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

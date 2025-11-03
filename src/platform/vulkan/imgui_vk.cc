@@ -53,6 +53,16 @@ bool ImGui_ImplGraphics_Init(ImGUIFunctions functions, ImGui_ImplVulkan_InitInfo
     return reinterpret_cast<bool(*)(void*)>(functions.graphics_init)(init_info);
 }
 
+/* ImGUI add texture function. */
+VkDescriptorSet ImGui_ImplGraphics_AddTexture(ImGUIFunctions functions, VkSampler sampler, VkImageView image_view, VkImageLayout image_layout) {
+    return reinterpret_cast<VkDescriptorSet(*)(VkSampler, VkImageView, VkImageLayout)>(functions.add_texture)(sampler, image_view, image_layout);
+}
+
+/* ImGUI remove texture function. */
+void ImGui_ImplGraphics_RemoveTexture(ImGUIFunctions functions, VkDescriptorSet desc_set) {
+    reinterpret_cast<void(*)(VkDescriptorSet)>(functions.remove_texture)(desc_set);
+}
+
 /* ImGUI graphics new frame function. */
 void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.new_frame)();
@@ -73,8 +83,7 @@ void ImGui_ImplGraphics_Shutdown(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.graphics_shutdown)();
 }
 
-Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functions)
-{
+Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functions) {
     this->gpu = &gpu;
     this->functions = functions;
 
@@ -116,29 +125,36 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functi
         return Err("failed to init imgui for vulkan.");
     }
 
-    // if (!ImGui_ImplVulkan_CreateFontsTexture()) {
-    //     return Err("failed to create fonts & textures for imgui.");
-    // }
+    /* Bilinear sampler creation info */
+    VkSamplerCreateInfo sampler_ci { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampler_ci.magFilter = VK_FILTER_LINEAR;
+    sampler_ci.minFilter = VK_FILTER_LINEAR;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_ci.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+    sampler_ci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 
-    // /* Create the sampler to be used for the imgui viewport */
-    // const VkSamplerCreateInfo sampler_ci {
-    //     .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-    //     .magFilter = VK_FILTER_LINEAR,
-    //     .minFilter = VK_FILTER_LINEAR,
-    //     .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-    //     .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-    //     .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-    //     .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-    //     .borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK};
-
-    // /* Create the sampler */
-    // if (vkCreateSampler(gpc->device, &sampler_ci, nullptr, &imgui_viewport_sampler) != VK_SUCCESS) return false;
-
+    /* Create a bilinear sampler for imgui */
+    if (vkCreateSampler(gpu.logical_device, &sampler_ci, nullptr, &bilinear_sampler) != VK_SUCCESS) { 
+        return Err("failed to create bilinear sampler for imgui.");
+    }
     return Ok();
 }
 
 void ImGUI::new_frame() {
     ImGui_ImplGraphics_NewFrame(functions);
+}
+
+u64 ImGUI::add_texture(Texture texture) {
+    // gpu->get_vram_bank().get_texture(texture);
+    // TODO: Get image view and image layout for texture here.
+    // return ImGui_ImplGraphics_AddTexture(functions, bilinear_sampler, );
+    return 0;
+}
+
+void ImGUI::remove_texture(Texture texture) {
+    // TODO: Remove texture from ImGUI and remove it from the std::unordered_map
 }
 
 void ImGUI::render(VkCommandBuffer cmd) {

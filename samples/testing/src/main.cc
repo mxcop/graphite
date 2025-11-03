@@ -206,9 +206,9 @@ int main() {
         rg.dispatch().expect("failed to dispatch render graph.");
 
         /* Check if we are still running */
-        if (glfwWindowShouldClose(win))
+        if (glfwWindowShouldClose(win)) {
             break;
-        // break; /* Exit for testing */
+        }
     }
 #endif
 
