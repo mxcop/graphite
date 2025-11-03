@@ -167,5 +167,6 @@ Result<void> ImGUI::destroy() {
     vkDeviceWaitIdle(gpu->logical_device);
     ImGui_ImplGraphics_Shutdown(functions);
     vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);
+    vkDestroySampler(gpu->logical_device, bilinear_sampler, nullptr);
     return Ok();
 }
