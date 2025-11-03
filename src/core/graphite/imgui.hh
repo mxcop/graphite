@@ -13,6 +13,10 @@ struct ImGUIFunctions {
     void* graphics_init {};
     /* e.g. ImGui_ImplVulkan_NewFrame */
     void* new_frame {};
+    /* ImGui::GetDrawData */
+    void* draw_data {};
+    /* e.g. ImGui_ImplVulkan_RenderDrawData */
+    void* render {};
     /* e.g. ImGui_ImplVulkan_Shutdown */
     void* graphics_shutdown {};
 };

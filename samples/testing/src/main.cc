@@ -75,14 +75,13 @@ int main() {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForVulkan(win, true);
     ImGUI imgui = ImGUI();
-    ImGUIFunctions func { ImGui_ImplVulkan_Init, ImGui_ImplVulkan_NewFrame, ImGui_ImplVulkan_Shutdown };
-    if (const Result r = imgui.init(gpu, rt, func); r.is_err()) {
+    if (const Result r = imgui.init(gpu, rt, IMGUI_FUNCTIONS); r.is_err()) {
         printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
-    // /* Add viewport image to ImGUI */
-    // imgui.bind_image(Image);
-    // imgui.unbind_image(Image);
+
+    /* Add the immediate mode GUI to the render graph */
+    rg.add_imgui(imgui);
 
 #if 0
     const u32 key_7 = 0x7u;
@@ -185,6 +184,16 @@ int main() {
         int win_w, win_h;
         glfwGetWindowSize(win, &win_w, &win_h);
 
+        /* Start a new imgui frame */
+        imgui.new_frame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        /* End the imgui frame */
+        ImGui::Render();
+
         rg.new_graph();
 
         /* Test Pass */
@@ -193,9 +202,6 @@ int main() {
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
-        /* ImGUI Pass */
-        // rg.add_imgui_pass(imgui, rt);
-            
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");
 
@@ -209,6 +215,8 @@ int main() {
     /* Cleanup resources */
     bank.destroy_render_target(rt);
     imgui.destroy().expect("failed to destroy imgui.");
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     /* Cleanup the VRAM bank & GPU adapter */
     rg.destroy().expect("failed to destroy render graph.");

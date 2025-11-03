@@ -58,12 +58,23 @@ void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.new_frame)();
 }
 
+/* ImGUI get draw data function. */
+void* ImGui_GetDrawData(ImGUIFunctions functions) {
+    return reinterpret_cast<void*(*)()>(functions.draw_data)();
+}
+
+/* ImGUI graphics render draw data function. */
+void ImGui_ImplGraphics_RenderDrawData(ImGUIFunctions functions, void* draw_data, VkCommandBuffer cmd) {
+    reinterpret_cast<void(*)(void*, VkCommandBuffer, void*)>(functions.render)(draw_data, cmd, nullptr);
+}
+
 /* ImGUI graphics shutdown function. */
 void ImGui_ImplGraphics_Shutdown(ImGUIFunctions functions) {
     reinterpret_cast<void(*)()>(functions.graphics_shutdown)();
 }
 
-Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) {
+Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functions)
+{
     this->gpu = &gpu;
     this->functions = functions;
 
@@ -82,7 +93,7 @@ Result<void> ImGUI::init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functi
 
     /* Initialize imgui */
     ImGui_ImplVulkan_InitInfo init_info {};
-    init_info.ApiVersion = VK_API_VERSION_1_2;
+    init_info.ApiVersion = VK_API_VERSION_1_2; // TODO: Use constexpr VK_API_VERSION instead!!!!
     init_info.Instance = gpu.instance;
     init_info.PhysicalDevice = gpu.physical_device;
     init_info.Device = gpu.logical_device;
@@ -130,8 +141,15 @@ void ImGUI::new_frame() {
     ImGui_ImplGraphics_NewFrame(functions);
 }
 
+void ImGUI::render(VkCommandBuffer cmd) {
+    void* draw_data = ImGui_GetDrawData(functions);
+    if (draw_data == nullptr) return;
+    ImGui_ImplGraphics_RenderDrawData(functions, draw_data, cmd);
+}
+
 Result<void> ImGUI::destroy() {
-    vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);
+    vkDeviceWaitIdle(gpu->logical_device);
     ImGui_ImplGraphics_Shutdown(functions);
+    vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);
     return Ok();
 }
