@@ -32,10 +32,64 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     render_targets.init(8u);
     buffers.init(8u);
 
+    /* Allocate upload command buffer */
+    VkCommandBufferAllocateInfo cmd_ai { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    cmd_ai.commandPool = gpu.cmd_pool;
+    cmd_ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_ai.commandBufferCount = 1u;
+
+    if (vkAllocateCommandBuffers(gpu.logical_device, &cmd_ai, &upload_cmd) != VK_SUCCESS) {
+        return Err("failed to create upload command buffer.");
+    }
+
+    /* Create the upload fence */
+    VkFenceCreateInfo fence_ci { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    if (vkCreateFence(gpu.logical_device, &fence_ci, nullptr, &upload_fence) != VK_SUCCESS) {
+        return Err("failed to create upload fence");
+    }
+
+    /* Get the device queue */
+    vkGetDeviceQueue(gpu.logical_device, gpu.queue_families.queue_transfer, 0u, &gpu.queues.queue_transfer);
+
     return Ok();
 }
 
+bool VRAMBank::begin_upload()
+{
+    VkCommandBufferBeginInfo begin_info {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    if (vkBeginCommandBuffer(upload_cmd, &begin_info) != VK_SUCCESS) {
+        return false;
+    }
+    return true;
+}
+
+bool VRAMBank::end_upload()
+{
+    /* End the upload command buffer */
+    vkEndCommandBuffer(upload_cmd);
+
+    /* Submit the upload commands to the queue */
+    const VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkSubmitInfo submit { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+    submit.pWaitDstStageMask = &wait_stage;
+    submit.commandBufferCount = 1u;
+    submit.pCommandBuffers = &upload_cmd;
+
+    if (vkQueueSubmit(gpu->queues.queue_transfer, 1u, &submit, upload_fence) != VK_SUCCESS) {
+        return false;
+    }
+
+    /* Wait for the upload commands to complete */
+    if (vkWaitForFences(gpu->logical_device, 1u, &upload_fence, true, UINT64_MAX) != VK_SUCCESS) return false;
+    if (vkResetFences(gpu->logical_device, 1u, &upload_fence) != VK_SUCCESS) return false;
+    return true;
+}
+
 Result<void> VRAMBank::destroy() {
+    vkDestroyFence(gpu->logical_device, upload_fence, nullptr);
+
     vmaDestroyAllocator(vma_allocator);
     return Ok();
 }
@@ -230,12 +284,12 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
 }
 
-Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride)
-{
+Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride){
     /* Make sure the buffer usage is valid */
     if (usage == BufferUsage::eInvalid) return Err("invalid buffer usage.");
 
     StockPair resource = buffers.pop();
+    resource.data.usage = usage;
 
     /* Size of the buffer in bytes */
     const u64 size = stride == 0 ? count : count * stride;
@@ -259,8 +313,48 @@ Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count,
     return resource.handle;
 }
 
-void VRAMBank::destroy_buffer(Buffer& buffer)
-{
+Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size){
+    if (size == 0u) return Err("size is 0.");
+
+    const BufferSlot& slot = buffers.get(buffer);
+
+    if (has_flag(slot.usage, BufferUsage::eTransferDst) == false)
+        return Err("the set buffer usage flags do not support transferring to.");
+
+    /* Create staging buffer */
+    VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    staging_buffer_ci.size = size;
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Staging memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the staging buffer & allocate it using VMA */
+    VkBuffer staging_buffer {};
+    VmaAllocation alloc {};
+    if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS) return Err("failed to create staging buffer.");
+    memcpy(alloc->GetMappedData(), data, size);
+
+    VkBufferCopy copy {};
+    copy.srcOffset = 0u;
+    copy.dstOffset = dst_offset;
+    copy.size = size;
+
+    if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
+    vkCmdCopyBuffer(upload_cmd, staging_buffer, slot.buffer, 1u, &copy);
+    if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
+
+    /* Destroy staging buffer */
+    vmaDestroyBuffer(vma_allocator, staging_buffer, alloc);
+    return Ok();
+}
+
+void VRAMBank::destroy_buffer(Buffer& buffer){
     BufferSlot& slot = buffers.push(buffer);
 
     vmaDestroyBuffer(vma_allocator, slot.buffer, slot.alloc);

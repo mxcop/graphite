@@ -24,6 +24,9 @@ void win_resize_cb(GLFWwindow* win, int width, int height) {
 }
 
 int main() {
+    float dt = 0.0f;
+    float last_frame = 0.0f;
+    
     /* Set a custom debug logger callback */
     GPUAdapter gpu = GPUAdapter();
     gpu.set_logger(color_logger, DebugLevel::Verbose);
@@ -64,7 +67,7 @@ int main() {
 
     /* Initialise a test buffer */
     Buffer test_buffer {};
-    if (const Result r = bank.create_buffer(BufferUsage::eConstant, 4); r.is_err()) {
+    if (const Result r = bank.create_buffer(BufferUsage::eConstant | BufferUsage::eTransferDst, 4); r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else test_buffer = r.unwrap();
@@ -180,10 +183,19 @@ int main() {
 #else
     /* Main loop */
     for (;;) {
+        /* Get delta time */
+        float currentFrame = glfwGetTime();
+        dt = currentFrame - last_frame;
+        last_frame = currentFrame;
+        
         /* Poll events */
         glfwPollEvents();
         int win_w, win_h;
         glfwGetWindowSize(win, &win_w, &win_h);
+
+        /* Update constant buffer */
+        bank.upload_buffer(test_buffer, &dt, 0, sizeof(dt));
+        printf("dt: %f\n", dt);
 
         rg.new_graph();
 

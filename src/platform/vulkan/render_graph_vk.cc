@@ -8,23 +8,13 @@
 Result<void> RenderGraph::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
 
-    /* Command pool creation info */
-    VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-    pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    pool_ci.queueFamilyIndex = gpu.queue_families.queue_combined;
-
-    /* Create command pool for command buffers */
-    if (vkCreateCommandPool(gpu.logical_device, &pool_ci, nullptr, &cmd_pool) != VK_SUCCESS) {
-        return Err("failed to create command pool for render graph.");
-    }
-
     /* Allocate graph executions ring buffer */
     graphs = new GraphExecution[max_graphs_in_flight] {};
     active_graph_index = 0u;
 
     /* Command buffer allocation info */
     VkCommandBufferAllocateInfo cmd_ai { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-    cmd_ai.commandPool = cmd_pool;
+    cmd_ai.commandPool = gpu.cmd_pool;
     cmd_ai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     cmd_ai.commandBufferCount = 1u;
 
@@ -214,7 +204,6 @@ Result<void> RenderGraph::destroy() {
     pipeline_cache.evict();
 
     /* Destroy graph execution resources */
-    vkDestroyCommandPool(gpu->logical_device, cmd_pool, nullptr);
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         vkDestroyFence(gpu->logical_device, graphs[i].flight_fence, nullptr);
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);

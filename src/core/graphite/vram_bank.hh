@@ -49,6 +49,9 @@ public:
      */
     PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0) = 0;
 
+    /* Upload data to a GPU buffer resource. */
+    PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size) = 0;
+
     /* Destroy a buffer resource. */
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
 

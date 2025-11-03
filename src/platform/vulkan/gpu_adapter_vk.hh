@@ -17,6 +17,7 @@ class GPUAdapter : public AgnGPUAdapter {
     VkQueueFamilies queue_families {};
     VkDevice logical_device {};
     VkQueues queues {};
+    VkCommandPool cmd_pool {};
 
     /* Vulkan debug / validation */
     bool validation = false;

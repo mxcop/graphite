@@ -28,8 +28,17 @@ class VRAMBank : public AgnVRAMBank {
     /* VMA Resources */
     VmaAllocator vma_allocator {};
 
+    /* Upload command buffer */
+    VkCommandBuffer upload_cmd {};
+    VkFence upload_fence {};
+
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+
+    /* Begin recording immediate commands. */
+    bool begin_upload();
+    /* End recording immediate commands, submit, and wait for commands to finish. */
+    bool end_upload();
 public:
     
     /* Create a new render target resource. (aka, swapchain) */
@@ -48,6 +57,9 @@ public:
      * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
      */
     PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0);
+
+    /* Upload data to a GPU buffer resource. */
+    PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size);
 
     /* Destroy a buffer resource. */
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
