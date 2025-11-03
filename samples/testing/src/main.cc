@@ -62,6 +62,13 @@ int main() {
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
 
+    /* Initialise a test buffer */
+    Buffer test_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::eConstant, 4); r.is_err()) {
+        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else test_buffer = r.unwrap();
+
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
     glfwSetWindowUserPointer(win, &user_data);
@@ -201,6 +208,7 @@ int main() {
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);
+    bank.destroy_buffer(test_buffer);
 
     /* Cleanup the VRAM bank & GPU adapter */
     rg.destroy().expect("failed to destroy render graph.");

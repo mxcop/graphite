@@ -32,4 +32,17 @@ VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
     }
 }
 
+VkBufferUsageFlags buffer_usage(const BufferUsage usage)
+{
+    VkBufferUsageFlags flags = 0x00;
+    if (has_flag(usage, BufferUsage::eTransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (has_flag(usage, BufferUsage::eTransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    if (has_flag(usage, BufferUsage::eConstant)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eStorage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eVertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    return flags;
+}
+
 } /* translate */

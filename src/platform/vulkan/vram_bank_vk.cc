@@ -1,14 +1,15 @@
 #define VMA_IMPLEMENTATION
 #include "vram_bank_vk.hh"
 
+#include "wrapper/translate_vk.hh"
+
 #define MAX(A, B) ((A > B) ? A : B)
 #define MIN(A, B) ((A < B) ? A : B)
 
 Result<void> VRAMBank::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
 
-    /* Initialize VMA */
-    {
+    { /* Initialize VMA */
         VmaVulkanFunctions vulkan_functions{};
 
         VmaAllocatorCreateInfo vma_info{};
@@ -29,11 +30,13 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
 
     /* Initialize the Stack Pools */
     render_targets.init(8u);
+    buffers.init(8u);
 
     return Ok();
 }
 
 Result<void> VRAMBank::destroy() {
+    vmaDestroyAllocator(vma_allocator);
     return Ok();
 }
 
@@ -225,4 +228,40 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
 
     /* Destroy the KHR surface */
     vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
+}
+
+Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride)
+{
+    /* Make sure the buffer usage is valid */
+    if (usage == BufferUsage::eInvalid) return Err("invalid buffer usage.");
+
+    StockPair resource = buffers.pop();
+
+    /* Size of the buffer in bytes */
+    const u64 size = stride == 0 ? count : count * stride;
+
+    /* Buffer creation info */
+    VkBufferCreateInfo buffer_ci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    buffer_ci.size = size;
+    buffer_ci.usage = translate::buffer_usage(usage);
+    buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_ci.queueFamilyIndexCount = 1u;
+    buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the buffer & allocate it using VMA */
+    if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) return Err("failed to create buffer.");
+
+    return resource.handle;
+}
+
+void VRAMBank::destroy_buffer(Buffer& buffer)
+{
+    BufferSlot& slot = buffers.push(buffer);
+
+    vmaDestroyBuffer(vma_allocator, slot.buffer, slot.alloc);
 }

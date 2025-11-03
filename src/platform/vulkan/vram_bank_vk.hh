@@ -41,6 +41,16 @@ public:
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
 
+    /**
+     * @brief Allocate a new buffer resource.
+     * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
+     * otherwise it is the number of elements in the buffer.
+     * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
+     */
+    PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0);
+
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
@@ -81,5 +91,8 @@ struct RenderTargetSlot {
 
 /* Buffer resource slot. */
 struct BufferSlot {
-
+    VkBuffer buffer {};
+    VmaAllocation alloc {};
+    BufferUsage usage {};
+    u64 size = 0u;
 };

@@ -4,6 +4,8 @@
 
 #include "graphite/nodes/node.hh"
 
+#include "graphite/resources/buffer.hh"
+
 /* Provides functions for translating platform-agnostic types to Vulkan-specific types. */
 namespace translate {
 
@@ -18,5 +20,8 @@ VkDescriptorType desired_image_type(DependencyFlags flags);
 
 /* Convert the platform-agnostic node type to Vulkan pipeline bind point. */
 VkPipelineBindPoint pipeline_bind_point(NodeType node_type);
+
+/* Convert the platform-agnostic buffer usage to buffer usage flags. */
+VkBufferUsageFlags buffer_usage(const BufferUsage usage);
 
 } /* translate */

@@ -5,10 +5,12 @@
 #include "gpu_adapter.hh"
 #include "utils/result.hh"
 #include "resources/stock.hh"
+#include "resources/buffer.hh"
 
 /* Slots are defined per platform */
 PLATFORM_STRUCT struct TargetDesc;
 PLATFORM_STRUCT struct RenderTargetSlot;
+PLATFORM_STRUCT struct BufferSlot;
 
 class GPUAdapter;
 
@@ -22,6 +24,7 @@ protected:
 
     /* Resources */
     Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
+    Stock<BufferSlot, Buffer, ResourceType::Buffer> buffers {};
 
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
@@ -37,6 +40,17 @@ public:
 
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
+
+    /**
+     * @brief Allocate a new buffer resource.
+     * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
+     * otherwise it is the number of elements in the buffer.
+     * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
+     */
+    PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0) = 0;
+
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;
