@@ -32,8 +32,7 @@ VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
     }
 }
 
-VkBufferUsageFlags buffer_usage(const BufferUsage usage)
-{
+VkBufferUsageFlags buffer_usage(const BufferUsage usage) {
     VkBufferUsageFlags flags = 0x00;
     if (has_flag(usage, BufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     if (has_flag(usage, BufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
