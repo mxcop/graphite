@@ -64,19 +64,14 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     return Ok();
 }
 
-bool VRAMBank::begin_upload()
-{
+bool VRAMBank::begin_upload() {
     VkCommandBufferBeginInfo begin_info {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-    if (vkBeginCommandBuffer(upload_cmd, &begin_info) != VK_SUCCESS) {
-        return false;
-    }
-    return true;
+    return vkBeginCommandBuffer(upload_cmd, &begin_info) == VK_SUCCESS;
 }
 
-bool VRAMBank::end_upload()
-{
+bool VRAMBank::end_upload() {
     /* End the upload command buffer */
     vkEndCommandBuffer(upload_cmd);
 
@@ -307,7 +302,7 @@ Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count,
     const u64 size = stride == 0 ? count : count * stride;
 
     /* Buffer creation info */
-    VkBufferCreateInfo buffer_ci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     buffer_ci.size = size;
     buffer_ci.usage = translate::buffer_usage(usage);
     buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -331,8 +326,10 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64
     BufferSlot& slot = buffers.get(buffer);
     slot.size = size;
 
-    if (has_flag(slot.usage, BufferUsage::TransferDst) == false)
-        return Err("the set buffer usage flags do not support transferring to.");
+    if (has_flag(slot.usage, BufferUsage::TransferDst) == false) {
+        gpu->log(DebugSeverity::Warning, "attempted to upload to buffer without TransferDst flag.");
+        return Ok();
+    }
 
     /* Create staging buffer */
     VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
