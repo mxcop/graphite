@@ -4,13 +4,18 @@
 
 #include "gpu_adapter.hh"
 #include "utils/result.hh"
-#include "resources/stock.hh"
+
 #include "resources/buffer.hh"
+#include "resources/texture.hh"
+#include "resources/stock.hh"
 
 /* Slots are defined per platform */
 PLATFORM_STRUCT struct TargetDesc;
 PLATFORM_STRUCT struct RenderTargetSlot;
 PLATFORM_STRUCT struct BufferSlot;
+PLATFORM_STRUCT struct TextureSlot;
+PLATFORM_STRUCT struct ImageSlot;
+PLATFORM_STRUCT struct SamplerSlot;
 
 class GPUAdapter;
 
@@ -25,6 +30,7 @@ protected:
     /* Resources */
     Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
     Stock<BufferSlot, Buffer, ResourceType::Buffer> buffers {};
+    Stock<TextureSlot, Texture, ResourceType::Texture> textures {};
 
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
@@ -42,21 +48,23 @@ protected:
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;
-
-    /* Destroy a render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
-
     /**
-     * @brief Allocate a new buffer resource.
+     * @brief Create a new buffer resource.
      * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
      * otherwise it is the number of elements in the buffer.
      * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
      */
-    PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0) = 0;
+    PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0) = 0;
+    /* Create a new texture resource. */
+    PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta()) = 0;
 
+    /* Resize a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height) = 0;
     /* Upload data to a GPU buffer resource. */
-    PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size) = 0;
+    PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;
 
+    /* Destroy a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
     /* Destroy a buffer resource. */
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
 
