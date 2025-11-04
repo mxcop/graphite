@@ -1,0 +1,7 @@
+BasedOnStyle: Google
+AlignAfterOpenBracket: BlockIndent
+SortIncludes: Never
+SpaceBeforeCpp11BracedList: true
+TabWidth: 4
+IndentWidth: 4
+ColumnLimit: 128

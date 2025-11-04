@@ -30,6 +30,9 @@ class RenderGraph : public AgnRenderGraph {
     /* Queue commands for a compute node. */
     Result<void> queue_compute_node(const GraphExecution& graph, const ComputeNode& node);
 
+    /* Queue commands to render immediate mode gui. */
+    void queue_imgui(const GraphExecution& graph);
+
 public:
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);

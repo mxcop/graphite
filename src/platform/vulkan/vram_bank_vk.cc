@@ -163,7 +163,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = VK_PRESENT_MODE_FIFO_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; /* TODO: Vsync parameter. */
     swapchain_ci.clipped = true;
 
     /* Create the swapchain */
@@ -233,7 +233,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = VK_PRESENT_MODE_FIFO_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; /* TODO: Vsync parameter. */
     swapchain_ci.clipped = true;
     swapchain_ci.oldSwapchain = data.swapchain;
 

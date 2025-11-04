@@ -51,6 +51,7 @@ target_sources(graphite PRIVATE
     ${PLATFORM_DIR}/${PLATFORM}/gpu_adapter_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/vram_bank_${PLATFORM_EXT}.cc
     ${PLATFORM_DIR}/${PLATFORM}/render_graph_${PLATFORM_EXT}.cc
+    ${PLATFORM_DIR}/${PLATFORM}/imgui_${PLATFORM_EXT}.cc
 )
 
 # Additional platform-specific source files

@@ -36,6 +36,7 @@ public:
     friend class PipelineCache;
     friend class VRAMBank;
     friend class RenderGraph;
+    friend class ImGUI;
 
     /* To access VRAM Bank and logical device */
     friend Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node& node);

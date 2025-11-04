@@ -74,6 +74,7 @@ public:
     /* To access resource getters. */
     friend class RenderGraph;
     friend class AgnGPUAdapter;
+    friend class ImGUI;
 };
 
 /* Render target resource slot. */

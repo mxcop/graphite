@@ -1,5 +1,6 @@
 #include "render_graph_vk.hh"
 
+#include "graphite/imgui.hh"
 #include "graphite/vram_bank.hh"
 #include "graphite/nodes/node.hh"
 #include "graphite/nodes/compute_node.hh"
@@ -86,6 +87,9 @@ Result<void> RenderGraph::dispatch() {
             s = e;
         }
     }
+
+    /* Queue immediate mode GUI render commands */
+    queue_imgui(graph);
 
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
@@ -194,6 +198,55 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     vkCmdDispatch(graph.cmd, dispatch_x, dispatch_y, dispatch_z);
 
     return Ok();
+}
+
+void RenderGraph::queue_imgui(const GraphExecution &graph) {
+    /* If this graph doesn't have a render target, don't render imgui */
+    if (imgui == nullptr || target.is_null()) return;
+    RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+
+    /* Make imgui render target sync barrier */
+    VkImageMemoryBarrier2 viewport_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    viewport_barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    viewport_barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    viewport_barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    viewport_barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    viewport_barrier.oldLayout = rt.old_layout();
+    viewport_barrier.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    rt.old_layout() = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    viewport_barrier.image = rt.image();
+    viewport_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
+
+    /* Render target dependency info */
+    VkDependencyInfo viewport_dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    viewport_dep_info.imageMemoryBarrierCount = 1u;
+    viewport_dep_info.pImageMemoryBarriers = &viewport_barrier;
+
+    /* Insert a pipeline barrier before rendering the overlay */
+    vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
+
+    /* Define the render target attachment */
+    VkRenderingAttachmentInfoKHR attachment_info { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
+    attachment_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_info.imageView = rt.view();
+
+    /* Rendering info */
+    VkRenderingInfoKHR rendering_info { VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
+    rendering_info.renderArea.extent = rt.extent;
+    rendering_info.renderArea.offset = VkOffset2D {0, 0};
+    rendering_info.colorAttachmentCount = 1;
+    rendering_info.pColorAttachments = &attachment_info;
+    rendering_info.layerCount = 1;
+
+    /* Begin dynamic rendering */
+    vkCmdBeginRenderingKHR(graph.cmd, &rendering_info);
+
+    imgui->render(graph.cmd);
+
+    /* End dynamic rendering */
+    vkCmdEndRenderingKHR(graph.cmd);
 }
 
 Result<void> RenderGraph::destroy() {
