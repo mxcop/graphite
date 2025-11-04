@@ -5,7 +5,6 @@
 
 #include "platform/platform.hh"
 
-#include "gpu_adapter.hh"
 #include "resources/handle.hh"
 #include "utils/result.hh"
 #include "utils/types.hh"
@@ -16,6 +15,9 @@ struct WaveLane {
     u32 lane = 0u; /* Index of the node. */
     WaveLane(u32 wave, u32 lane) : wave(wave), lane(lane) {}
 };
+
+class GPUAdapter;
+class ImGUI;
 
 /* The execution data for a graph. */
 PLATFORM_STRUCT struct GraphExecution;
@@ -31,6 +33,7 @@ class ComputeNode;
 class AgnRenderGraph {
 protected:
     GPUAdapter* gpu = nullptr;
+    ImGUI* imgui = nullptr;
 
     /* List of nodes in the order in which they were queued. */
     std::vector<Node*> nodes {};
@@ -59,6 +62,8 @@ public:
     void set_shader_path(std::string path) { shader_path = path; };
     /* Set the maximum number of graphs in flight. (default: `1`) */
     void set_max_graphs_in_flight(u32 max) { max_graphs_in_flight = max; };
+    /* Add an immediate mode gui to this render graph. (only works when rendering to a render target) */
+    void add_imgui(ImGUI& gui) { imgui = &gui; };
 
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;

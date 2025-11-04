@@ -43,6 +43,7 @@ public:
     friend Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end);
     /* To access resource getters. */
     friend class RenderGraph;
+    friend class ImGUI;
 };
 
 /* Render target resource slot. */

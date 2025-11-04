@@ -33,4 +33,5 @@ public:
     friend class PipelineCache;
     friend class VRAMBank;
     friend class RenderGraph;
+    friend class ImGUI;
 };

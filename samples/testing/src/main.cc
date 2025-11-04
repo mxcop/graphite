@@ -10,6 +10,10 @@
 #include <graphite/vram_bank.hh>
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
+#include <graphite/imgui.hh>
+
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 
 struct WindowUserData {
     VRAMBank* bank {};
@@ -68,14 +72,16 @@ int main() {
     glfwSetFramebufferSizeCallback(win, win_resize_cb);
 
     /* Initialize the immediate mode GUI */
-    // ImGUI imgui = ImGUI();
-    // if (const Result r = imgui.init(gpu); r.is_err()) {
-    //     printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
-    //     return EXIT_SUCCESS;
-    // }
-    // /* Add viewport image to ImGUI */
-    // imgui.bind_image(Image);
-    // imgui.unbind_image(Image);
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForVulkan(win, true);
+    ImGUI imgui = ImGUI();
+    if (const Result r = imgui.init(gpu, rt, IMGUI_FUNCTIONS); r.is_err()) {
+        printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+
+    /* Add the immediate mode GUI to the render graph */
+    rg.add_imgui(imgui);
 
 #if 0
     const u32 key_7 = 0x7u;
@@ -178,6 +184,16 @@ int main() {
         int win_w, win_h;
         glfwGetWindowSize(win, &win_w, &win_h);
 
+        /* Start a new imgui frame */
+        imgui.new_frame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        /* End the imgui frame */
+        ImGui::Render();
+
         rg.new_graph();
 
         /* Test Pass */
@@ -186,21 +202,21 @@ int main() {
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
-        /* ImGUI Pass */
-        // rg.add_imgui_pass(imgui, rt);
-            
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");
 
         /* Check if we are still running */
-        if (glfwWindowShouldClose(win))
+        if (glfwWindowShouldClose(win)) {
             break;
-        // break; /* Exit for testing */
+        }
     }
 #endif
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);
+    imgui.destroy().expect("failed to destroy imgui.");
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     /* Cleanup the VRAM bank & GPU adapter */
     rg.destroy().expect("failed to destroy render graph.");

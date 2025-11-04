@@ -13,7 +13,9 @@ const char* const device_ext[] = {
     /* For SPIR-V "StorageImageReadWithoutFormat" and "StorageImageWriteWithoutFormat" */
     VK_KHR_FORMAT_FEATURE_FLAGS_2_EXTENSION_NAME,
     /* Improved barriers */
-    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
+    VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+    /* Dynamic rendering */
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 };
 const u32 device_ext_count = sizeof(device_ext) / sizeof(char*);
 
