@@ -5,11 +5,10 @@ struct Pixel {
 RWStructuredBuffer<Pixel> buffer;
 
 [shader("compute")] /* Compute shader entry point */
-[numthreads(64, 1, 1)]
+[numthreads(16, 16, 1)]
 void entry(int2 thread_id: SV_DispatchThreadID) {
-    // Guard against out-of-bounds writes
-    if (thread_id.x >= 1440 * 810)
-        return;
+    uint index = thread_id.x + thread_id.y * 1440;
+    float2 uv = thread_id.xy / float2(1440.0f - 1.0f, 810.0f - 1.0f);
 
-    buffer[thread_id.x].color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    buffer[index].color = float4(uv, 0.0f, 1.0f);
 }

@@ -235,8 +235,8 @@ int main() {
         /* Fill Storage Buffer Pass */
         rg.add_compute_pass("buffer fill pass", "buffer-fill")
             .write(storage_buffer)
-            .group_size(64u, 1u)
-            .work_size(1440u * 810u, 1u);
+            .group_size(16, 16)
+            .work_size(1440, 810);
 
         /* Test Pass */
         rg.add_compute_pass("render pass", "test")
