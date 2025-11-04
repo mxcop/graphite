@@ -291,7 +291,7 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
 }
 
-Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride){
+Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride) {
     /* Make sure the buffer usage is valid */
     if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
 
@@ -320,7 +320,7 @@ Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count,
     return resource.handle;
 }
 
-Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size){
+Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size) {
     if (size == 0u) return Err("size is 0.");
 
     BufferSlot& slot = buffers.get(buffer);
@@ -364,7 +364,7 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64
     return Ok();
 }
 
-void VRAMBank::destroy_buffer(Buffer& buffer){
+void VRAMBank::destroy_buffer(Buffer& buffer) {
     BufferSlot& slot = buffers.push(buffer);
 
     vmaDestroyBuffer(vma_allocator, slot.buffer, slot.alloc);
