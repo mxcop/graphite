@@ -71,11 +71,26 @@ int main() {
     } else rt = r.unwrap();
 
     /* Initialise a test buffer */
-    Buffer test_buffer {};
-    if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4); r.is_err()) {
+    Buffer const_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, sizeof(float)); r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else test_buffer = r.unwrap();
+    } else const_buffer = r.unwrap();
+
+    /* Initialise a storage buffer */
+    Buffer storage_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::Storage | BufferUsage::TransferDst, 1440 * 810, sizeof(float) * 4); r.is_err()) {
+        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else storage_buffer = r.unwrap();
+    struct Pixel {
+        float r = 0.0f;
+        float g = 0.0f;
+        float b = 0.0f;
+        float a = 0.0f;
+    };
+    float* pixels = (float*)malloc(sizeof(float) * 4 * 1440 * 810);
+    bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -202,7 +217,7 @@ int main() {
         glfwGetWindowSize(win, &win_w, &win_h);
 
         /* Update constant buffer */
-        bank.upload_buffer(test_buffer, &total_time, 0, sizeof(total_time));
+        bank.upload_buffer(const_buffer, &total_time, 0, sizeof(total_time));
         //printf("dt: %f\n", dt);
 
         /* Start a new imgui frame */
@@ -217,10 +232,17 @@ int main() {
 
         rg.new_graph();
 
+        /* Fill Storage Buffer Pass */
+        rg.add_compute_pass("buffer fill pass", "buffer-fill")
+            .write(storage_buffer)
+            .group_size(64u, 1u)
+            .work_size(1440u * 810u, 1u);
+
         /* Test Pass */
         rg.add_compute_pass("render pass", "test")
             .write(rt)
-            .read(test_buffer)
+            .read(const_buffer)
+            .read(storage_buffer)
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
@@ -236,7 +258,8 @@ int main() {
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);
-    bank.destroy_buffer(test_buffer);
+    bank.destroy_buffer(const_buffer);
+    bank.destroy_buffer(storage_buffer);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

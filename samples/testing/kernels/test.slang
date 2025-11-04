@@ -1,10 +1,14 @@
-struct BufferData
-{
+struct BufferData {
     float time;
+};
+
+struct Pixel {
+    float4 color;
 };
 
 RWTexture2D<float4> out_texture;
 ConstantBuffer<BufferData> test_buffer;
+StructuredBuffer<Pixel> in_buffer;
 
 static const float2 size = float2(1440, 810);
 //static const float iTime = 1.0;
@@ -49,6 +53,10 @@ float2 turbulence(float2 p) {
 [shader("compute")] /* Compute shader entry point */
 [numthreads(16, 16, 1)]
 void entry(int2 thread_id: SV_DispatchThreadID) {
+    uint index = thread_id.y * 1440 + thread_id.x;
+    out_texture[thread_id] = in_buffer[index].color;
+    return;
+
     const float2 uv = 2.0 * ((float2)thread_id * 2.0 - size) / size.y;
     const float2 t = turbulence(uv);
     // Subtle blue and yellow gradient
