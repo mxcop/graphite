@@ -19,11 +19,6 @@ VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDe
 
 /* Initialize the GPU adapter. */
 Result<void> GPUAdapter::init(bool debug_mode) {
-    /* Initialize VRAM banks */
-    if (const Result r = init_vram_bank(); r.is_err()) {
-        return Err(r.unwrap_err());
-    }
-
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
@@ -37,7 +32,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     VkApplicationInfo app_info { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.apiVersion = VK_API_VERSION;
     
     /* Debug utilities messenger (for debug mode) */
     VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -146,11 +141,29 @@ Result<void> GPUAdapter::init(bool debug_mode) {
 
     /* Get the logical device queues */
     queues = get_queues(logical_device, queue_families);
+
+    /* Command pool creation info */
+    VkCommandPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    pool_ci.queueFamilyIndex = queue_families.queue_combined;
+
+    /* Create command pool for command buffers */
+    if (vkCreateCommandPool(logical_device, &pool_ci, nullptr, &cmd_pool) != VK_SUCCESS) {
+        return Err("failed to create command pool for render graph.");
+    }
+
+    /* Initialize VRAM banks */
+    if (const Result r = init_vram_bank(); r.is_err()) {
+        return Err(r.unwrap_err());
+    }
+
     return Ok();
 }
 
 /* Destroy the GPU adapter, free all its resources. */
 Result<void> GPUAdapter::destroy() {
+    vkDestroyCommandPool(logical_device, cmd_pool, nullptr);
+
     vkDestroyDevice(logical_device, nullptr);
     if (validation) { 
         vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);

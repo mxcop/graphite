@@ -28,6 +28,10 @@ void win_resize_cb(GLFWwindow* win, int width, int height) {
 }
 
 int main() {
+    float dt = 0.0f;
+    float last_frame = 0.0f;
+    float total_time = 0.0f;
+    
     /* Set a custom debug logger callback */
     GPUAdapter gpu = GPUAdapter();
     gpu.set_logger(color_logger, DebugLevel::Verbose);
@@ -65,6 +69,13 @@ int main() {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
+
+    /* Initialise a test buffer */
+    Buffer test_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4); r.is_err()) {
+        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else test_buffer = r.unwrap();
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -179,10 +190,20 @@ int main() {
 #else
     /* Main loop */
     for (;;) {
+        /* Get delta time */
+        float currentFrame = glfwGetTime();
+        dt = currentFrame - last_frame;
+        total_time += dt;
+        last_frame = currentFrame;
+        
         /* Poll events */
         glfwPollEvents();
         int win_w, win_h;
         glfwGetWindowSize(win, &win_w, &win_h);
+
+        /* Update constant buffer */
+        bank.upload_buffer(test_buffer, &total_time, 0, sizeof(total_time));
+        //printf("dt: %f\n", dt);
 
         /* Start a new imgui frame */
         imgui.new_frame();
@@ -199,6 +220,7 @@ int main() {
         /* Test Pass */
         rg.add_compute_pass("render pass", "test")
             .write(rt)
+            .read(test_buffer)
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
@@ -214,6 +236,7 @@ int main() {
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);
+    bank.destroy_buffer(test_buffer);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

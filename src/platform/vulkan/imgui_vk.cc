@@ -102,7 +102,7 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functi
 
     /* Initialize imgui */
     ImGui_ImplVulkan_InitInfo init_info {};
-    init_info.ApiVersion = VK_API_VERSION_1_2; // TODO: Use constexpr VK_API_VERSION instead!!!!
+    init_info.ApiVersion = VK_API_VERSION;
     init_info.Instance = gpu.instance;
     init_info.PhysicalDevice = gpu.physical_device;
     init_info.Device = gpu.logical_device;

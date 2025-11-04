@@ -32,4 +32,22 @@ VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
     }
 }
 
+VkBufferUsageFlags buffer_usage(const BufferUsage usage) {
+    VkBufferUsageFlags flags = 0x00;
+    if (has_flag(usage, BufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    if (has_flag(usage, BufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    if (has_flag(usage, BufferUsage::Constant)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eStorage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eVertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    //if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    return flags;
+}
+
+VkDescriptorType buffer_descriptor_type(const BufferUsage usage) {
+    if (has_flag(usage, BufferUsage::Constant)) return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    //if (has_flag(usage, BufferUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+}
+
 } /* translate */

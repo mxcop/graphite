@@ -25,7 +25,23 @@ struct TargetDesc {
  * Used to create and manage GPU resources.
  */
 class VRAMBank : public AgnVRAMBank {
+    /* VMA Resources */
+    VmaAllocator vma_allocator {};
+
+    /* Upload Resources */
+    VkCommandPool upload_cmd_pool {};
+    VkCommandBuffer upload_cmd {};
+    VkFence upload_fence {};
+
+    /* Initialize the VRAM bank. */
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+
+    /* Begin recording immediate commands. */
+    bool begin_upload();
+    /* End recording immediate commands, submit, and wait for commands to finish. */
+    bool end_upload();
 public:
+    
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u);
     
@@ -35,6 +51,20 @@ public:
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
 
+    /**
+     * @brief Allocate a new buffer resource.
+     * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
+     * otherwise it is the number of elements in the buffer.
+     * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
+     */
+    PLATFORM_SPECIFIC Result<Buffer> create_buffer(const BufferUsage usage, const u64 count, const u64 stride = 0);
+
+    /* Upload data to a GPU buffer resource. */
+    PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size);
+
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
+
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
 
@@ -43,6 +73,7 @@ public:
     friend Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end);
     /* To access resource getters. */
     friend class RenderGraph;
+    friend class AgnGPUAdapter;
     friend class ImGUI;
 };
 
@@ -70,4 +101,12 @@ struct RenderTargetSlot {
     inline VkImageView& view() { return views[current_image]; };
     inline VkSemaphore& semaphore() { return semaphores[current_image]; };
     inline VkImageLayout& old_layout() { return old_layouts[current_image]; };
+};
+
+/* Buffer resource slot. */
+struct BufferSlot {
+    VkBuffer buffer {};
+    VmaAllocation alloc {};
+    BufferUsage usage {};
+    u64 size = 0u;
 };

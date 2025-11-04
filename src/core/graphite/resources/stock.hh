@@ -59,6 +59,7 @@ class Stock {
 
     /* Pop a new resource off the stack. */
     StockPair<Slot, Handle> pop() {
+        assert(stack_ptr < stack_size && "stock overflow!");
         const Handle handle = stack[stack_ptr++];
         Slot& data = pool[handle.index - 1u];
         return StockPair(handle, data);

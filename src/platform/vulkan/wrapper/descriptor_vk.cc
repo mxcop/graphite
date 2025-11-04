@@ -10,8 +10,11 @@
 /* Create a descriptor layout binding for a render target resource. */
 VkDescriptorSetLayoutBinding render_target_layout(u32 slot, const Dependency& dep);
 
+/* Create a descriptor layout binding for a buffer resource. */
+VkDescriptorSetLayoutBinding buffer_layout(u32 slot, const Dependency& dep, const BufferUsage& buffer_usage);
+
 /* Create the descriptor layout for a render graph node. */
-Result<VkDescriptorSetLayout> node_descriptor_layout(VkDevice device, const Node &node) {
+Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node &node) {
     /* Descriptor bindings */
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
 
@@ -24,9 +27,11 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(VkDevice device, const Node
             case ResourceType::RenderTarget:
                 bindings.push_back(render_target_layout(slot, dep));
                 break;
-            // case ResourceType::Buffer:
-            //     bindings.push_back(buffer_binding((uint32)bindings.size(), dep));
-            //     break;
+            case ResourceType::Buffer: {
+                BufferSlot& buffer = gpu.get_vram_bank().get_buffer(dep.resource);
+                bindings.push_back(buffer_layout(slot, dep, buffer.usage));
+                break;
+            }
             // case ResourceType::Image:
             //     bindings.push_back(image_binding((uint32)bindings.size(), dep));
             //     break;
@@ -43,7 +48,7 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(VkDevice device, const Node
 
     /* Create the descriptor set layout */
     VkDescriptorSetLayout layout {};
-    if (vkCreateDescriptorSetLayout(device, &layout_ci, nullptr, &layout) != VK_SUCCESS) {
+    if (vkCreateDescriptorSetLayout(gpu.logical_device, &layout_ci, nullptr, &layout) != VK_SUCCESS) {
         return Err("failed to create descriptor set layout for '%s' node.", node.label.data());
     }
     return Ok(layout);
@@ -54,6 +59,16 @@ VkDescriptorSetLayoutBinding render_target_layout(u32 slot, const Dependency& de
     VkDescriptorSetLayoutBinding binding {};
     binding.binding = slot;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    binding.descriptorCount = 1u;
+    binding.stageFlags = translate::stage_flags(dep.stages);
+    return binding;
+}
+
+/* Create a descriptor layout binding for a buffer resource. */
+VkDescriptorSetLayoutBinding buffer_layout(u32 slot, const Dependency& dep, const BufferUsage& buffer_usage) {
+    VkDescriptorSetLayoutBinding binding {};
+    binding.binding = slot;
+    binding.descriptorType = translate::buffer_descriptor_type(buffer_usage);
     binding.descriptorCount = 1u;
     binding.stageFlags = translate::stage_flags(dep.stages);
     return binding;
@@ -92,9 +107,15 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 write.pImageInfo = &texture_info[bindings];
                 break;
             }
-            // case ResourceType::eBuffer:
-            //     buffer_push(dep, buffer_info[binding], write);
-            //     break;
+            case ResourceType::Buffer: {
+                BufferSlot& buffer = rg.gpu->get_vram_bank().get_buffer(dep.resource);
+                buffer_info[bindings].buffer = buffer.buffer;
+                buffer_info[bindings].offset = 0u;
+                buffer_info[bindings].range = buffer.size;
+                write.descriptorType = translate::buffer_descriptor_type(buffer.usage);
+                write.pBufferInfo = &buffer_info[bindings];
+                break;
+            }
             // case ResourceType::eImage:
             //     image_push(dep, texture_info[binding], write);
             //     break;
@@ -141,9 +162,19 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
                     break;
                 }
-                // case ResourceType::eBuffer:
-                //     buf_barriers.push_back(buffer_barrier(dep));
-                //     break;
+                case ResourceType::Buffer: {
+                    BufferSlot& buffer = rg.gpu->get_vram_bank().get_buffer(dep.resource);
+
+                    VkBufferMemoryBarrier2& barrier = buf_barriers.emplace_back(VkBufferMemoryBarrier2{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 });
+                    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+                    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                    barrier.dstAccessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+                    barrier.buffer = buffer.buffer;
+                    barrier.offset = 0u;
+                    barrier.size = buffer.size;
+                    break;
+                }
                 // case ResourceType::eImage:
                 //     tex_barriers.push_back(image_barrier(dep));
                 //     break;

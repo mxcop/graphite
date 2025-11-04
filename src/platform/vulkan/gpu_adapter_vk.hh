@@ -6,6 +6,8 @@
 #include "vulkan/api_vk.hh" /* Vulkan API */
 #include "wrapper/queue_selection_vk.hh"
 
+class Node;
+
 /**
  * Graphics Processing Unit Adapter.  
  * Used to find and initialize a GPU.
@@ -17,6 +19,7 @@ class GPUAdapter : public AgnGPUAdapter {
     VkQueueFamilies queue_families {};
     VkDevice logical_device {};
     VkQueues queues {};
+    VkCommandPool cmd_pool {};
 
     /* Vulkan debug / validation */
     bool validation = false;
@@ -34,4 +37,7 @@ public:
     friend class VRAMBank;
     friend class RenderGraph;
     friend class ImGUI;
+
+    /* To access VRAM Bank and logical device */
+    friend Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node& node);
 };
