@@ -79,7 +79,9 @@ Result<void> AgnRenderGraph::end_graph() {
 
                 /* Save this resource if it is a render target */
                 if (dep.resource.get_type() == ResourceType::RenderTarget) {
-                    if (target.is_null() == false) return Err("multiple render targets are not allowed in the same graph.");
+                    if (target.is_null() == false && target.raw() != dep.resource.raw()) { 
+                        return Err("multiple render targets are not allowed in the same graph.");
+                    }
                     target = (RenderTarget&)dep.resource;
                 }
             }

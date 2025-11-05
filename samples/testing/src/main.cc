@@ -279,7 +279,7 @@ int main() {
             .raster_extent(win_w, win_h);
         graphics_pass.draw(vertex_buffer, 3);
 
-        rg.end_graph();
+        rg.end_graph().expect("failed to compile render graph.");
         rg.dispatch().expect("failed to dispatch render graph.");
 
         /* Check if we are still running */
