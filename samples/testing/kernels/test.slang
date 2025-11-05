@@ -1,17 +1,8 @@
-struct BufferData {
-    float time;
-};
-
-struct Pixel {
-    float4 color;
-};
+import common;
 
 RWTexture2D<float4> out_texture;
-ConstantBuffer<BufferData> test_buffer;
+ConstantBuffer<FrameData> frame_data;
 StructuredBuffer<Pixel> in_buffer;
-
-static const float2 size = float2(1440, 810);
-//static const float iTime = 1.0;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
 
@@ -37,7 +28,7 @@ float2 turbulence(float2 p) {
     // Loop through turbulence octaves
     for (float i = 0.0; i < TURB_NUM; i++) {
         // Scroll along the rotated y coordinate
-        float phase = freq * mul(rot, p).y + TURB_SPEED * test_buffer.time + i;
+        float phase = freq * mul(rot, p).y + TURB_SPEED * frame_data.time + i;
         // Add a perpendicular sine wave offset
         p += TURB_AMP * rot[0] * sin(phase) / freq;
 
@@ -53,11 +44,11 @@ float2 turbulence(float2 p) {
 [shader("compute")] /* Compute shader entry point */
 [numthreads(16, 16, 1)]
 void entry(int2 thread_id: SV_DispatchThreadID) {
-    uint index = thread_id.y * 1440 + thread_id.x;
+    uint index = thread_id.y * (uint)frame_data.win_width + thread_id.x;
     out_texture[thread_id] = in_buffer[index].color;
     return;
 
-    const float2 uv = 2.0 * ((float2)thread_id * 2.0 - size) / size.y;
+    const float2 uv = 2.0 * ((float2)thread_id * 2.0 - float2(frame_data.win_width, frame_data.win_height)) / frame_data.win_height;
     const float2 t = turbulence(uv);
     // Subtle blue and yellow gradient
     float3 col = 0.5 * exp(0.1 * t.x * float3(-1, 0, 2));
