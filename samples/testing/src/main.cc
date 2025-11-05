@@ -274,7 +274,7 @@ int main() {
         RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
             .topology(Topology::TriangleList)
             .attribute(AttrFormat::XYZ32_SFloat) // Position
-            .read(const_buffer, ShaderStages::Fragment)
+            .read(const_buffer, ShaderStages::Pixel)
             .attach(rt)
             .raster_extent(win_w, win_h);
         graphics_pass.draw(vertex_buffer, 3);

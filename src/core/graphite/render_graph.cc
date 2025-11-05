@@ -197,9 +197,9 @@ ComputeNode& AgnRenderGraph::add_compute_pass(std::string_view label, std::strin
     return *new_node;
 }
 
-RasterNode& AgnRenderGraph::add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view fg_path) {
+RasterNode& AgnRenderGraph::add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path) {
     /* Create the new raster node, and insert it into the nodes list. */
-    RasterNode* new_node = new RasterNode(label, vx_path, fg_path);
+    RasterNode* new_node = new RasterNode(label, vx_path, px_path);
     nodes.emplace_back((Node*)new_node);
     return *new_node;
 }

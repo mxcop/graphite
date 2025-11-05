@@ -7,7 +7,7 @@ VkShaderStageFlags stage_flags(DependencyStages stages) {
     VkShaderStageFlags flags = 0x00;
     if (has_flag(stages, DependencyStages::Compute)) flags |= VK_SHADER_STAGE_COMPUTE_BIT;
     if (has_flag(stages, DependencyStages::Vertex)) flags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if (has_flag(stages, DependencyStages::Fragment)) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    if (has_flag(stages, DependencyStages::Pixel)) flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     return flags;
 }
 

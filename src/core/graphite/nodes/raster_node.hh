@@ -36,7 +36,7 @@ class RasterNode : public Node {
    public:
     /* Shader file paths */
     std::string_view vertex_path {};
-    std::string_view fragment_path {};
+    std::string_view pixel_path {};
 
     /* Vertex shader attributes */
     std::vector<AttrFormat> attributes {};
@@ -64,7 +64,7 @@ class RasterNode : public Node {
     /* Add a bindable resource as an input for this node. */
     RasterNode& read(BindHandle resource, ShaderStages stages);
 
-    /* Add a rendering attachment as an output for the fragment stage */
+    /* Add a rendering attachment as an output for the pixel stage */
     RasterNode& attach(BindHandle resource);
 
     /* Set the raster extent of the raster pass. (the extent of the attachments to rasterize into) */

@@ -1,7 +1,7 @@
 #include "raster_node.hh"
 
-RasterNode::RasterNode(std::string_view label, std::string_view vx_path, std::string_view fg_path)
-    : Node(label, NodeType::Raster), vertex_path(vx_path), fragment_path(fg_path) {}
+RasterNode::RasterNode(std::string_view label, std::string_view vx_path, std::string_view px_path)
+    : Node(label, NodeType::Raster), vertex_path(vx_path), pixel_path(px_path) {}
 
 RasterNode& RasterNode::write(BindHandle resource, ShaderStages stages) {
     /* Insert the write dependency */
@@ -16,7 +16,7 @@ RasterNode& RasterNode::read(BindHandle resource, ShaderStages stages) {
 }
 
 RasterNode& RasterNode::attach(BindHandle resource) {
-    dependencies.emplace_back(resource, DependencyFlags::Attachment | DependencyFlags::Unbound, DependencyStages::Fragment);
+    dependencies.emplace_back(resource, DependencyFlags::Attachment | DependencyFlags::Unbound, DependencyStages::Pixel);
     return *this;
 }
 

@@ -88,8 +88,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (r_vert_shader.is_err()) return Err(r_vert_shader.unwrap_err());
     const VkShaderModule vert_shader = r_vert_shader.unwrap();
 
-    /* Try to load the fragment shader module for the new pipeline */
-    const Result r_frag_shader = shader::from_alias(gpu->logical_device, path, node.fragment_path);
+    /* Try to load the pixel shader module for the new pipeline */
+    const Result r_frag_shader = shader::from_alias(gpu->logical_device, path, node.pixel_path);
     if (r_frag_shader.is_err()) return Err(r_frag_shader.unwrap_err());
     const VkShaderModule frag_shader = r_frag_shader.unwrap();
 

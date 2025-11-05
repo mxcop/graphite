@@ -98,10 +98,10 @@ public:
      *
      * @param label Label for this pass. (should be unique)
      * @param vx_path Path to the vertex shader file relative to the shader path set using `set_shader_path(...)`.
-     * @param fg_path Path to the fragment shader file relative to the shader path set using `set_shader_path(...)`.
+     * @param px_path Path to the pixel shader file relative to the shader path set using `set_shader_path(...)`.
      * @return The new compute node to be customized using the builder pattern.
      */
-    RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view fg_path);
+    RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path);
 
     /* Destroy the Render Graph, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

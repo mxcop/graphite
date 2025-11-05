@@ -22,7 +22,7 @@ enum class DependencyStages : u32 {
     None = 0u,
     Compute = 1u << 0u,
     Vertex = 1u << 1u,
-    Fragment = 1u << 2u,
+    Pixel = 1u << 2u,
 };
 ENUM_CLASS_FLAGS(DependencyStages);
 using ShaderStages = DependencyStages;
