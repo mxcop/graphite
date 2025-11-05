@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 #include "nodes/compute_node.hh"
+#include "nodes/raster_node.hh"
 
 #define DEBUG_LOGGING 0
 
@@ -190,6 +191,13 @@ Result<void> AgnRenderGraph::end_graph() {
 ComputeNode& AgnRenderGraph::add_compute_pass(std::string_view label, std::string_view shader_path) {
     /* Create the new compute node, and insert it into the nodes list. */
     ComputeNode* new_node = new ComputeNode(label, shader_path);
+    nodes.emplace_back((Node*)new_node);
+    return *new_node;
+}
+
+RasterNode& AgnRenderGraph::add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view fg_path) {
+    /* Create the new raster node, and insert it into the nodes list. */
+    RasterNode* new_node = new RasterNode(label, vx_path, fg_path);
     nodes.emplace_back((Node*)new_node);
     return *new_node;
 }

@@ -25,6 +25,7 @@ PLATFORM_STRUCT struct GraphExecution;
 /* Graph nodes. */
 class Node;
 class ComputeNode;
+class RasterNode;
 
 /**
  * @warning Never use this class directly!
@@ -91,6 +92,16 @@ public:
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch() = 0;
+
+    /**
+     * @brief Add a rasterisation pass to the render graph.
+     *
+     * @param label Label for this pass. (should be unique)
+     * @param vx_path Path to the vertex shader file relative to the shader path set using `set_shader_path(...)`.
+     * @param fg_path Path to the fragment shader file relative to the shader path set using `set_shader_path(...)`.
+     * @return The new compute node to be customized using the builder pattern.
+     */
+    RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view fg_path);
 
     /* Destroy the Render Graph, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

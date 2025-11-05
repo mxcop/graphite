@@ -169,6 +169,11 @@ Result<void> RenderGraph::queue_wave(const GraphExecution& graph, u32 start, u32
                 const Result node_result = queue_compute_node(graph, (const ComputeNode&)node);
                 if (node_result.is_err()) return node_result;
                 break;
+            } 
+            case NodeType::Raster: {
+                const Result node_result = queue_raster_node(graph, (const RasterNode&)node);
+                if (node_result.is_err()) return node_result;
+                break;
             }
             default:
                 return Err("unknown node type in render graph.");
@@ -196,6 +201,110 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
 
     /* Dispatch the compute pipeline */
     vkCmdDispatch(graph.cmd, dispatch_x, dispatch_y, dispatch_z);
+
+    return Ok();
+}
+
+Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const RasterNode& node) { 
+    /* Try to get the pipeline for this compute node */
+    const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
+    if (cache_result.is_err()) return Err(cache_result.unwrap_err());
+    const Pipeline pipeline = cache_result.unwrap();
+
+    /* Bind the compute pipeline */
+    //vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+    const Result push_result = node_push_descriptors(*this, pipeline, node);
+    if (push_result.is_err()) return push_result;
+
+    /* Find all attachment resource dependencies to put in the rendering info. */
+    std::vector<VkRenderingAttachmentInfo> color_attachments {};
+    for (const Dependency& dep : node.dependencies) {
+        /* Find attachment dependencies */
+        if (has_flag(dep.flags, DependencyFlags::Attachment) == false) continue;
+
+        /* Skip unbound resources */ // TODO: Implement Unbound Flag
+        //if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
+
+        /* Handle render target attachments */
+        VkImageView attachment_view = VK_NULL_HANDLE;
+        if (dep.resource.get_type() == ResourceType::RenderTarget) {
+#if defined(KUDZU_INSPECTOR)
+            /* For the editor, we render into a viewport */
+            attachment_view = imgui_targets[frame_uid % FRAMES_IN_FLIGHT].view;
+#else
+            /* For the game, we render directly into the swapchain */
+            //attachment_view = render_targets[target_idx].view;
+            attachment_view = gpu->get_vram_bank().get_render_target(target).view();
+#endif
+        } /*else { // TODO: Implement Textures
+            const TextureSlot& texture = vrm->get_texture(dep.resource);
+            if (has_flag(texture.usage, TexUsage::eColorAttachment) == false) continue;
+            attachment_view = texture.view;
+        }*/
+
+        VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        attachment.imageView = attachment_view;
+        attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        color_attachments.emplace_back(attachment);
+    }
+
+    /* Get the render area */
+    VkRect2D render_area {};
+    render_area.offset = {(i32)node.raster_x, (i32)node.raster_y};
+    render_area.extent = {node.raster_w, node.raster_h};
+    if (render_area.extent.width == 0u || render_area.extent.height == 0u) {
+        RenderTargetSlot& rt_slot = gpu->get_vram_bank().get_render_target(target);
+        render_area.extent = rt_slot.extent;
+    }
+
+    /* Rendering info */
+    VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
+    rendering.renderArea = render_area;
+    rendering.layerCount = 1u;
+    rendering.colorAttachmentCount = (u32)color_attachments.size();
+    rendering.pColorAttachments = color_attachments.data();
+
+    /* Begin rendering */
+    vkCmdBeginRenderingKHR(graph.cmd, &rendering);
+
+    /* Bind the pipeline */
+    vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+    // TODO: Add Bindless
+    /*vkCmdBindDescriptorSets(
+        graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1u, 1u, &vrm->bindless_set, 0u, nullptr
+    );*/
+
+    VkViewport viewport {};
+    viewport.x = (f32)render_area.offset.x;
+    viewport.y = (f32)render_area.offset.y;
+    viewport.width = (f32)render_area.extent.width;
+    viewport.height = (f32)render_area.extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    const VkRect2D scissor = render_area;
+
+    /* Set the viewport and scissor */
+    vkCmdSetViewport(graph.cmd, 0u, 1u, &viewport);
+    vkCmdSetScissor(graph.cmd, 0u, 1u, &scissor);
+
+    /* Loop over all draw calls, bind vertex buffers, draw */
+    for (const DrawCall& draw_call : node.draws) {
+        /* Bind the vertex buffer for this draw call */
+        const BufferSlot& vertex_buffer = gpu->get_vram_bank().get_buffer(draw_call.vertex_buffer);
+        const VkDeviceSize offset = 0u;
+        vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
+
+        /* Execute the draw */
+        vkCmdDraw(
+            graph.cmd, draw_call.vertex_count, draw_call.instance_count, draw_call.vertex_offset, draw_call.instance_offset
+        );
+    }
+
+    /* End rendering */
+    vkCmdEndRenderingKHR(graph.cmd);
 
     return Ok();
 }

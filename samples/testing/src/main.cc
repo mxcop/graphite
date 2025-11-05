@@ -10,6 +10,7 @@
 #include <graphite/vram_bank.hh>
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
+#include <graphite/nodes/raster_node.hh>
 #include <graphite/imgui.hh>
 
 #include <backends/imgui_impl_glfw.h>
@@ -19,6 +20,12 @@ struct FrameData {
     float time;
     float win_width;
     float win_height;
+};
+
+struct Vertex {
+    float x;
+    float y;
+    float z;
 };
 
 struct WindowUserData {
@@ -91,6 +98,19 @@ int main() {
     } else storage_buffer = r.unwrap();
     float* pixels = (float*)malloc(sizeof(float) * 4 * 1440 * 810);
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
+
+    /* Initialise a vertex buffer */
+    Buffer vertex_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::Vertex | BufferUsage::TransferDst, 1, sizeof(Vertex) * 3);
+        r.is_err()) {
+        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else vertex_buffer = r.unwrap();
+    std::vector<Vertex> vertices {};
+    vertices.push_back({ -0.5f, 0.5f, 0.0f });
+    vertices.push_back({ 0.0f, -0.5f, 0.0f });
+    vertices.push_back({ 0.5f, 0.5f, 0.0f });
+    bank.upload_buffer(vertex_buffer, vertices.data(), 0, sizeof(Vertex) * 3);
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -250,6 +270,15 @@ int main() {
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
+        /* Test Rasterisation Pass */
+        RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
+            .topology(Topology::TriangleList)
+            .attribute(AttrFormat::XYZ32_SFloat) // Position
+            .read(const_buffer, ShaderStages::Fragment)
+            .attach(rt)
+            .raster_extent(win_w, win_h);
+        graphics_pass.draw(vertex_buffer, 3);
+
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");
 
@@ -264,6 +293,7 @@ int main() {
     bank.destroy_render_target(rt);
     bank.destroy_buffer(const_buffer);
     bank.destroy_buffer(storage_buffer);
+    bank.destroy_buffer(vertex_buffer);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

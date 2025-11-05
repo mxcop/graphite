@@ -40,6 +40,7 @@ target_sources(graphite PRIVATE
     ${CORE_DIR}/render_graph.cc
     ${CORE_DIR}/nodes/node.cc
     ${CORE_DIR}/nodes/compute_node.cc
+    ${CORE_DIR}/nodes/raster_node.cc
     # Utils
     ${CORE_DIR}/utils/debug.cc
     ${CORE_DIR}/utils/result.cc

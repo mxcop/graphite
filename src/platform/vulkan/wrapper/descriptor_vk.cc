@@ -23,11 +23,15 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
         const ResourceType rtype = dep.resource.get_type();
         const u32 slot = (u32)bindings.size();
 
+        /* Skip resources that don't need to be in the descriptor layout (ex: Vertex Buffers) */
+        if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
+
         switch (rtype) {
             case ResourceType::RenderTarget:
                 bindings.push_back(render_target_layout(slot, dep));
                 break;
             case ResourceType::Buffer: {
+
                 BufferSlot& buffer = gpu.get_vram_bank().get_buffer(dep.resource);
                 bindings.push_back(buffer_layout(slot, dep, buffer.usage));
                 break;
@@ -89,7 +93,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
         const ResourceType rtype = dep.resource.get_type();
 
         /* Attachments are not bound as descriptors */
-        if (has_flag(dep.flags, DependencyFlags::Attachment)) continue;
+        if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
 
         /* Create the write command */
         VkWriteDescriptorSet& write = writes[bindings];
