@@ -127,6 +127,13 @@ int main() {
             .read(test_buffer)
             .group_size(16, 8)
             .work_size(win_w, win_h);
+            
+        /* Image Test Pass */
+        rg.add_compute_pass("image test pass", "image")
+            .write(test_image)
+            .read(test_buffer)
+            .group_size(16, 8)
+            .work_size(128, 128);
 
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");

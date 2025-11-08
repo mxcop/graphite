@@ -1,12 +1,11 @@
-struct BufferData
-{
+struct BufferData {
     float time;
 };
 
 RWTexture2D<float4> out_texture;
 ConstantBuffer<BufferData> test_buffer;
 
-static const float2 size = float2(1440, 810);
+static const float2 size = float2(128, 128);
 //static const float iTime = 1.0;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
