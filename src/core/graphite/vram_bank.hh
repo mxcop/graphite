@@ -41,10 +41,20 @@ protected:
     /* Get a render target slot by handle. */
     const RenderTargetSlot& get_render_target(BindHandle render_target) const;
 
-    /* Get a buffer sloy by handle. */
+    /* Get a buffer slot by handle. */
     BufferSlot& get_buffer(BindHandle buffer);
-    /* Get a buffer sloy by handle. */
+    /* Get a buffer slot by handle. */
     const BufferSlot& get_buffer(BindHandle buffer) const;
+
+    /* Get a texture slot by handle. */
+    TextureSlot& get_texture(OpaqueHandle texture);
+    /* Get a texture slot by handle. */
+    const TextureSlot& get_texture(OpaqueHandle texture) const;
+
+    /* Get a image slot by handle. */
+    ImageSlot& get_image(BindHandle image);
+    /* Get a image slot by handle. */
+    const ImageSlot& get_image(BindHandle image) const;
 
 public:
     /* Create a new render target resource. (aka, swapchain) */
@@ -58,6 +68,8 @@ public:
     PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0) = 0;
     /* Create a new texture resource. */
     PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta()) = 0;
+    /* Create a new image resource. */
+    PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u) = 0;
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height) = 0;
@@ -70,6 +82,8 @@ public:
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
     /* Destroy a texture resource. */
     PLATFORM_SPECIFIC void destroy_texture(Texture& texture) = 0;
+    /* Destroy a image resource. */
+    PLATFORM_SPECIFIC void destroy_image(Image& image) = 0;
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

@@ -10,10 +10,29 @@ VkShaderStageFlags stage_flags(DependencyStages stages) {
 }
 
 /* Convert the platform-agnostic dependency flags to a desired image layout. */
-VkImageLayout desired_image_layout(DependencyFlags flags) {
-    if (has_flag(flags, DependencyFlags::Attachment)) return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-    if (has_flag(flags, DependencyFlags::Readonly)) return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
-    return VK_IMAGE_LAYOUT_GENERAL;
+VkImageLayout desired_image_layout(TextureUsage usage, DependencyFlags flags) {
+    if (has_flag(flags, DependencyFlags::Readonly)) {
+        /* If texture is used as readonly resource, Sampled gets priority. */
+        if (has_flag(usage, TextureUsage::Sampled)) return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+        if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
+    } else {
+        /* If texture is used as write resource, only Storage will work. */
+        if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
+    }
+    return VK_IMAGE_LAYOUT_UNDEFINED;
+}
+
+/* Convert the platform-agnostic buffer usage to Vulkan buffer descriptor type. */
+VkDescriptorType image_descriptor_type(TextureUsage usage, DependencyFlags flags) {
+    if (has_flag(flags, DependencyFlags::Readonly)) {
+        /* If texture is used as readonly resource, Sampled gets priority. */
+        if (has_flag(usage, TextureUsage::Sampled)) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    } else {
+        /* If texture is used as write resource, only Storage will work. */
+        if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    }
+    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 
 /* Convert the platform-agnostic dependency flags to a desired image descriptor type. */
@@ -33,7 +52,7 @@ VkPipelineBindPoint pipeline_bind_point(NodeType node_type) {
 }
 
 /* Convert the platform-agnostic buffer usage to buffer usage flags. */
-VkBufferUsageFlags buffer_usage(const BufferUsage usage) {
+VkBufferUsageFlags buffer_usage(BufferUsage usage) {
     VkBufferUsageFlags flags = 0x00;
     if (has_flag(usage, BufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     if (has_flag(usage, BufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -46,7 +65,7 @@ VkBufferUsageFlags buffer_usage(const BufferUsage usage) {
 }
 
 /* Convert the platform-agnostic buffer usage to Vulkan buffer descriptor type. */
-VkDescriptorType buffer_descriptor_type(const BufferUsage usage) {
+VkDescriptorType buffer_descriptor_type(BufferUsage usage) {
     if (has_flag(usage, BufferUsage::Constant)) return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     //if (has_flag(usage, BufferUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;

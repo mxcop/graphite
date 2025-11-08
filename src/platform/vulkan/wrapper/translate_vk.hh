@@ -13,8 +13,11 @@ namespace translate {
 /* Convert the platform-agnostic stage flags to Vulkan shader stage flags. */
 VkShaderStageFlags stage_flags(DependencyStages stages);
 
-/* Convert the platform-agnostic dependency flags to a desired image layout. */
-VkImageLayout desired_image_layout(DependencyFlags flags);
+/* Convert the platform-agnostic texture usage to a desired image layout. */
+VkImageLayout desired_image_layout(TextureUsage usage, DependencyFlags flags);
+
+/* Convert the platform-agnostic texture usage to Vulkan image descriptor type. */
+VkDescriptorType image_descriptor_type(TextureUsage usage, DependencyFlags flags);
 
 /* Convert the platform-agnostic dependency flags to a desired image descriptor type. */
 VkDescriptorType desired_image_type(DependencyFlags flags);

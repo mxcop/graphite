@@ -8,7 +8,8 @@ enum class TextureUsage : u32 {
     Invalid = 0u,           /* Invalid buffer usage. */
     TransferDst = 1u << 1u, /* This buffer can be a GPU transfer destination. */
     TransferSrc = 1u << 2u, /* This buffer can be a GPU transfer source. */
-    Storage = 1u << 3u,     /* Read-write texture */
+    Sampled = 1u << 3u,     /* Texture can be sampled using hardware samplers. */
+    Storage = 1u << 4u,     /* GPU write-able texture. */
 };
 ENUM_CLASS_FLAGS(TextureUsage);
 

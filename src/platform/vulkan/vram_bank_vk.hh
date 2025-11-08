@@ -53,6 +53,8 @@ public:
     PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0);
     /* Create a new texture resource. */
     PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta());
+    /* Create a new image resource. */
+    PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u);
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
@@ -65,6 +67,8 @@ public:
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
     /* Destroy a texture resource. */
     PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
+    /* Destroy a image resource. */
+    PLATFORM_SPECIFIC void destroy_image(Image& image);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
@@ -124,7 +128,7 @@ struct TextureSlot {
 
     /* Resource */
     VkImage image {};
-    // VkImageView view {};
+    VkImageLayout layout {};
 
     /* Metadata */
     Size3D size {};
@@ -140,4 +144,5 @@ struct ImageSlot {
 
     /* Image view */
     VkImageView view {};
+    VkImageSubresourceRange sub_range {};
 };

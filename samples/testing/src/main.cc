@@ -73,6 +73,7 @@ int main() {
     /* Initialise some resources */
     Buffer test_buffer = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4).expect("failed to create buffer.");
     Texture test_texture = bank.create_texture(TextureUsage::Storage, TextureFormat::RGBA8Unorm, { 128, 128 }).expect("failed to create texture.");
+    Image test_image = bank.create_image(test_texture).unwrap();
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -139,6 +140,7 @@ int main() {
     /* Cleanup resources */
     bank.destroy_render_target(rt);
     bank.destroy_buffer(test_buffer);
+    bank.destroy_image(test_image);
     bank.destroy_texture(test_texture);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();

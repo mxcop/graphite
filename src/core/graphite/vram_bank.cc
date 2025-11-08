@@ -15,3 +15,19 @@ BufferSlot& AgnVRAMBank::get_buffer(BindHandle buffer) {
 const BufferSlot& AgnVRAMBank::get_buffer(BindHandle buffer) const {
     return buffers.get(buffer);
 }
+
+TextureSlot& AgnVRAMBank::get_texture(OpaqueHandle texture) {
+    return textures.get(texture);
+}
+
+const TextureSlot& AgnVRAMBank::get_texture(OpaqueHandle texture) const {
+    return textures.get(texture);
+}
+
+ImageSlot& AgnVRAMBank::get_image(BindHandle image) {
+    return images.get(image);
+}
+
+const ImageSlot& AgnVRAMBank::get_image(BindHandle image) const {
+    return images.get(image);
+}

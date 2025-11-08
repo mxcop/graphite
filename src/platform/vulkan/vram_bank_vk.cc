@@ -32,6 +32,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     render_targets.init(8u);
     buffers.init(8u);
     textures.init(8u);
+    images.init(8u);
 
     /* Command pool creation info */
     VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -267,6 +268,38 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     return Ok(resource.handle);
 }
 
+Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
+    /* Make sure the texture is valid */
+    if (texture.is_null()) return Err("cannot create image for texture which is null.");
+
+    /* Pop a new image off the stock */
+    StockPair resource = images.pop();
+    resource.data.texture = texture;
+    TextureSlot& texture_slot = textures.get(texture);
+    
+    /* Image access sub resource range */
+    VkImageSubresourceRange sub_range {};
+    sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
+    sub_range.baseMipLevel = mip;
+    sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
+    sub_range.baseArrayLayer = layer;
+    sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
+    resource.data.sub_range = sub_range;
+
+    /* Image view creation info */
+    VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    view_ci.image = texture_slot.image;
+    view_ci.viewType = texture_slot.size.is_2d() ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+    view_ci.format = translate::texture_format(texture_slot.format);
+    view_ci.subresourceRange = sub_range;
+
+    /* Create the image view */
+    if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.view) != VK_SUCCESS) {
+        return Err("failed to create image view.");
+    }
+    return Ok(resource.handle);
+}
+
 Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 width, u32 height) {
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
@@ -409,4 +442,9 @@ void VRAMBank::destroy_buffer(Buffer& buffer) {
 void VRAMBank::destroy_texture(Texture& texture) { 
     TextureSlot& slot = textures.push(texture);
     vmaDestroyImage(vma_allocator, slot.image, slot.alloc);
+}
+
+void VRAMBank::destroy_image(Image& image) { 
+    ImageSlot& slot = images.push(image);
+    vkDestroyImageView(gpu->logical_device, slot.view, nullptr);
 }
