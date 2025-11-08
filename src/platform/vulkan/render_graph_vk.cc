@@ -164,6 +164,11 @@ Result<void> RenderGraph::queue_wave(const GraphExecution& graph, u32 start, u32
     for (u32 i = start; i < end; ++i) {
         const Node& node = *nodes[waves[i].lane];
 
+        /* Start debug label for this node */
+        VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        debug_label.pLabelName = node.label.data();
+        vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+
         switch (node.type) {
             case NodeType::Compute: {
                 const Result node_result = queue_compute_node(graph, (const ComputeNode&)node);
@@ -173,6 +178,9 @@ Result<void> RenderGraph::queue_wave(const GraphExecution& graph, u32 start, u32
             default:
                 return Err("unknown node type in render graph.");
         }
+
+        /* End debug label for this node */
+        vkCmdEndDebugUtilsLabelEXT(graph.cmd);
     }
 
     return Ok();
@@ -222,6 +230,11 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     viewport_dep_info.imageMemoryBarrierCount = 1u;
     viewport_dep_info.pImageMemoryBarriers = &viewport_barrier;
 
+    /* Start debug label for imgui */
+    VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+    debug_label.pLabelName = "imgui";
+    vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+
     /* Insert a pipeline barrier before rendering the overlay */
     vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
 
@@ -247,6 +260,9 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
 
     /* End dynamic rendering */
     vkCmdEndRenderingKHR(graph.cmd);
+
+    /* End debug label for this node */
+    vkCmdEndDebugUtilsLabelEXT(graph.cmd);
 }
 
 Result<void> RenderGraph::destroy() {
