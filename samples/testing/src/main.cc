@@ -70,12 +70,9 @@ int main() {
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
 
-    /* Initialise a test buffer */
-    Buffer test_buffer {};
-    if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4); r.is_err()) {
-        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    } else test_buffer = r.unwrap();
+    /* Initialise some resources */
+    Buffer test_buffer = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4).expect("failed to create buffer.");
+    Texture test_texture = bank.create_texture(TextureUsage::Storage, TextureFormat::RGBA8Unorm, { 128, 128 }).expect("failed to create texture.");
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -94,100 +91,6 @@ int main() {
     /* Add the immediate mode GUI to the render graph */
     rg.add_imgui(imgui);
 
-#if 0
-    const u32 key_7 = 0x7u;
-    BindHandle dummy_7 = (BindHandle&)key_7;
-    const u32 key_8 = 0x8u;
-    BindHandle dummy_8 = (BindHandle&)key_8;
-    const u32 key_9 = 0x9u;
-    BindHandle dummy_9 = (BindHandle&)key_9;
-    const u32 key_a = 0xAu;
-    BindHandle dummy_a = (BindHandle&)key_a;
-    const u32 key_b = 0xBu;
-    BindHandle dummy_b = (BindHandle&)key_b;
-    const u32 key_c = 0xCu;
-    BindHandle dummy_c = (BindHandle&)key_c;
-    const u32 key_d = 0xDu;
-    BindHandle dummy_d = (BindHandle&)key_d;
-    const u32 key_e = 0xEu;
-    BindHandle dummy_e = (BindHandle&)key_e;
-    const u32 key_f = 0xFu;
-    BindHandle dummy_f = (BindHandle&)key_f;
-
-    /* Main loop */
-    for (;;) {
-        /* Poll events */
-        glfwPollEvents();
-
-        rg.new_graph();
-
-        /* Root A */
-        rg.add_compute_pass("rA", "shader:dummy")
-            .write(dummy_7)
-            .group_size(16, 8)
-            .work_size(1440, 810);
-            
-        /* Root B */
-        rg.add_compute_pass("rB", "shader:dummy")
-            .write(dummy_8)
-            .group_size(16, 8)
-            .work_size(1440, 810);
-        rg.add_compute_pass("c0", "shader:dummy")
-            .read(dummy_8)
-            .write(dummy_9)
-            .group_size(16, 8)
-            .work_size(1440, 810);
-            
-        /* Root C */
-        rg.add_compute_pass("rC", "shader:dummy")
-            .write(dummy_a)
-            .group_size(16, 8)
-            .work_size(1440, 810);
-        rg.add_compute_pass("c1", "shader:dummy")
-            .read(dummy_a)
-            .write(dummy_b)
-            .group_size(16, 8)
-            .work_size(1440, 810);
-
-        /* C2 */
-        rg.add_compute_pass("c2", "shader:dummy")
-            .read(dummy_7)
-            .read(dummy_9)
-            .read(dummy_b)
-            .write(dummy_c)
-            .group_size(16, 8)
-            .work_size(1440, 810); 
-            
-        /* C3 */
-        rg.add_compute_pass("c3", "shader:dummy")
-            .read(dummy_c)
-            .write(dummy_d)
-            .group_size(16, 8)
-            .work_size(1440, 810); 
-        /* C4 */
-        rg.add_compute_pass("c4", "shader:dummy")
-            .read(dummy_c)
-            .write(dummy_e)
-            .group_size(16, 8)
-            .work_size(1440, 810); 
-            
-        /* C5 */
-        rg.add_compute_pass("c5", "shader:dummy")
-            .read(dummy_d)
-            .read(dummy_e)
-            .write(dummy_f)
-            .group_size(16, 8)
-            .work_size(1440, 810); 
-
-        rg.end_graph();
-        rg.dispatch();
-
-        /* Check if we are still running */
-        if (glfwWindowShouldClose(win))
-            break;
-        break; /* Exit for testing */
-    }
-#else
     /* Main loop */
     for (;;) {
         /* Get delta time */
@@ -232,11 +135,11 @@ int main() {
             break;
         }
     }
-#endif
 
     /* Cleanup resources */
     bank.destroy_render_target(rt);
     bank.destroy_buffer(test_buffer);
+    bank.destroy_texture(test_texture);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

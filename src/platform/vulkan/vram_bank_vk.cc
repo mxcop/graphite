@@ -261,10 +261,9 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
 
     /* Create the texture & allocate it using VMA */
-    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) return Err("failed to allocate image resource.");
-
-    /* TODO: Create resource and allocation */
-
+    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
+        return Err("failed to allocate image resource.");
+    }
     return Ok(resource.handle);
 }
 
@@ -404,6 +403,10 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
 
 void VRAMBank::destroy_buffer(Buffer& buffer) {
     BufferSlot& slot = buffers.push(buffer);
-
     vmaDestroyBuffer(vma_allocator, slot.buffer, slot.alloc);
+}
+
+void VRAMBank::destroy_texture(Texture& texture) { 
+    TextureSlot& slot = textures.push(texture);
+    vmaDestroyImage(vma_allocator, slot.image, slot.alloc);
 }

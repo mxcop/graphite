@@ -31,6 +31,7 @@ protected:
     Stock<RenderTargetSlot, RenderTarget, ResourceType::RenderTarget> render_targets {};
     Stock<BufferSlot, Buffer, ResourceType::Buffer> buffers {};
     Stock<TextureSlot, Texture, ResourceType::Texture> textures {};
+    Stock<ImageSlot, Image, ResourceType::Image> images {};
 
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
@@ -67,6 +68,8 @@ public:
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
     /* Destroy a buffer resource. */
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
+    /* Destroy a texture resource. */
+    PLATFORM_SPECIFIC void destroy_texture(Texture& texture) = 0;
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

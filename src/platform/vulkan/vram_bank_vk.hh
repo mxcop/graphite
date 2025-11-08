@@ -63,6 +63,8 @@ public:
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
     /* Destroy a buffer resource. */
     PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
+    /* Destroy a texture resource. */
+    PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
@@ -122,11 +124,20 @@ struct TextureSlot {
 
     /* Resource */
     VkImage image {};
-    VkImageView view {};
+    // VkImageView view {};
 
     /* Metadata */
     Size3D size {};
     TextureUsage usage {};
     TextureFormat format {};
     TextureMeta meta {};
+};
+
+/* Image resource slot. */
+struct ImageSlot {
+    /* Resource reference */
+    Texture texture {};
+
+    /* Image view */
+    VkImageView view {};
 };
