@@ -31,3 +31,11 @@ ImageSlot& AgnVRAMBank::get_image(BindHandle image) {
 const ImageSlot& AgnVRAMBank::get_image(BindHandle image) const {
     return images.get(image);
 }
+
+SamplerSlot& AgnVRAMBank::get_sampler(BindHandle sampler) {
+    return samplers.get(sampler);
+}
+
+const SamplerSlot& AgnVRAMBank::get_sampler(BindHandle sampler) const {
+    return samplers.get(sampler);
+}

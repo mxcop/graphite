@@ -85,9 +85,51 @@ VkFormat texture_format(TextureFormat format) {
 VkImageUsageFlags texture_usage(TextureUsage usage) {
     VkImageUsageFlags flags = 0x00;
     if (has_flag(usage, TextureUsage::Storage)) flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    if (has_flag(usage, TextureUsage::Sampled)) flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
     if (has_flag(usage, TextureUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (has_flag(usage, TextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     return flags;
+}
+
+/* Convert the platform-agnostic filter to Vulkan sampler filter. */
+VkFilter sampler_filter(Filter filter) {
+    return filter == Filter::Nearest ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+}
+
+/* Convert the platform-agnostic address mode to Vulkan sampler address mode. */
+VkSamplerAddressMode sampler_address_mode(AddressMode mode) {
+    switch (mode) {
+        case AddressMode::Repeat:
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        case AddressMode::MirrorRepeat:
+            return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+        case AddressMode::ClampToEdge:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        case AddressMode::ClampToBorder:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        default:
+            return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
+    }
+}
+
+/* Convert the platform-agnostic border color to Vulkan sampler border color. */
+VkBorderColor sampler_border_color(BorderColor color) {
+    switch (color) {
+        case BorderColor::RGB0A0_Float:
+            return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+        case BorderColor::RGB0A0_Int:
+            return VK_BORDER_COLOR_INT_TRANSPARENT_BLACK;
+        case BorderColor::RGB0A1_Float:
+            return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+        case BorderColor::RGB0A1_Int:
+            return VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        case BorderColor::RGB1A1_Float:
+            return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+        case BorderColor::RGB1A1_Int:
+            return VK_BORDER_COLOR_INT_OPAQUE_WHITE;
+        default:
+            return VK_BORDER_COLOR_MAX_ENUM;
+    }
 }
 
 } /* translate */

@@ -16,6 +16,9 @@ VkDescriptorSetLayoutBinding buffer_layout(u32 slot, const Dependency& dep, cons
 /* Create a descriptor layout binding for an image resource. */
 VkDescriptorSetLayoutBinding image_layout(u32 slot, const Dependency& dep, const TextureUsage& texture_usage);
 
+/* Create a descriptor layout binding for an sampler resource. */
+VkDescriptorSetLayoutBinding sampler_layout(u32 slot, const Dependency& dep);
+
 /* Create the descriptor layout for a render graph node. */
 Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node &node) {
     /* Descriptor bindings */
@@ -38,6 +41,10 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
             case ResourceType::Image: {
                 const TextureSlot& texture = gpu.get_vram_bank().get_texture(dep.resource);
                 bindings.push_back(image_layout(slot, dep, texture.usage));
+                break;
+            }
+            case ResourceType::Sampler: {
+                bindings.push_back(sampler_layout(slot, dep));
                 break;
             }
             default:
@@ -84,6 +91,16 @@ VkDescriptorSetLayoutBinding image_layout(u32 slot, const Dependency& dep, const
     VkDescriptorSetLayoutBinding binding {};
     binding.binding = slot;
     binding.descriptorType = translate::image_descriptor_type(texture_usage, dep.flags);
+    binding.descriptorCount = 1u;
+    binding.stageFlags = translate::stage_flags(dep.stages);
+    return binding;
+}
+
+/* Create a descriptor layout binding for an sampler resource. */
+VkDescriptorSetLayoutBinding sampler_layout(u32 slot, const Dependency& dep) {
+    VkDescriptorSetLayoutBinding binding {};
+    binding.binding = slot;
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     binding.descriptorCount = 1u;
     binding.stageFlags = translate::stage_flags(dep.stages);
     return binding;
@@ -138,6 +155,13 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 texture_info[bindings].imageLayout = translate::desired_image_layout(texture.usage, dep.flags);
                 texture_info[bindings].imageView = image.view;
                 write.descriptorType = translate::image_descriptor_type(texture.usage, dep.flags);
+                write.pImageInfo = &texture_info[bindings];
+                break;
+            }
+            case ResourceType::Sampler: {
+                const SamplerSlot& sampler = rg.gpu->get_vram_bank().get_sampler(dep.resource);
+                texture_info[bindings].sampler = sampler.sampler;
+                write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
                 write.pImageInfo = &texture_info[bindings];
                 break;
             }
@@ -211,6 +235,7 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     barrier.subresourceRange = image.sub_range;
                     break;
                 }
+                case ResourceType::Sampler: break;
                 default:
                     return Err("unknown resource type for sync barriers.");
             }

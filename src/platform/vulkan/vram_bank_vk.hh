@@ -55,6 +55,8 @@ public:
     PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta());
     /* Create a new image resource. */
     PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u);
+    /* Create a new sampler resource. */
+    PLATFORM_SPECIFIC Result<Sampler> create_sampler(Filter filter = Filter::Linear, AddressMode mode = AddressMode::Repeat, BorderColor border = BorderColor::RGB0A0_Float);
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
@@ -69,6 +71,8 @@ public:
     PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
     /* Destroy a image resource. */
     PLATFORM_SPECIFIC void destroy_image(Image& image);
+    /* Destroy a sampler resource. */
+    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();
@@ -145,4 +149,9 @@ struct ImageSlot {
     /* Image view */
     VkImageView view {};
     VkImageSubresourceRange sub_range {};
+};
+
+/* Sampler resource slot. */
+struct SamplerSlot {
+    VkSampler sampler {};
 };

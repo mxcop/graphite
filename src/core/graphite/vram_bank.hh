@@ -7,6 +7,7 @@
 
 #include "resources/buffer.hh"
 #include "resources/texture.hh"
+#include "resources/sampler.hh"
 #include "resources/stock.hh"
 
 /* Slots are defined per platform */
@@ -32,6 +33,7 @@ protected:
     Stock<BufferSlot, Buffer, ResourceType::Buffer> buffers {};
     Stock<TextureSlot, Texture, ResourceType::Texture> textures {};
     Stock<ImageSlot, Image, ResourceType::Image> images {};
+    Stock<SamplerSlot, Sampler, ResourceType::Sampler> samplers {};
 
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
@@ -56,6 +58,11 @@ protected:
     /* Get a image slot by handle. */
     const ImageSlot& get_image(BindHandle image) const;
 
+    /* Get a sampler slot by handle. */
+    SamplerSlot& get_sampler(BindHandle sampler);
+    /* Get a sampler slot by handle. */
+    const SamplerSlot& get_sampler(BindHandle sampler) const;
+
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;
@@ -70,6 +77,8 @@ public:
     PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta()) = 0;
     /* Create a new image resource. */
     PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u) = 0;
+    /* Create a new sampler resource. */
+    PLATFORM_SPECIFIC Result<Sampler> create_sampler(Filter filter = Filter::Linear, AddressMode mode = AddressMode::Repeat, BorderColor border = BorderColor::RGB0A0_Float) = 0;
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height) = 0;
@@ -84,6 +93,8 @@ public:
     PLATFORM_SPECIFIC void destroy_texture(Texture& texture) = 0;
     /* Destroy a image resource. */
     PLATFORM_SPECIFIC void destroy_image(Image& image) = 0;
+    /* Destroy a sampler resource. */
+    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler) = 0;
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

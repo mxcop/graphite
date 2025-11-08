@@ -33,6 +33,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     buffers.init(8u);
     textures.init(8u);
     images.init(8u);
+    samplers.init(8u);
 
     /* Command pool creation info */
     VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -300,6 +301,32 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     return Ok(resource.handle);
 }
 
+Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, BorderColor border) {
+    /* Translate the filter, address mode, and border color */
+    const VkFilter filter_mode = translate::sampler_filter(filter);
+    const VkSamplerAddressMode address_mode = translate::sampler_address_mode(mode);
+    const VkBorderColor border_color = translate::sampler_border_color(border);
+
+    /* Pop a new sampler off the stock */
+    StockPair resource = samplers.pop();
+
+    /* Sampler creation info */
+    VkSamplerCreateInfo sampler_ci { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampler_ci.magFilter = filter_mode;
+    sampler_ci.minFilter = filter_mode;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = address_mode;
+    sampler_ci.addressModeV = address_mode;
+    sampler_ci.addressModeW = address_mode;
+    sampler_ci.borderColor = border_color;
+
+    /* Create the sampler */
+    if (vkCreateSampler(gpu->logical_device, &sampler_ci, nullptr, &resource.data.sampler) != VK_SUCCESS) {
+        return Err("failed to create sampler.");
+    }
+    return Ok(resource.handle);
+}
+
 Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 width, u32 height) {
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
@@ -447,4 +474,9 @@ void VRAMBank::destroy_texture(Texture& texture) {
 void VRAMBank::destroy_image(Image& image) { 
     ImageSlot& slot = images.push(image);
     vkDestroyImageView(gpu->logical_device, slot.view, nullptr);
+}
+
+void VRAMBank::destroy_sampler(Sampler& sampler) { 
+    SamplerSlot& slot = samplers.push(sampler);
+    vkDestroySampler(gpu->logical_device, slot.sampler, nullptr);
 }

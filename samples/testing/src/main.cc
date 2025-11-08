@@ -72,8 +72,9 @@ int main() {
 
     /* Initialise some resources */
     Buffer test_buffer = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, 4).expect("failed to create buffer.");
-    Texture test_texture = bank.create_texture(TextureUsage::Storage, TextureFormat::RGBA8Unorm, { 128, 128 }).expect("failed to create texture.");
+    Texture test_texture = bank.create_texture(TextureUsage::Storage | TextureUsage::Sampled, TextureFormat::RGBA8Unorm, { 128, 128 }).expect("failed to create texture.");
     Image test_image = bank.create_image(test_texture).unwrap();
+    Sampler test_sampler = bank.create_sampler(Filter::Nearest, AddressMode::MirrorRepeat).unwrap();
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
@@ -121,19 +122,21 @@ int main() {
 
         rg.new_graph();
 
-        /* Test Pass */
-        rg.add_compute_pass("render pass", "test")
-            .write(rt)
-            .read(test_buffer)
-            .group_size(16, 8)
-            .work_size(win_w, win_h);
-            
         /* Image Test Pass */
         rg.add_compute_pass("image test pass", "image")
             .write(test_image)
             .read(test_buffer)
             .group_size(16, 8)
             .work_size(128, 128);
+
+        /* Test Pass */
+        rg.add_compute_pass("render pass", "test")
+            .write(rt)
+            .read(test_image)
+            .read(test_sampler)
+            .read(test_buffer)
+            .group_size(16, 8)
+            .work_size(win_w, win_h);
 
         rg.end_graph();
         rg.dispatch().expect("failed to dispatch render graph.");
@@ -149,6 +152,7 @@ int main() {
     bank.destroy_buffer(test_buffer);
     bank.destroy_image(test_image);
     bank.destroy_texture(test_texture);
+    bank.destroy_sampler(test_sampler);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

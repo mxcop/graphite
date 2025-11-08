@@ -6,6 +6,7 @@
 
 #include "graphite/resources/buffer.hh"
 #include "graphite/resources/texture.hh"
+#include "graphite/resources/sampler.hh"
 
 /* Provides functions for translating platform-agnostic types to Vulkan-specific types. */
 namespace translate {
@@ -36,5 +37,14 @@ VkFormat texture_format(TextureFormat format);
 
 /* Convert the platform-agnostic texture usage to texture usage flags. */
 VkImageUsageFlags texture_usage(TextureUsage usage);
+
+/* Convert the platform-agnostic filter to Vulkan sampler filter. */
+VkFilter sampler_filter(Filter filter);
+
+/* Convert the platform-agnostic address mode to Vulkan sampler address mode. */
+VkSamplerAddressMode sampler_address_mode(AddressMode mode);
+
+/* Convert the platform-agnostic border color to Vulkan sampler border color. */
+VkBorderColor sampler_border_color(BorderColor color);
 
 } /* translate */
