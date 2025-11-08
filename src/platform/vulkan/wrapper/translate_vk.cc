@@ -57,7 +57,7 @@ VkBufferUsageFlags buffer_usage(BufferUsage usage) {
     if (has_flag(usage, BufferUsage::TransferDst)) flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     if (has_flag(usage, BufferUsage::TransferSrc)) flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     if (has_flag(usage, BufferUsage::Constant)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    //if (has_flag(usage, BufferUsage::eStorage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    if (has_flag(usage, BufferUsage::Storage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     //if (has_flag(usage, BufferUsage::eVertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     //if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     //if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
@@ -67,7 +67,7 @@ VkBufferUsageFlags buffer_usage(BufferUsage usage) {
 /* Convert the platform-agnostic buffer usage to Vulkan buffer descriptor type. */
 VkDescriptorType buffer_descriptor_type(BufferUsage usage) {
     if (has_flag(usage, BufferUsage::Constant)) return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //if (has_flag(usage, BufferUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    if (has_flag(usage, BufferUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 
