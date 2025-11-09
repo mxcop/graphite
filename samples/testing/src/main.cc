@@ -10,6 +10,7 @@
 #include <graphite/vram_bank.hh>
 #include <graphite/render_graph.hh>
 #include <graphite/nodes/compute_node.hh>
+#include <graphite/nodes/raster_node.hh>
 #include <graphite/imgui.hh>
 
 #include <backends/imgui_impl_glfw.h>
@@ -19,6 +20,12 @@ struct FrameData {
     float time;
     float win_width;
     float win_height;
+};
+
+struct Vertex {
+    float x;
+    float y;
+    float z;
 };
 
 struct WindowUserData {
@@ -76,12 +83,38 @@ int main() {
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
 
+    /* Initialise a texture that will be used as a color attachment */
+    Texture attachment {};
+    if (const Result r = bank.create_texture(TextureUsage::ColorAttachment, TextureFormat::RGBA8Unorm, {1440, 810, 0}); r.is_err()) {
+        printf("failed to initialize attachment texture.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else attachment = r.unwrap();
+    Image attachment_img {};
+    if (const Result r = bank.create_image(attachment);
+        r.is_err()) {
+        printf("failed to initialize attachment image.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else attachment_img = r.unwrap();
+
     /* Initialise a test buffer */
     Buffer const_buffer {};
     if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, sizeof(FrameData)); r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else const_buffer = r.unwrap();
+
+    /* Initialise a vertex buffer */
+    Buffer vertex_buffer {};
+    if (const Result r = bank.create_buffer(BufferUsage::Vertex | BufferUsage::TransferDst, 1, sizeof(Vertex) * 3);
+        r.is_err()) {
+        printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else vertex_buffer = r.unwrap();
+    std::vector<Vertex> vertices {};
+    vertices.push_back({ -0.5f, 0.5f, 0.0f });
+    vertices.push_back({ 0.0f, -0.5f, 0.0f });
+    vertices.push_back({ 0.5f, 0.5f, 0.0f });
+    bank.upload_buffer(vertex_buffer, vertices.data(), 0, sizeof(Vertex) * 3);
 
     /* Initialise a storage buffer */
     Buffer storage_buffer {};
@@ -156,7 +189,16 @@ int main() {
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
-        rg.end_graph();
+        /* Test Rasterisation Pass */
+        RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
+            .topology(Topology::TriangleList)
+            .attribute(AttrFormat::XYZ32_SFloat) // Position
+            .read(const_buffer, ShaderStages::Pixel)
+            .attach(attachment_img)
+            .raster_extent(win_w, win_h);
+        graphics_pass.draw(vertex_buffer, 3);
+
+        rg.end_graph().expect("failed to compile render graph.");
         rg.dispatch().expect("failed to dispatch render graph.");
 
         /* Check if we are still running */
@@ -169,6 +211,9 @@ int main() {
     bank.destroy_render_target(rt);
     bank.destroy_buffer(const_buffer);
     bank.destroy_buffer(storage_buffer);
+    bank.destroy_buffer(vertex_buffer);
+    bank.destroy_texture(attachment);
+    bank.destroy_image(attachment_img);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

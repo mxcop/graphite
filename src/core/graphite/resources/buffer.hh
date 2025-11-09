@@ -10,5 +10,6 @@ enum class BufferUsage : u32 {
     TransferSrc = 1u << 2u, /* This buffer can be a GPU transfer source. */
     Constant = 1u << 3u,    /* Read-only buffer, aka. `UniformBuffer` */
     Storage = 1u << 4u,     /* Read/Write buffer, aka. `StructuredBuffer` */
+    Vertex = 1u << 5u,      /* Vertex buffer */
 };
 ENUM_CLASS_FLAGS(BufferUsage);

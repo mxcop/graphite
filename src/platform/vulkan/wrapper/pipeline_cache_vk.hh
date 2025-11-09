@@ -8,6 +8,7 @@
 
 class GPUAdapter;
 class ComputeNode;
+class RasterNode;
 
 /* Collection of everything that makes up a pipeline. */
 struct Pipeline {
@@ -34,4 +35,7 @@ public:
 
     /* Get a pipeline from the cache, or load the pipeline if it's not already cached. */
     Result<Pipeline> get_pipeline(const std::string_view path, const ComputeNode& node);
+
+    /* Get a pipeline from the cache, or load the pipeline if it's not already cached. */
+    Result<Pipeline> get_pipeline(const std::string_view path, const RasterNode& node);
 };

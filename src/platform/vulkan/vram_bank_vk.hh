@@ -84,6 +84,7 @@ public:
     friend class RenderGraph;
     friend class AgnGPUAdapter;
     friend class ImGUI;
+    friend class PipelineCache;
 };
 
 /* Render target resource slot. */

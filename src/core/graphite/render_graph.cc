@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 #include "nodes/compute_node.hh"
+#include "nodes/raster_node.hh"
 
 #define DEBUG_LOGGING 0
 
@@ -78,7 +79,9 @@ Result<void> AgnRenderGraph::end_graph() {
 
                 /* Save this resource if it is a render target */
                 if (dep.resource.get_type() == ResourceType::RenderTarget) {
-                    if (target.is_null() == false) return Err("multiple render targets are not allowed in the same graph.");
+                    if (target.is_null() == false && target.raw() != dep.resource.raw()) { 
+                        return Err("multiple render targets are not allowed in the same graph.");
+                    }
                     target = (RenderTarget&)dep.resource;
                 }
             }
@@ -190,6 +193,13 @@ Result<void> AgnRenderGraph::end_graph() {
 ComputeNode& AgnRenderGraph::add_compute_pass(std::string_view label, std::string_view shader_path) {
     /* Create the new compute node, and insert it into the nodes list. */
     ComputeNode* new_node = new ComputeNode(label, shader_path);
+    nodes.emplace_back((Node*)new_node);
+    return *new_node;
+}
+
+RasterNode& AgnRenderGraph::add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path) {
+    /* Create the new raster node, and insert it into the nodes list. */
+    RasterNode* new_node = new RasterNode(label, vx_path, px_path);
     nodes.emplace_back((Node*)new_node);
     return *new_node;
 }

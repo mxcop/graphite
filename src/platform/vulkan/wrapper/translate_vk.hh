@@ -3,6 +3,7 @@
 #include "vulkan/api_vk.hh"
 
 #include "graphite/nodes/node.hh"
+#include "graphite/nodes/raster_node.hh"
 
 #include "graphite/resources/buffer.hh"
 #include "graphite/resources/texture.hh"
@@ -46,5 +47,14 @@ VkSamplerAddressMode sampler_address_mode(AddressMode mode);
 
 /* Convert the platform-agnostic border color to Vulkan sampler border color. */
 VkBorderColor sampler_border_color(BorderColor color);
+
+/* Get the number of bytes per vertex attribute for a given vertex attribute format. */
+u32 vertex_attribute_size(const AttrFormat fmt);
+
+/* Convert the platform-agnostic vertex attribute format to a vertex format. */
+VkFormat vertex_format(const AttrFormat fmt);
+
+/* Convert the platform-agnostic primitive topology. */
+VkPrimitiveTopology primitive_topology(const Topology topology);
 
 } /* translate */

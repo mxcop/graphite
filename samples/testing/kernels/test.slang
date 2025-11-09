@@ -44,10 +44,6 @@ float2 turbulence(float2 p) {
 [shader("compute")] /* Compute shader entry point */
 [numthreads(16, 8, 1)]
 void entry(int2 thread_id: SV_DispatchThreadID) {
-    uint index = thread_id.y * (uint)frame_data.win_width + thread_id.x;
-    out_texture[thread_id] = in_buffer[index].color;
-    return;
-
     const float2 uv = 2.0 * ((float2)thread_id * 2.0 - float2(frame_data.win_width, frame_data.win_height)) / frame_data.win_height;
     const float2 t = turbulence(uv);
     // Subtle blue and yellow gradient
