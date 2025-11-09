@@ -13,6 +13,7 @@ enum class DependencyFlags : u32 {
     None = 0u,
     Readonly = 1u << 0u,   /* The dependency is read only. */
     Attachment = 1u << 1u, /* The dependency is used as an attachment. */
+    Unbound = 1u << 2u,    /* The dependency is unbound (ex: Vertex Buffer). */
 };
 ENUM_CLASS_FLAGS(DependencyFlags);
 
@@ -20,8 +21,11 @@ ENUM_CLASS_FLAGS(DependencyFlags);
 enum class DependencyStages : u32 {
     None = 0u,
     Compute = 1u << 0u,
+    Vertex = 1u << 1u,
+    Pixel = 1u << 2u,
 };
 ENUM_CLASS_FLAGS(DependencyStages);
+using ShaderStages = DependencyStages;
 
 /* Render Graph resource dependency. */
 struct Dependency {
@@ -36,6 +40,7 @@ struct Dependency {
 enum class NodeType : u32 {
     Invalid = 0u,
     Compute = 1u, /* Compute pass node. */
+    Raster = 2u,  /* Rasterisation pass node. */
 };
 
 /**

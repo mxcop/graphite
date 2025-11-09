@@ -31,9 +31,12 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     /* Initialize the Stack Pools */
     render_targets.init(8u);
     buffers.init(8u);
+    textures.init(8u);
+    images.init(8u);
+    samplers.init(8u);
 
     /* Command pool creation info */
-    VkCommandPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+    VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     pool_ci.queueFamilyIndex = gpu.queue_families.queue_transfer;
 
@@ -58,14 +61,11 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         return Err("failed to create upload fence");
     }
 
-    /* Get the device queue */
-    vkGetDeviceQueue(gpu.logical_device, gpu.queue_families.queue_transfer, 0u, &gpu.queues.queue_transfer);
-
     return Ok();
 }
 
 bool VRAMBank::begin_upload() {
-    VkCommandBufferBeginInfo begin_info {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    VkCommandBufferBeginInfo begin_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     return vkBeginCommandBuffer(upload_cmd, &begin_info) == VK_SUCCESS;
@@ -201,6 +201,132 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     return Ok(resource.handle);
 }
 
+Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride) {
+    /* Make sure the buffer usage is valid */
+    if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
+
+    /* Pop a new buffer off the stock */
+    StockPair resource = buffers.pop();
+    resource.data.usage = usage;
+
+    /* Size of the buffer in bytes */
+    const u64 size = stride == 0 ? count : count * stride;
+
+    /* Buffer creation info */
+    VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    buffer_ci.size = size;
+    buffer_ci.usage = translate::buffer_usage(usage);
+    buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_ci.queueFamilyIndexCount = 1u;
+    buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the buffer & allocate it using VMA */
+    if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
+        return Err("failed to create buffer.");
+    }
+    return Ok(resource.handle);
+}
+
+Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta) {
+    /* Make sure the texture usage is valid */
+    if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
+
+    /* Pop a new texture off the stock */
+    StockPair resource = textures.pop();
+    resource.data.usage = usage;
+    resource.data.format = fmt;
+    resource.data.size = size;
+    resource.data.meta = meta;
+
+    const VkFormat format = translate::texture_format(fmt);
+
+    /* Image creation info */
+    VkImageCreateInfo texture_ci { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+    texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    texture_ci.format = format;
+    texture_ci.extent = { MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u) };
+    texture_ci.mipLevels = MAX(1u, meta.mips);
+    texture_ci.arrayLayers = MAX(1u, meta.arrays);
+    texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
+    texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    texture_ci.usage = translate::texture_usage(usage);
+    texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u; 
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the texture & allocate it using VMA */
+    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
+        return Err("failed to allocate image resource.");
+    }
+    return Ok(resource.handle);
+}
+
+Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
+    /* Make sure the texture is valid */
+    if (texture.is_null()) return Err("cannot create image for texture which is null.");
+
+    /* Pop a new image off the stock */
+    StockPair resource = images.pop();
+    resource.data.texture = texture;
+    TextureSlot& texture_slot = textures.get(texture);
+    
+    /* Image access sub resource range */
+    VkImageSubresourceRange sub_range {};
+    sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
+    sub_range.baseMipLevel = mip;
+    sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
+    sub_range.baseArrayLayer = layer;
+    sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
+    resource.data.sub_range = sub_range;
+
+    /* Image view creation info */
+    VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    view_ci.image = texture_slot.image;
+    view_ci.viewType = texture_slot.size.is_2d() ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+    view_ci.format = translate::texture_format(texture_slot.format);
+    view_ci.subresourceRange = sub_range;
+
+    /* Create the image view */
+    if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.view) != VK_SUCCESS) {
+        return Err("failed to create image view.");
+    }
+    return Ok(resource.handle);
+}
+
+Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, BorderColor border) {
+    /* Translate the filter, address mode, and border color */
+    const VkFilter filter_mode = translate::sampler_filter(filter);
+    const VkSamplerAddressMode address_mode = translate::sampler_address_mode(mode);
+    const VkBorderColor border_color = translate::sampler_border_color(border);
+
+    /* Pop a new sampler off the stock */
+    StockPair resource = samplers.pop();
+
+    /* Sampler creation info */
+    VkSamplerCreateInfo sampler_ci { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+    sampler_ci.magFilter = filter_mode;
+    sampler_ci.minFilter = filter_mode;
+    sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    sampler_ci.addressModeU = address_mode;
+    sampler_ci.addressModeV = address_mode;
+    sampler_ci.addressModeW = address_mode;
+    sampler_ci.borderColor = border_color;
+
+    /* Create the sampler */
+    if (vkCreateSampler(gpu->logical_device, &sampler_ci, nullptr, &resource.data.sampler) != VK_SUCCESS) {
+        return Err("failed to create sampler.");
+    }
+    return Ok(resource.handle);
+}
+
 Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 width, u32 height) {
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
@@ -267,60 +393,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     return Ok();
 }
 
-void VRAMBank::destroy_render_target(RenderTarget &render_target) {
-    /* Wait for the queue to idle */
-    vkQueueWaitIdle(gpu->queues.queue_combined);
-    
-    /* Push the handle back onto the stock, and get its slot for cleanup */
-    RenderTargetSlot& slot = render_targets.push(render_target);
-
-    /* Destroy the images & views */
-    delete[] slot.images;
-    delete[] slot.old_layouts;
-    for (u32 i = 0u; i < slot.image_count; ++i) {
-        vkDestroyImageView(gpu->logical_device, slot.views[i], nullptr);
-        vkDestroySemaphore(gpu->logical_device, slot.semaphores[i], nullptr);
-    }
-    delete[] slot.views;
-    delete[] slot.semaphores;
-
-    /* Destroy the swapchain */
-    vkDestroySwapchainKHR(gpu->logical_device, slot.swapchain, nullptr);
-
-    /* Destroy the KHR surface */
-    vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
-}
-
-Result<Buffer> VRAMBank::create_buffer(const BufferUsage usage, const u64 count, const u64 stride) {
-    /* Make sure the buffer usage is valid */
-    if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
-
-    StockPair resource = buffers.pop();
-    resource.data.usage = usage;
-
-    /* Size of the buffer in bytes */
-    const u64 size = stride == 0 ? count : count * stride;
-
-    /* Buffer creation info */
-    VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    buffer_ci.size = size;
-    buffer_ci.usage = translate::buffer_usage(usage);
-    buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buffer_ci.queueFamilyIndexCount = 1u;
-    buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
-
-    /* Memory allocation info */
-    VmaAllocationCreateInfo alloc_ci {};
-    alloc_ci.flags = 0x00u;
-    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
-
-    /* Create the buffer & allocate it using VMA */
-    if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) return Err("failed to create buffer.");
-
-    return resource.handle;
-}
-
-Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64 dst_offset, const u64 size) {
+Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
     if (size == 0u) return Err("size is 0.");
 
     BufferSlot& slot = buffers.get(buffer);
@@ -364,8 +437,46 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, const u64
     return Ok();
 }
 
+void VRAMBank::destroy_render_target(RenderTarget &render_target) {
+    /* Wait for the queue to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    
+    /* Push the handle back onto the stock, and get its slot for cleanup */
+    RenderTargetSlot& slot = render_targets.push(render_target);
+
+    /* Destroy the images & views */
+    delete[] slot.images;
+    delete[] slot.old_layouts;
+    for (u32 i = 0u; i < slot.image_count; ++i) {
+        vkDestroyImageView(gpu->logical_device, slot.views[i], nullptr);
+        vkDestroySemaphore(gpu->logical_device, slot.semaphores[i], nullptr);
+    }
+    delete[] slot.views;
+    delete[] slot.semaphores;
+
+    /* Destroy the swapchain */
+    vkDestroySwapchainKHR(gpu->logical_device, slot.swapchain, nullptr);
+
+    /* Destroy the KHR surface */
+    vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
+}
+
 void VRAMBank::destroy_buffer(Buffer& buffer) {
     BufferSlot& slot = buffers.push(buffer);
-
     vmaDestroyBuffer(vma_allocator, slot.buffer, slot.alloc);
+}
+
+void VRAMBank::destroy_texture(Texture& texture) { 
+    TextureSlot& slot = textures.push(texture);
+    vmaDestroyImage(vma_allocator, slot.image, slot.alloc);
+}
+
+void VRAMBank::destroy_image(Image& image) { 
+    ImageSlot& slot = images.push(image);
+    vkDestroyImageView(gpu->logical_device, slot.view, nullptr);
+}
+
+void VRAMBank::destroy_sampler(Sampler& sampler) { 
+    SamplerSlot& slot = samplers.push(sampler);
+    vkDestroySampler(gpu->logical_device, slot.sampler, nullptr);
 }

@@ -30,6 +30,9 @@ class RenderGraph : public AgnRenderGraph {
     /* Queue commands for a compute node. */
     Result<void> queue_compute_node(const GraphExecution& graph, const ComputeNode& node);
 
+    /* Queue commands for a rasterisation node */
+    Result<void> queue_raster_node(const GraphExecution& graph, const RasterNode& node);
+
     /* Queue commands to render immediate mode gui. */
     void queue_imgui(const GraphExecution& graph);
 
