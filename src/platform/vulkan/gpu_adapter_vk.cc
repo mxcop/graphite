@@ -58,9 +58,9 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         instance_ci.pNext = &debug_utils;
         instance_ci.enabledLayerCount = instance_layers_count;
         instance_ci.ppEnabledLayerNames = instance_layers;
-        instance_ci.enabledExtensionCount = instance_ext_count;
-        instance_ci.ppEnabledExtensionNames = instance_ext;
     }
+    instance_ci.enabledExtensionCount = instance_ext_count;
+    instance_ci.ppEnabledExtensionNames = instance_ext;
     instance_ci.pApplicationInfo = &app_info;
 
     /* Create a Vulkan instance */
