@@ -3,7 +3,7 @@
 #include "graphite/utils/enum_flags.hh"
 #include "graphite/utils/types.hh"
 
-/* Buffer Usage Flags */
+/* Buffer usage flags. */
 enum class BufferUsage : u32 {
     Invalid = 0u,           /* Invalid buffer usage. */
     TransferDst = 1u << 1u, /* This buffer can be a GPU transfer destination. */

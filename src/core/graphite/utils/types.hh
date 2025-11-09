@@ -17,3 +17,14 @@ using i64 = int64_t;
 /* Floating point numbers */
 using f32 = float;
 using f64 = double;
+
+/* 2D integer size. */
+struct Size2D {
+    u32 x = 0u, y = 0u;
+};
+
+/* 3D integer size. */
+struct Size3D {
+    u32 x = 0u, y = 0u, z = 0u;
+    inline bool is_2d() const { return z == 0u; };
+};
