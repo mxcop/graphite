@@ -83,6 +83,19 @@ int main() {
         return EXIT_SUCCESS;
     } else rt = r.unwrap();
 
+    /* Initialise a texture that will be used as a color attachment */
+    Texture attachment {};
+    if (const Result r = bank.create_texture(TextureUsage::ColorAttachment, TextureFormat::RGBA8Unorm, {1440, 810, 0}); r.is_err()) {
+        printf("failed to initialize attachment texture.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else attachment = r.unwrap();
+    Image attachment_img {};
+    if (const Result r = bank.create_image(attachment);
+        r.is_err()) {
+        printf("failed to initialize attachment image.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else attachment_img = r.unwrap();
+
     /* Initialise a test buffer */
     Buffer const_buffer {};
     if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, sizeof(FrameData)); r.is_err()) {
@@ -181,7 +194,7 @@ int main() {
             .topology(Topology::TriangleList)
             .attribute(AttrFormat::XYZ32_SFloat) // Position
             .read(const_buffer, ShaderStages::Pixel)
-            .attach(rt)
+            .attach(attachment_img)
             .raster_extent(win_w, win_h);
         graphics_pass.draw(vertex_buffer, 3);
 
@@ -199,6 +212,8 @@ int main() {
     bank.destroy_buffer(const_buffer);
     bank.destroy_buffer(storage_buffer);
     bank.destroy_buffer(vertex_buffer);
+    bank.destroy_texture(attachment);
+    bank.destroy_image(attachment_img);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

@@ -193,11 +193,11 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
         VkFormat format {}; /* Get the image format for render target or texture */
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
             format = gpu->get_vram_bank().get_render_target(dep.resource).format;
-        } /*else { // TODO: Implement Later
-            const Texture& texture = vrm->get_texture(dep.resource);
-            if (has_flag(texture.usage, TexUsage::eColorAttachment) == false) continue;
-            format = get_image_format(texture.format);
-        }*/
+        } else {
+            const TextureSlot& texture = gpu->get_vram_bank().get_texture(dep.resource);
+            if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
+            format = translate::texture_format(texture.format);
+        }
 
         color_attachments.emplace_back(format);
         VkPipelineColorBlendAttachmentState blend_state {};

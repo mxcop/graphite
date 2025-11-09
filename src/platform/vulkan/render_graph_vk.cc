@@ -211,8 +211,6 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
 
-    /* Bind the compute pipeline */
-    //vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
 
@@ -222,25 +220,16 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         /* Find attachment dependencies */
         if (has_flag(dep.flags, DependencyFlags::Attachment) == false) continue;
 
-        /* Skip unbound resources */ // TODO: Implement Unbound Flag
-        //if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
-
         /* Handle render target attachments */
         VkImageView attachment_view = VK_NULL_HANDLE;
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
-#if defined(KUDZU_INSPECTOR)
-            /* For the editor, we render into a viewport */
-            attachment_view = imgui_targets[frame_uid % FRAMES_IN_FLIGHT].view;
-#else
-            /* For the game, we render directly into the swapchain */
-            //attachment_view = render_targets[target_idx].view;
             attachment_view = gpu->get_vram_bank().get_render_target(target).view();
-#endif
-        } /*else { // TODO: Implement Textures
-            const TextureSlot& texture = vrm->get_texture(dep.resource);
-            if (has_flag(texture.usage, TexUsage::eColorAttachment) == false) continue;
-            attachment_view = texture.view;
-        }*/
+        } else {
+            const ImageSlot& image = gpu->get_vram_bank().get_image(dep.resource);
+            const TextureSlot& texture = gpu->get_vram_bank().get_texture(image.texture);
+            if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
+            attachment_view = image.view;
+        }
 
         VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
