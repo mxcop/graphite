@@ -123,7 +123,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
         const Dependency& dep = node.dependencies[i];
         const ResourceType rtype = dep.resource.get_type();
 
-        /* Attachments are not bound as descriptors */
+        /* Skip resources that don't need to be in the descriptor layout (ex: Vertex Buffers) */
         if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
 
         /* Create the write command */
