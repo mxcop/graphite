@@ -203,6 +203,7 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
+    vkCmdBindDescriptorSets(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr);
 
     /* Calculate the dispatch size */
     const u32 dispatch_x = div_up(node.work_x, node.group_x);
@@ -221,8 +222,13 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
 
+    /* Bind the pipeline */
+    vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
+    vkCmdBindDescriptorSets(
+        graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr
+    );
 
     /* Find all attachment resource dependencies to put in the rendering info. */
     std::vector<VkRenderingAttachmentInfo> color_attachments {};
@@ -267,13 +273,6 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
 
     /* Begin rendering */
     vkCmdBeginRenderingKHR(graph.cmd, &rendering);
-
-    /* Bind the pipeline */
-    vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
-    // TODO: Add Bindless
-    /*vkCmdBindDescriptorSets(
-        graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1u, 1u, &vrm->bindless_set, 0u, nullptr
-    );*/
 
     VkViewport viewport {};
     viewport.x = (f32)render_area.offset.x;

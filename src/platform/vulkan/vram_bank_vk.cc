@@ -35,6 +35,68 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     images.init(8u);
     samplers.init(8u);
 
+    { /* Init Bindless */
+        const u32 resource_limit = 32u;
+        const u32 bindless_textures_slot = 0u;
+        const u32 bindless_buffers_slot = 1u;
+
+        /* Initialize the bindless resources */
+        const VkDescriptorPoolSize bindless_pool_sizes[] {
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, resource_limit}, {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, resource_limit}
+        };
+
+        /* Allocate the bindless descriptor pool */
+        VkDescriptorPoolCreateInfo bindless_pool_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        bindless_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        bindless_pool_ci.maxSets = 1u;
+        bindless_pool_ci.poolSizeCount = sizeof(bindless_pool_sizes) / sizeof(VkDescriptorPoolSize);
+        bindless_pool_ci.pPoolSizes = bindless_pool_sizes;
+        if (vkCreateDescriptorPool(gpu.logical_device, &bindless_pool_ci, nullptr, &bindless_pool) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor pool.");
+        }
+
+        /* Create the bindless descriptor set layout */
+        const VkDescriptorBindingFlags flags[] {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+        };
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindless_flags { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        bindless_flags.bindingCount = 2u;
+        bindless_flags.pBindingFlags = flags;
+
+        VkDescriptorSetLayoutBinding bindless_bindings[2u] {};
+        bindless_bindings[0].binding = bindless_textures_slot;
+        bindless_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        bindless_bindings[0].descriptorCount = resource_limit;
+        bindless_bindings[0].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
+
+        bindless_bindings[1].binding = bindless_buffers_slot;
+        bindless_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindless_bindings[1].descriptorCount = resource_limit;
+        bindless_bindings[1].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutCreateInfo bindless_set_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        bindless_set_ci.pNext = &bindless_flags;
+        bindless_set_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        bindless_set_ci.bindingCount = sizeof(bindless_bindings) / sizeof(VkDescriptorSetLayoutBinding);
+        bindless_set_ci.pBindings = bindless_bindings;
+
+        if (vkCreateDescriptorSetLayout(gpu.logical_device, &bindless_set_ci, nullptr, &bindless_layout) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor layout.");
+        }
+
+        /* Allocate the bindless descriptor set */
+        VkDescriptorSetAllocateInfo bindless_set_ai { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+        bindless_set_ai.descriptorPool = bindless_pool;
+        bindless_set_ai.descriptorSetCount = 1u;
+        bindless_set_ai.pSetLayouts = &bindless_layout;
+
+        if (vkAllocateDescriptorSets(gpu.logical_device, &bindless_set_ai, &bindless_set) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor set.");
+        }
+    }
+
     /* Command pool creation info */
     VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -93,6 +155,9 @@ bool VRAMBank::end_upload() {
 }
 
 Result<void> VRAMBank::destroy() {
+    vkDestroyDescriptorPool(gpu->logical_device, bindless_pool, nullptr);
+    vkDestroyDescriptorSetLayout(gpu->logical_device, bindless_layout, nullptr);
+
     vkDestroyCommandPool(gpu->logical_device, upload_cmd_pool, nullptr);
 
     vkDestroyFence(gpu->logical_device, upload_fence, nullptr);

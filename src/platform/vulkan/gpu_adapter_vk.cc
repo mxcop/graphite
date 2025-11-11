@@ -110,8 +110,16 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     device_queues_ci[2].queueCount = 1u;
     device_queues_ci[2].pQueuePriorities = &priority;
 
+    /* Enable descriptor indexing features */
+    VkPhysicalDeviceDescriptorIndexingFeatures desc_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
+    desc_features.descriptorBindingSampledImageUpdateAfterBind = true;
+    desc_features.descriptorBindingStorageBufferUpdateAfterBind = true;
+    desc_features.descriptorBindingPartiallyBound = true;
+    desc_features.runtimeDescriptorArray = true;
+
     /* Enable synchronization 2.0 features */
     VkPhysicalDeviceSynchronization2Features sync_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
+    sync_features.pNext = &desc_features;
     sync_features.synchronization2 = true;
 
     /* Enable dynamic rendering features */
