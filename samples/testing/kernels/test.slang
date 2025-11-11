@@ -54,6 +54,6 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
     col = 1.0 - exp(-col);
     out_texture[thread_id] = float4(col, 1);
 
-    Texture2D tex = bindless_sampled_textures[0];
+    Texture2D<float4> tex = bindless::texture_sampled<Texture2D<float4>>(1);
     out_texture[thread_id] = tex.Load(int3(thread_id, 0));
 }

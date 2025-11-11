@@ -28,7 +28,7 @@ public T texture_sampled<T>(const uint handle) where T : IOpaqueDescriptor {
 }
 
 /* Get a bindless storage buffer with a given handle. */
-public T texture_storage<T>(const uint handle) where T : IOpaqueDescriptor {
+public T storage_buffer<T>(const uint handle) where T : IOpaqueDescriptor {
     return bindless_storage_buffers[NonUniformResourceIndex((handle & 0x0FFFFFFF) - 1u)].asOpaqueDescriptor<T>();
 }
 
