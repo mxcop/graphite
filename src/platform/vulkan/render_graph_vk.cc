@@ -63,7 +63,7 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
     /* Fetch the buffer resource slot from the vram bank */
     VRAMBank& bank = gpu->get_vram_bank();
-    const BufferSlot& slot = bank.get_buffer(buffer);
+    const BufferSlot& slot = bank.buffers.get(buffer);
 
     /* Make sure this buffer supports being a transfer destination */
     if (has_flag(slot.usage, BufferUsage::TransferDst) == false) {
@@ -90,19 +90,11 @@ void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset
     vmaUnmapMemory(bank.vma_allocator, graph.staging_alloc);
 
     /* Staging buffer copy command */
-    VkBufferCopy2& copy_cmd = graph.staging_copies.emplace_back();
-    copy_cmd.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
-    copy_cmd.srcOffset = src_offset;
-    copy_cmd.dstOffset = dst_offset;
-    copy_cmd.size = size;
-
-    /* Staging buffer copy info */
-    VkCopyBufferInfo2& copy_info = graph.staging_infos.emplace_back();
-    copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-    copy_info.srcBuffer = graph.staging_buffer;
-    copy_info.dstBuffer = slot.buffer;
-    copy_info.pRegions = &copy_cmd;
-    copy_info.regionCount = 1u;
+    StagingCommand& cmd = graph.staging_commands.emplace_back();
+    cmd.dst_offset = dst_offset;
+    cmd.src_offset = src_offset;
+    cmd.bytes = size;
+    cmd.dst_resource = buffer;
 }
 
 Result<void> RenderGraph::dispatch() {
@@ -122,7 +114,7 @@ Result<void> RenderGraph::dispatch() {
     RenderTargetSlot* rt = nullptr;
     if (has_target) {
         /* Acquire the next render target image from the swapchain */
-        rt = &gpu->get_vram_bank().get_render_target(target);
+        rt = &gpu->get_vram_bank().render_targets.get(target);
         const VkResult swapchain_result = vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image);
 
         /* Don't render anything if the swapchain is out of date */
@@ -221,8 +213,7 @@ Result<void> RenderGraph::dispatch() {
     /* Reset the staging buffer for the next graph */
     GraphExecution& next_graph = active_graph();
     next_graph.staging_stack_ptr = 0u;
-    next_graph.staging_infos.clear();
-    next_graph.staging_copies.clear();
+    next_graph.staging_commands.clear();
 
     return Ok();
 }
@@ -288,13 +279,15 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
 }
 
 Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const RasterNode& node) { 
-    /* Try to get the pipeline for this compute node */
+    /* Try to get the pipeline for this raster node */
     const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
 
+    /* Create and submit push descriptors for this node */
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
+    VRAMBank& bank = gpu->get_vram_bank();
 
     /* Find all attachment resource dependencies to put in the rendering info. */
     std::vector<VkRenderingAttachmentInfo> color_attachments {};
@@ -306,13 +299,13 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         /* Handle render target attachments */
         VkImageView attachment_view = VK_NULL_HANDLE;
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
-            RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+            RenderTargetSlot& rt = bank.render_targets.get(target);
             attachment_view = rt.view();
             min_raster_w = min(min_raster_w, rt.extent.width);
             min_raster_h = min(min_raster_h, rt.extent.height);
         } else {
-            const ImageSlot& image = gpu->get_vram_bank().get_image(dep.resource);
-            const TextureSlot& texture = gpu->get_vram_bank().get_texture(image.texture);
+            const ImageSlot& image = bank.images.get(dep.resource);
+            const TextureSlot& texture = bank.textures.get(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             attachment_view = image.view;
             min_raster_w = min(min_raster_w, texture.size.x);
@@ -370,7 +363,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     /* Loop over all draw calls, bind vertex buffers, draw */
     for (const DrawCall& draw_call : node.draws) {
         /* Bind the vertex buffer for this draw call */
-        const BufferSlot& vertex_buffer = gpu->get_vram_bank().get_buffer(draw_call.vertex_buffer);
+        const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
         const VkDeviceSize offset = 0u;
         vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
 
@@ -388,16 +381,43 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
 
 void RenderGraph::queue_staging(const GraphExecution& graph) {
     /* Do nothing if there are no staging copies queued */
-    if (graph.staging_infos.empty()) return;
+    if (graph.staging_commands.empty()) return;
+
+    /* Compile the staging copy commands */
+    std::vector<VkBufferCopy2> regions {};
+    std::vector<VkCopyBufferInfo2> copies {};
+
+    VRAMBank& bank = gpu->get_vram_bank();
+    for (const StagingCommand& cmd : graph.staging_commands) {
+        if (cmd.dst_resource.get_type() != ResourceType::Buffer) {
+            gpu->log(DebugSeverity::Warning, "tried to stage resource which is not a buffer!");
+            continue; /* TODO: Implement staging for other resources. */
+        }
+
+        /* Fill in the buffer copy region */
+        VkBufferCopy2& region = regions.emplace_back();
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        region.dstOffset = cmd.dst_offset;
+        region.srcOffset = cmd.src_offset;
+        region.size = cmd.bytes;
+
+        /* Fill in the buffer copy command */
+        VkCopyBufferInfo2& copy = copies.emplace_back();
+        copy.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+        copy.srcBuffer = graph.staging_buffer;
+        copy.dstBuffer = bank.buffers.get(cmd.dst_resource).buffer;
+        copy.pRegions = &region;
+        copy.regionCount = 1u;
+    }
 
     /* Queue copy commands */
-    vkCmdCopyBuffer2KHR(graph.cmd, graph.staging_infos.data());
+    vkCmdCopyBuffer2KHR(graph.cmd, copies.data());
 }
 
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
     /* If this graph doesn't have a render target, don't render imgui */
     if (imgui == nullptr || target.is_null()) return;
-    RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+    RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
 
     /* Make imgui render target sync barrier */
     VkImageMemoryBarrier2 viewport_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };

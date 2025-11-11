@@ -7,6 +7,14 @@
 #include "vulkan/api_vk.hh" /* Vulkan API */
 #include "wrapper/pipeline_cache_vk.hh"
 
+/* Staging command for a graph execution. */
+struct StagingCommand {
+    u64 dst_offset = 0u;
+    u64 src_offset = 0u;
+    u64 bytes = 0u;
+    OpaqueHandle dst_resource {};
+};
+
 /* The execution data for a graph. */
 struct GraphExecution {
     VkCommandBuffer cmd {};
@@ -19,8 +27,7 @@ struct GraphExecution {
     /* Graph staging buffer. */
     VkBuffer staging_buffer {};
     /* Graph staging copy commands. */
-    std::vector<VkCopyBufferInfo2> staging_infos {};
-    std::vector<VkBufferCopy2> staging_copies {};
+    std::vector<StagingCommand> staging_commands {};
     u64 staging_stack_ptr = 0u;
 };
 
