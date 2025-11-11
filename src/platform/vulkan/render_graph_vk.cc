@@ -226,6 +226,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
 
     /* Find all attachment resource dependencies to put in the rendering info. */
     std::vector<VkRenderingAttachmentInfo> color_attachments {};
+    i32 min_raster_w = INT32_MAX, min_raster_h = INT32_MAX;
     for (const Dependency& dep : node.dependencies) {
         /* Find attachment dependencies */
         if (has_flag(dep.flags, DependencyFlags::Attachment) == false) continue;
@@ -233,14 +234,20 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         /* Handle render target attachments */
         VkImageView attachment_view = VK_NULL_HANDLE;
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
-            attachment_view = gpu->get_vram_bank().get_render_target(target).view();
+            RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+            attachment_view = rt.view();
+            min_raster_w = min(min_raster_w, rt.extent.width);
+            min_raster_h = min(min_raster_h, rt.extent.height);
         } else {
             const ImageSlot& image = gpu->get_vram_bank().get_image(dep.resource);
             const TextureSlot& texture = gpu->get_vram_bank().get_texture(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             attachment_view = image.view;
+            min_raster_w = min(min_raster_w, texture.size.x);
+            min_raster_h = min(min_raster_h, texture.size.y);
         }
 
+        /* Fill in the attachment info */
         VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
         attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -253,9 +260,8 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     VkRect2D render_area {};
     render_area.offset = {(i32)node.raster_x, (i32)node.raster_y};
     render_area.extent = {node.raster_w, node.raster_h};
-    if (render_area.extent.width == 0u || render_area.extent.height == 0u) {
-        RenderTargetSlot& rt_slot = gpu->get_vram_bank().get_render_target(target);
-        render_area.extent = rt_slot.extent;
+    if (min_raster_w < render_area.extent.width || min_raster_h < render_area.extent.height) {
+        return Err("attempted to rasterize into attachment smaller than raster extent.");
     }
 
     /* Rendering info */
