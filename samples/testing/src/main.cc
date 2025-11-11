@@ -122,8 +122,9 @@ int main() {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else storage_buffer = r.unwrap();
-    float* pixels = (float*)malloc(sizeof(float) * 4 * 1440 * 810);
+    float* pixels = new float[4 * 1440 * 810] {};
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
+    delete[] pixels;
 
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
