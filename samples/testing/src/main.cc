@@ -85,7 +85,7 @@ int main() {
 
     /* Initialise a texture that will be used as a color attachment */
     Texture attachment {};
-    if (const Result r = bank.create_texture(TextureUsage::ColorAttachment, TextureFormat::RGBA8Unorm, {1440, 810, 0}); r.is_err()) {
+    if (const Result r = bank.create_texture(TextureUsage::ColorAttachment | TextureUsage::Sampled, TextureFormat::RGBA8Unorm, {1440, 810, 0}); r.is_err()) {
         printf("failed to initialize attachment texture.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else attachment = r.unwrap();
@@ -174,20 +174,12 @@ int main() {
 
         rg.new_graph();
 
-        /* Fill Storage Buffer Pass */
-        rg.add_compute_pass("buffer fill pass", "buffer-fill")
-            .read(const_buffer)
-            .write(storage_buffer)
-            .group_size(16, 16)
-            .work_size(win_w, win_h);
-
-        /* Test Pass */
-        rg.add_compute_pass("render pass", "test")
-            .write(rt)
-            .read(const_buffer)
-            .read(storage_buffer)
-            .group_size(16, 8)
-            .work_size(win_w, win_h);
+        ///* Fill Storage Buffer Pass */
+        //rg.add_compute_pass("buffer fill pass", "buffer-fill")
+        //    .read(const_buffer)
+        //    .write(storage_buffer)
+        //    .group_size(16, 16)
+        //    .work_size(win_w, win_h);
 
         /* Test Rasterisation Pass */
         RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
@@ -197,6 +189,14 @@ int main() {
             .attach(attachment_img)
             .raster_extent(win_w, win_h);
         graphics_pass.draw(vertex_buffer, 3);
+
+        /* Test Pass */
+        rg.add_compute_pass("render pass", "test")
+            .write(rt)
+            .read(const_buffer)
+            .read(storage_buffer)
+            .group_size(16, 8)
+            .work_size(win_w, win_h);
 
         rg.end_graph().expect("failed to compile render graph.");
         rg.dispatch().expect("failed to dispatch render graph.");
@@ -214,6 +214,7 @@ int main() {
     bank.destroy_buffer(vertex_buffer);
     bank.destroy_texture(attachment);
     bank.destroy_image(attachment_img);
+
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

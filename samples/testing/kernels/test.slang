@@ -53,4 +53,7 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
     // Exponential tonemap
     col = 1.0 - exp(-col);
     out_texture[thread_id] = float4(col, 1);
+
+    Texture2D tex = bindless_sampled_textures[0];
+    out_texture[thread_id] = tex.Load(int3(thread_id, 0));
 }
