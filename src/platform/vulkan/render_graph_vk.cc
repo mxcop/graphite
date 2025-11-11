@@ -410,8 +410,18 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
         copy.regionCount = 1u;
     }
 
+    if (gpu->validation) {
+        /* Start debug label for staging */
+        VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        debug_label.pLabelName = "staging";
+        vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+    }
+
     /* Queue copy commands */
     vkCmdCopyBuffer2KHR(graph.cmd, copies.data());
+
+    /* End debug label for this node */
+    if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
 }
 
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
