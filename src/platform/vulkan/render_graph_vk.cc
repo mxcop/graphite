@@ -26,6 +26,19 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
     /* Semaphore creation info */
     const VkSemaphoreCreateInfo sema_ci { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
+    /* Graph staging buffer creation info */
+    VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    staging_buffer_ci.size = graph_staging_limit;
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu.queue_families.queue_combined;
+
+    /* Graph staging memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
     /* Allocate graph execution resources */
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         if (vkAllocateCommandBuffers(gpu.logical_device, &cmd_ai, &graphs[i].cmd) != VK_SUCCESS)
@@ -34,12 +47,62 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
             return Err("failed to create in-flight fence for graph.");
         if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
             return Err("failed to create start semaphore for graph.");
+        
+        /* Create the graph staging buffer & allocate it using VMA */
+        if (vmaCreateBuffer(gpu.get_vram_bank().vma_allocator, &staging_buffer_ci, &alloc_ci, &graphs[i].staging_buffer, &graphs[i].staging_alloc, nullptr) != VK_SUCCESS) { 
+            return Err("failed to create staging buffer for graph.");
+        }
     }
 
     /* Initialize the pipeline cache */
     pipeline_cache.init(gpu);
 
     return Ok();
+}
+
+void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
+    /* Fetch the buffer resource slot from the vram bank */
+    VRAMBank& bank = gpu->get_vram_bank();
+    const BufferSlot& slot = bank.get_buffer(buffer);
+
+    /* Make sure this buffer supports being a transfer destination */
+    if (has_flag(slot.usage, BufferUsage::TransferDst) == false) {
+        gpu->log(DebugSeverity::Warning, "attempted to upload to buffer without TransferDst flag.");
+        return;
+    }
+
+    /* Get the next graph in the graph executions ring buffer */
+    GraphExecution& graph = active_graph();
+
+    /* Make sure there's enough space in the staging buffer */
+    if ((graph.staging_stack_ptr + size) >= graph_staging_limit) {
+        gpu->log(DebugSeverity::Warning, "ran out of staging space in graph execution.");
+        return;
+    }
+
+    /* Copy data into the staging buffer */
+    void* staging_memory = nullptr;
+    vmaMapMemory(bank.vma_allocator, graph.staging_alloc, &staging_memory);
+    const u64 src_offset = graph.staging_stack_ptr;
+    u8* staging_dst = reinterpret_cast<u8*>(staging_memory) + src_offset;
+    memcpy(staging_dst, data, size); 
+    graph.staging_stack_ptr += size;
+    vmaUnmapMemory(bank.vma_allocator, graph.staging_alloc);
+
+    /* Staging buffer copy command */
+    VkBufferCopy2& copy_cmd = graph.staging_copies.emplace_back();
+    copy_cmd.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+    copy_cmd.srcOffset = src_offset;
+    copy_cmd.dstOffset = dst_offset;
+    copy_cmd.size = size;
+
+    /* Staging buffer copy info */
+    VkCopyBufferInfo2& copy_info = graph.staging_infos.emplace_back();
+    copy_info.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    copy_info.srcBuffer = graph.staging_buffer;
+    copy_info.dstBuffer = slot.buffer;
+    copy_info.pRegions = &copy_cmd;
+    copy_info.regionCount = 1u;
 }
 
 Result<void> RenderGraph::dispatch() {
@@ -76,6 +139,9 @@ Result<void> RenderGraph::dispatch() {
     if (vkBeginCommandBuffer(graph.cmd, &cmd_begin) != VK_SUCCESS) {
         return Err("failed to begin recording command buffer for graph.");
     }
+
+    /* Queue staging copy commands */
+    queue_staging(graph);
 
     /* Process all waves in the render graph */
     for (u32 s = 0u, w = 0u, e = 0u; e <= waves.size(); ++e) {
@@ -151,6 +217,12 @@ Result<void> RenderGraph::dispatch() {
 
     /* Update the active graph index */
     next_graph();
+
+    /* Reset the staging buffer for the next graph */
+    GraphExecution& next_graph = active_graph();
+    next_graph.staging_stack_ptr = 0u;
+    next_graph.staging_infos.clear();
+    next_graph.staging_copies.clear();
 
     return Ok();
 }
@@ -308,6 +380,14 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     return Ok();
 }
 
+void RenderGraph::queue_staging(const GraphExecution& graph) {
+    /* Do nothing if there are no staging copies queued */
+    if (graph.staging_infos.empty()) return;
+
+    /* Queue copy commands */
+    vkCmdCopyBuffer2KHR(graph.cmd, graph.staging_infos.data());
+}
+
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
     /* If this graph doesn't have a render target, don't render imgui */
     if (imgui == nullptr || target.is_null()) return;
@@ -378,6 +458,7 @@ Result<void> RenderGraph::destroy() {
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         vkDestroyFence(gpu->logical_device, graphs[i].flight_fence, nullptr);
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
+        vmaDestroyBuffer(gpu->get_vram_bank().vma_allocator, graphs[i].staging_buffer, graphs[i].staging_alloc);
     }
     delete[] graphs;
 

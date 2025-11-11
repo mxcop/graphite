@@ -9,6 +9,8 @@
 
 const GraphExecution &AgnRenderGraph::active_graph() const { return graphs[active_graph_index]; }
 
+GraphExecution &AgnRenderGraph::active_graph() { return graphs[active_graph_index]; }
+
 void AgnRenderGraph::new_graph(u32 node_count) {
     /* Clear out the nodes list */
     for (Node* old_node : nodes)

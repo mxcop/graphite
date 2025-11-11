@@ -14,6 +14,14 @@ struct GraphExecution {
     VkSemaphore start_semaphore {};
     /* Indicates whether this execution is in flight. */
     VkFence flight_fence {};
+    /* Graph staging buffer allocation. */
+    VmaAllocation staging_alloc {};
+    /* Graph staging buffer. */
+    VkBuffer staging_buffer {};
+    /* Graph staging copy commands. */
+    std::vector<VkCopyBufferInfo2> staging_infos {};
+    std::vector<VkBufferCopy2> staging_copies {};
+    u64 staging_stack_ptr = 0u;
 };
 
 /**
@@ -33,12 +41,18 @@ class RenderGraph : public AgnRenderGraph {
     /* Queue commands for a rasterisation node */
     Result<void> queue_raster_node(const GraphExecution& graph, const RasterNode& node);
 
+    /* Queue commands to stage graph buffers. */
+    void queue_staging(const GraphExecution& graph);
+
     /* Queue commands to render immediate mode gui. */
     void queue_imgui(const GraphExecution& graph);
 
 public:
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
+    
+    /* Upload data to a GPU buffer resource. */
+    PLATFORM_SPECIFIC void upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch();

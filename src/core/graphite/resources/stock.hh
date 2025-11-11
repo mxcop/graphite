@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "graphite/utils/types.hh"
 #include "handle.hh"
 
