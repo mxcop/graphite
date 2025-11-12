@@ -2,7 +2,7 @@ import common;
 
 RWTexture2D<float4> out_texture;
 ConstantBuffer<FrameData> frame_data;
-StructuredBuffer<Pixel> in_buffer;
+//StructuredBuffer<Pixel> in_buffer;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
 
@@ -56,4 +56,7 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
 
     Texture2D<float4> tex = bindless::texture_sampled<Texture2D<float4>>(1);
     out_texture[thread_id] = tex.Load(int3(thread_id, 0));
+
+    StructuredBuffer<Pixel> buf = bindless::storage_buffer<StructuredBuffer<Pixel>>(3);
+    out_texture[thread_id] = buf[int(thread_id.x + thread_id.y * frame_data.win_width)].color;
 }

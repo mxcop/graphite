@@ -123,6 +123,7 @@ int main() {
         return EXIT_SUCCESS;
     } else storage_buffer = r.unwrap();
     float* pixels = (float*)malloc(sizeof(float) * 4 * 1440 * 810);
+    memset(pixels, 0, sizeof(float) * 4 * 1440 * 810);
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
 
     /* Setup the framebuffer resize callback */ 
@@ -174,12 +175,12 @@ int main() {
 
         rg.new_graph();
 
-        ///* Fill Storage Buffer Pass */
-        //rg.add_compute_pass("buffer fill pass", "buffer-fill")
-        //    .read(const_buffer)
-        //    .write(storage_buffer)
-        //    .group_size(16, 16)
-        //    .work_size(win_w, win_h);
+        /* Fill Storage Buffer Pass */
+        rg.add_compute_pass("buffer fill pass", "buffer-fill")
+            .read(const_buffer)
+            .write(storage_buffer)
+            .group_size(16, 16)
+            .work_size(win_w, win_h);
 
         /* Test Rasterisation Pass */
         RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
@@ -194,7 +195,7 @@ int main() {
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .read(const_buffer)
-            .read(storage_buffer)
+            //.read(storage_buffer)
             .group_size(16, 8)
             .work_size(win_w, win_h);
 

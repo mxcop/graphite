@@ -291,6 +291,27 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to create buffer.");
     }
+
+    /* Insert only Storage Buffers in the bindless descriptor set */
+    if (has_flag(usage, BufferUsage::Storage)) {
+        /* Create the bindless descriptor write template */
+        VkDescriptorBufferInfo buffer_info {};
+        buffer_info.buffer = resource.data.buffer;
+        buffer_info.offset = 0u;
+        buffer_info.range = size;
+
+        VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        bindless_write.dstSet = bindless_set;
+        bindless_write.dstBinding = 0u;
+        bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
+        bindless_write.descriptorCount = 1u;
+        bindless_write.pBufferInfo = &buffer_info;
+        bindless_write.dstBinding = BINDLESS_BUFFER_SLOT;
+        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+        vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
+    }
+
     return Ok(resource.handle);
 }
 
@@ -368,19 +389,16 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
         VkDescriptorImageInfo image_info {};
         image_info.sampler = VK_NULL_HANDLE;
         image_info.imageView = resource.data.view;
-        image_info.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         bindless_write.dstSet = bindless_set;
-        bindless_write.dstBinding = 0u;
         bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
         bindless_write.descriptorCount = 1u;
-        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_MAX_ENUM;
         bindless_write.pImageInfo = &image_info;
-
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        bindless_write.dstBinding = BINDLESS_TEXTURE_SLOT;
         bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        bindless_write.dstBinding = BINDLESS_TEXTURE_SLOT;
+
         vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
     }
 
