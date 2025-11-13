@@ -184,6 +184,9 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     depth_stencil_state.depthWriteEnable = false;
     depth_stencil_state.depthCompareOp = VK_COMPARE_OP_LESS;
 
+    /* Get the active VRAM bank */
+    VRAMBank& bank = gpu->get_vram_bank();
+
     /* Find all attachment resource dependencies to put in the rendering info. */
     std::vector<VkFormat> color_attachments {};
     std::vector<VkPipelineColorBlendAttachmentState> blend_attachments {};
@@ -193,9 +196,9 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
 
         VkFormat format {}; /* Get the image format for render target or texture */
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
-            format = gpu->get_vram_bank().get_render_target(dep.resource).format;
+            format = bank.render_targets.get(dep.resource).format;
         } else {
-            const TextureSlot& texture = gpu->get_vram_bank().get_texture(dep.resource);
+            const TextureSlot& texture = bank.textures.get(dep.resource);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             format = translate::texture_format(texture.format);
         }

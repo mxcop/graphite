@@ -42,31 +42,6 @@ protected:
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
 
-    /* Get a render target slot by handle. */
-    RenderTargetSlot& get_render_target(BindHandle render_target);
-    /* Get a render target slot by handle. */
-    const RenderTargetSlot& get_render_target(BindHandle render_target) const;
-
-    /* Get a buffer slot by handle. */
-    BufferSlot& get_buffer(BindHandle buffer);
-    /* Get a buffer slot by handle. */
-    const BufferSlot& get_buffer(BindHandle buffer) const;
-
-    /* Get a texture slot by handle. */
-    TextureSlot& get_texture(OpaqueHandle texture);
-    /* Get a texture slot by handle. */
-    const TextureSlot& get_texture(OpaqueHandle texture) const;
-
-    /* Get a image slot by handle. */
-    ImageSlot& get_image(BindHandle image);
-    /* Get a image slot by handle. */
-    const ImageSlot& get_image(BindHandle image) const;
-
-    /* Get a sampler slot by handle. */
-    SamplerSlot& get_sampler(BindHandle sampler);
-    /* Get a sampler slot by handle. */
-    const SamplerSlot& get_sampler(BindHandle sampler) const;
-
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;

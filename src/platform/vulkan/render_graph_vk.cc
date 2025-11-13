@@ -26,6 +26,19 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
     /* Semaphore creation info */
     const VkSemaphoreCreateInfo sema_ci { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
+    /* Graph staging buffer creation info */
+    VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    staging_buffer_ci.size = graph_staging_limit;
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu.queue_families.queue_combined;
+
+    /* Graph staging memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
     /* Allocate graph execution resources */
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         if (vkAllocateCommandBuffers(gpu.logical_device, &cmd_ai, &graphs[i].cmd) != VK_SUCCESS)
@@ -34,12 +47,54 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
             return Err("failed to create in-flight fence for graph.");
         if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
             return Err("failed to create start semaphore for graph.");
+        
+        /* Create the graph staging buffer & allocate it using VMA */
+        if (vmaCreateBuffer(gpu.get_vram_bank().vma_allocator, &staging_buffer_ci, &alloc_ci, &graphs[i].staging_buffer, &graphs[i].staging_alloc, nullptr) != VK_SUCCESS) { 
+            return Err("failed to create staging buffer for graph.");
+        }
     }
 
     /* Initialize the pipeline cache */
     pipeline_cache.init(gpu);
 
     return Ok();
+}
+
+void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
+    /* Fetch the buffer resource slot from the vram bank */
+    VRAMBank& bank = gpu->get_vram_bank();
+    const BufferSlot& slot = bank.buffers.get(buffer);
+
+    /* Make sure this buffer supports being a transfer destination */
+    if (has_flag(slot.usage, BufferUsage::TransferDst) == false) {
+        gpu->log(DebugSeverity::Warning, "attempted to upload to buffer without TransferDst flag.");
+        return;
+    }
+
+    /* Get the next graph in the graph executions ring buffer */
+    GraphExecution& graph = active_graph();
+
+    /* Make sure there's enough space in the staging buffer */
+    if ((graph.staging_stack_ptr + size) >= graph_staging_limit) {
+        gpu->log(DebugSeverity::Warning, "ran out of staging space in graph execution.");
+        return;
+    }
+
+    /* Copy data into the staging buffer */
+    void* staging_memory = nullptr;
+    vmaMapMemory(bank.vma_allocator, graph.staging_alloc, &staging_memory);
+    const u64 src_offset = graph.staging_stack_ptr;
+    u8* staging_dst = reinterpret_cast<u8*>(staging_memory) + src_offset;
+    memcpy(staging_dst, data, size); 
+    graph.staging_stack_ptr += size;
+    vmaUnmapMemory(bank.vma_allocator, graph.staging_alloc);
+
+    /* Staging buffer copy command */
+    StagingCommand& cmd = graph.staging_commands.emplace_back();
+    cmd.dst_offset = dst_offset;
+    cmd.src_offset = src_offset;
+    cmd.bytes = size;
+    cmd.dst_resource = buffer;
 }
 
 Result<void> RenderGraph::dispatch() {
@@ -59,7 +114,7 @@ Result<void> RenderGraph::dispatch() {
     RenderTargetSlot* rt = nullptr;
     if (has_target) {
         /* Acquire the next render target image from the swapchain */
-        rt = &gpu->get_vram_bank().get_render_target(target);
+        rt = &gpu->get_vram_bank().render_targets.get(target);
         const VkResult swapchain_result = vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image);
 
         /* Don't render anything if the swapchain is out of date */
@@ -76,6 +131,9 @@ Result<void> RenderGraph::dispatch() {
     if (vkBeginCommandBuffer(graph.cmd, &cmd_begin) != VK_SUCCESS) {
         return Err("failed to begin recording command buffer for graph.");
     }
+
+    /* Queue staging copy commands */
+    queue_staging(graph);
 
     /* Process all waves in the render graph */
     for (u32 s = 0u, w = 0u, e = 0u; e <= waves.size(); ++e) {
@@ -152,6 +210,11 @@ Result<void> RenderGraph::dispatch() {
     /* Update the active graph index */
     next_graph();
 
+    /* Reset the staging buffer for the next graph */
+    GraphExecution& next_graph = active_graph();
+    next_graph.staging_stack_ptr = 0u;
+    next_graph.staging_commands.clear();
+
     return Ok();
 }
 
@@ -217,18 +280,21 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
 }
 
 Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const RasterNode& node) { 
-    /* Try to get the pipeline for this compute node */
+    /* Try to get the pipeline for this raster node */
     const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
 
     /* Bind the pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);
+  
+    /* Create and submit push descriptors for this node */
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
     vkCmdBindDescriptorSets(
         graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr
     );
+    VRAMBank& bank = gpu->get_vram_bank();
 
     /* Find all attachment resource dependencies to put in the rendering info. */
     std::vector<VkRenderingAttachmentInfo> color_attachments {};
@@ -240,13 +306,13 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         /* Handle render target attachments */
         VkImageView attachment_view = VK_NULL_HANDLE;
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
-            RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+            RenderTargetSlot& rt = bank.render_targets.get(target);
             attachment_view = rt.view();
             min_raster_w = min(min_raster_w, rt.extent.width);
             min_raster_h = min(min_raster_h, rt.extent.height);
         } else {
-            const ImageSlot& image = gpu->get_vram_bank().get_image(dep.resource);
-            const TextureSlot& texture = gpu->get_vram_bank().get_texture(image.texture);
+            const ImageSlot& image = bank.images.get(dep.resource);
+            const TextureSlot& texture = bank.textures.get(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             attachment_view = image.view;
             min_raster_w = min(min_raster_w, texture.size.x);
@@ -297,7 +363,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     /* Loop over all draw calls, bind vertex buffers, draw */
     for (const DrawCall& draw_call : node.draws) {
         /* Bind the vertex buffer for this draw call */
-        const BufferSlot& vertex_buffer = gpu->get_vram_bank().get_buffer(draw_call.vertex_buffer);
+        const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
         const VkDeviceSize offset = 0u;
         vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
 
@@ -313,10 +379,55 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     return Ok();
 }
 
+void RenderGraph::queue_staging(const GraphExecution& graph) {
+    /* Do nothing if there are no staging copies queued */
+    if (graph.staging_commands.empty()) return;
+
+    /* Compile the staging copy commands */
+    std::vector<VkBufferCopy2> regions {};
+    std::vector<VkCopyBufferInfo2> copies {};
+
+    VRAMBank& bank = gpu->get_vram_bank();
+    for (const StagingCommand& cmd : graph.staging_commands) {
+        if (cmd.dst_resource.get_type() != ResourceType::Buffer) {
+            gpu->log(DebugSeverity::Warning, "tried to stage resource which is not a buffer!");
+            continue; /* TODO: Implement staging for other resources. */
+        }
+
+        /* Fill in the buffer copy region */
+        VkBufferCopy2& region = regions.emplace_back();
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        region.dstOffset = cmd.dst_offset;
+        region.srcOffset = cmd.src_offset;
+        region.size = cmd.bytes;
+
+        /* Fill in the buffer copy command */
+        VkCopyBufferInfo2& copy = copies.emplace_back();
+        copy.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+        copy.srcBuffer = graph.staging_buffer;
+        copy.dstBuffer = bank.buffers.get(cmd.dst_resource).buffer;
+        copy.pRegions = &region;
+        copy.regionCount = 1u;
+    }
+
+    if (gpu->validation) {
+        /* Start debug label for staging */
+        VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        debug_label.pLabelName = "staging";
+        vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+    }
+
+    /* Queue copy commands */
+    vkCmdCopyBuffer2KHR(graph.cmd, copies.data());
+
+    /* End debug label for this node */
+    if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
+}
+
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
     /* If this graph doesn't have a render target, don't render imgui */
     if (imgui == nullptr || target.is_null()) return;
-    RenderTargetSlot& rt = gpu->get_vram_bank().get_render_target(target);
+    RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
 
     /* Make imgui render target sync barrier */
     VkImageMemoryBarrier2 viewport_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
@@ -383,6 +494,7 @@ Result<void> RenderGraph::destroy() {
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         vkDestroyFence(gpu->logical_device, graphs[i].flight_fence, nullptr);
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
+        vmaDestroyBuffer(gpu->get_vram_bank().vma_allocator, graphs[i].staging_buffer, graphs[i].staging_alloc);
     }
     delete[] graphs;
 
