@@ -59,6 +59,7 @@ target_sources(graphite PRIVATE
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_sources(graphite PRIVATE
         # Wrapper components
+        ${PLATFORM_DIR}/vulkan/api_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/descriptor_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/device_selection_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/queue_selection_vk.cc

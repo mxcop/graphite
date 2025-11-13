@@ -48,6 +48,8 @@ protected:
 
     /* Maximum number of graphs in flight. */
     u32 max_graphs_in_flight = 1u;
+    /* Staging memory limit per graph in flight. */
+    u64 graph_staging_limit = 65536u;
 
     /* List of graph executions */
     GraphExecution* graphs = nullptr;
@@ -55,6 +57,8 @@ protected:
     
     /* Get a reference to the active graph execution. */
     const GraphExecution& active_graph() const;
+    /* Get a reference to the active graph execution. */
+    GraphExecution& active_graph();
     /* Move on to the next graph execution, should be called at the end of `dispatch()`. */
     inline void next_graph() { if (++active_graph_index >= max_graphs_in_flight) active_graph_index = 0u; };
 
@@ -63,6 +67,8 @@ public:
     void set_shader_path(std::string path) { shader_path = path; };
     /* Set the maximum number of graphs in flight. (default: `1`) */
     void set_max_graphs_in_flight(u32 max) { max_graphs_in_flight = max; };
+    /* Set the staging memory limit per graph in flight. (default: `65536`) */
+    void set_staging_limit(u64 bytes) { graph_staging_limit = bytes; };
     /* Add an immediate mode gui to this render graph. (only works when rendering to a render target) */
     void add_imgui(ImGUI& gui) { imgui = &gui; };
 
@@ -90,9 +96,6 @@ public:
      */
     ComputeNode& add_compute_pass(std::string_view label, std::string_view shader_path);
 
-    /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
-    PLATFORM_SPECIFIC Result<void> dispatch() = 0;
-
     /**
      * @brief Add a rasterisation pass to the render graph.
      *
@@ -102,6 +105,12 @@ public:
      * @return The new compute node to be customized using the builder pattern.
      */
     RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path);
+    
+    /* Upload data to a GPU buffer resource. */
+    PLATFORM_SPECIFIC void upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;
+
+    /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
+    PLATFORM_SPECIFIC Result<void> dispatch() = 0;
 
     /* Destroy the Render Graph, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;

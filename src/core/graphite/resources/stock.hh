@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include "graphite/utils/types.hh"
 #include "handle.hh"
 
@@ -65,6 +67,15 @@ class Stock {
         return StockPair(handle, data);
     }
 
+    /* Push a resource back onto the stack. (returns a reference to the now open slot) */
+    Slot& push(Handle& handle) {
+        stack[--stack_ptr] = handle;
+        Slot& data = pool[handle.index - 1u];
+        handle = Handle();
+        return data;
+    }
+
+public:
     /* Get a resource slot from its handle. */
     Slot& get(OpaqueHandle handle) {
         return pool[handle.index - 1u];
@@ -73,14 +84,6 @@ class Stock {
     /* Get a resource slot from its handle. */
     const Slot& get(OpaqueHandle handle) const {
         return pool[handle.index - 1u];
-    }
-
-    /* Push a resource back onto the stack. (returns a reference to the now open slot) */
-    Slot& push(Handle& handle) {
-        stack[--stack_ptr] = handle;
-        Slot& data = pool[handle.index - 1u];
-        handle = Handle();
-        return data;
     }
 
     /* To access the constructor. */

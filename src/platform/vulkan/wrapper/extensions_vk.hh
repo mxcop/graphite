@@ -15,7 +15,9 @@ const char* const device_ext[] = {
     /* Improved barriers */
     VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
     /* Dynamic rendering */
-    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    /* Merging of copy commands */
+    VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME,
 };
 const u32 device_ext_count = sizeof(device_ext) / sizeof(char*);
 

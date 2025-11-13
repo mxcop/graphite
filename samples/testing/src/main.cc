@@ -198,7 +198,7 @@ int main() {
         frame_data.time = total_time;
         frame_data.win_width = win_w;
         frame_data.win_height = win_h;
-        bank.upload_buffer(const_buffer, &frame_data, 0, sizeof(frame_data));
+        rg.upload_buffer(const_buffer, &frame_data, 0, sizeof(frame_data));
 
         /* Start a new imgui frame */
         imgui.new_frame();

@@ -1,4 +1,3 @@
-#define VMA_IMPLEMENTATION
 #include "vram_bank_vk.hh"
 
 #include "wrapper/translate_vk.hh"
@@ -474,7 +473,12 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_o
     VkBuffer staging_buffer {};
     VmaAllocation alloc {};
     if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS) return Err("failed to create staging buffer.");
-    memcpy(alloc->GetMappedData(), data, size);
+
+    /* Copy data into the staging buffer */
+    void* staging_memory = nullptr;
+    vmaMapMemory(vma_allocator, alloc, &staging_memory);
+    memcpy(staging_memory, data, size); 
+    vmaUnmapMemory(vma_allocator, alloc);
 
     VkBufferCopy copy {};
     copy.srcOffset = 0u;
