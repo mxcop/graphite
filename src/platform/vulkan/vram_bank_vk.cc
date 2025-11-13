@@ -583,7 +583,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     image_barrier.srcAccessMask = VK_ACCESS_2_NONE;
     image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     image_barrier.dstAccessMask = VK_ACCESS_2_NONE;
-    image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_barrier.oldLayout = texture_slot.layout;
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
     image_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
