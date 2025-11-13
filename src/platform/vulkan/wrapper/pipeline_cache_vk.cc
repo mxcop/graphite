@@ -39,10 +39,10 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     pipeline.descriptors = r_layout.unwrap();
 
     /* Pipeline layout creation info */
-    /* TODO: Insert bindless descriptor set here later. */
+    const VkDescriptorSetLayout desc_layouts[] {pipeline.descriptors, gpu->get_vram_bank().bindless_layout};
     VkPipelineLayoutCreateInfo layout_ci {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_ci.setLayoutCount = 1u;
-    layout_ci.pSetLayouts = &pipeline.descriptors;
+    layout_ci.setLayoutCount = sizeof(desc_layouts) / sizeof(VkDescriptorSetLayout);
+    layout_ci.pSetLayouts = desc_layouts;
 
     /* Create the pipeline layout */
     if (vkCreatePipelineLayout(gpu->logical_device, &layout_ci, nullptr, &pipeline.layout) != VK_SUCCESS) {
@@ -110,10 +110,10 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     pipeline.descriptors = r_layout.unwrap();
 
     /* Pipeline layout creation info */
-    /* TODO: Insert bindless descriptor set here later. */
+    const VkDescriptorSetLayout desc_layouts[] {pipeline.descriptors, gpu->get_vram_bank().bindless_layout};
     VkPipelineLayoutCreateInfo layout_ci {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-    layout_ci.setLayoutCount = 1u;
-    layout_ci.pSetLayouts = &pipeline.descriptors;
+    layout_ci.setLayoutCount = sizeof(desc_layouts) / sizeof(VkDescriptorSetLayout);
+    layout_ci.pSetLayouts = desc_layouts;
 
     /* Create the pipeline layout */
     if (vkCreatePipelineLayout(gpu->logical_device, &layout_ci, nullptr, &pipeline.layout) != VK_SUCCESS) {

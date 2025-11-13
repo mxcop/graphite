@@ -34,6 +34,65 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     images.init(8u);
     samplers.init(8u);
 
+    { /* Init Bindless */
+        /* Initialize the bindless resources */
+        const VkDescriptorPoolSize bindless_pool_sizes[] {
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, images.stack_size},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffers.stack_size}
+        };
+
+        /* Allocate the bindless descriptor pool */
+        VkDescriptorPoolCreateInfo bindless_pool_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        bindless_pool_ci.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        bindless_pool_ci.maxSets = 1u;
+        bindless_pool_ci.poolSizeCount = sizeof(bindless_pool_sizes) / sizeof(VkDescriptorPoolSize);
+        bindless_pool_ci.pPoolSizes = bindless_pool_sizes;
+        if (vkCreateDescriptorPool(gpu.logical_device, &bindless_pool_ci, nullptr, &bindless_pool) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor pool.");
+        }
+
+        /* Create the bindless descriptor set layout */
+        const VkDescriptorBindingFlags flags[] {
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
+        };
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindless_flags { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        bindless_flags.bindingCount = 2u;
+        bindless_flags.pBindingFlags = flags;
+
+        VkDescriptorSetLayoutBinding bindless_bindings[2u] {};
+        bindless_bindings[0].binding = BINDLESS_TEXTURE_SLOT;
+        bindless_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        bindless_bindings[0].descriptorCount = images.stack_size;
+        bindless_bindings[0].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
+
+        bindless_bindings[1].binding = BINDLESS_BUFFER_SLOT;
+        bindless_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindless_bindings[1].descriptorCount = buffers.stack_size;
+        bindless_bindings[1].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
+
+        VkDescriptorSetLayoutCreateInfo bindless_set_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        bindless_set_ci.pNext = &bindless_flags;
+        bindless_set_ci.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        bindless_set_ci.bindingCount = sizeof(bindless_bindings) / sizeof(VkDescriptorSetLayoutBinding);
+        bindless_set_ci.pBindings = bindless_bindings;
+
+        if (vkCreateDescriptorSetLayout(gpu.logical_device, &bindless_set_ci, nullptr, &bindless_layout) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor layout.");
+        }
+
+        /* Allocate the bindless descriptor set */
+        VkDescriptorSetAllocateInfo bindless_set_ai { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+        bindless_set_ai.descriptorPool = bindless_pool;
+        bindless_set_ai.descriptorSetCount = 1u;
+        bindless_set_ai.pSetLayouts = &bindless_layout;
+
+        if (vkAllocateDescriptorSets(gpu.logical_device, &bindless_set_ai, &bindless_set) != VK_SUCCESS) {
+            return Err("failed to create bindless descriptor set.");
+        }
+    }
+
     /* Command pool creation info */
     VkCommandPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -92,6 +151,9 @@ bool VRAMBank::end_upload() {
 }
 
 Result<void> VRAMBank::destroy() {
+    vkDestroyDescriptorPool(gpu->logical_device, bindless_pool, nullptr);
+    vkDestroyDescriptorSetLayout(gpu->logical_device, bindless_layout, nullptr);
+
     vkDestroyCommandPool(gpu->logical_device, upload_cmd_pool, nullptr);
 
     vkDestroyFence(gpu->logical_device, upload_fence, nullptr);
@@ -229,6 +291,27 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to create buffer.");
     }
+
+    /* Insert only Storage Buffers in the bindless descriptor set */
+    if (has_flag(usage, BufferUsage::Storage)) {
+        /* Create the bindless descriptor write template */
+        VkDescriptorBufferInfo buffer_info {};
+        buffer_info.buffer = resource.data.buffer;
+        buffer_info.offset = 0u;
+        buffer_info.range = size;
+
+        VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        bindless_write.dstSet = bindless_set;
+        bindless_write.dstBinding = 0u;
+        bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
+        bindless_write.descriptorCount = 1u;
+        bindless_write.pBufferInfo = &buffer_info;
+        bindless_write.dstBinding = BINDLESS_BUFFER_SLOT;
+        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+        vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
+    }
+
     return Ok(resource.handle);
 }
 
@@ -299,6 +382,26 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.view) != VK_SUCCESS) {
         return Err("failed to create image view.");
     }
+
+    /* Insert readonly images into the bindless descriptor set */
+    if (has_flag(texture_slot.usage, TextureUsage::Sampled)) { 
+        /* Create the bindless descriptor write template */
+        VkDescriptorImageInfo image_info {};
+        image_info.sampler = VK_NULL_HANDLE;
+        image_info.imageView = resource.data.view;
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        bindless_write.dstSet = bindless_set;
+        bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
+        bindless_write.descriptorCount = 1u;
+        bindless_write.pImageInfo = &image_info;
+        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        bindless_write.dstBinding = BINDLESS_TEXTURE_SLOT;
+
+        vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
+    }
+
     return Ok(resource.handle);
 }
 

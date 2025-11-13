@@ -19,6 +19,8 @@ struct OpaqueHandle {
 
     /* Get the raw handle for debugging. */
     inline u32 raw() const { return index | static_cast<u32>(type); }
+    /* Get the resource index. */
+    inline u32 get_index() const { return index; }
     /* Get the type of this resource handle. */
     inline ResourceType get_type() const { return type; }
     /* Returns true if this handle is null. */

@@ -28,6 +28,11 @@ class VRAMBank : public AgnVRAMBank {
     /* VMA Resources */
     VmaAllocator vma_allocator {};
 
+    /* Vulkan bindless resources */
+    VkDescriptorPool bindless_pool {};
+    VkDescriptorSetLayout bindless_layout {};
+    VkDescriptorSet bindless_set {};
+
     /* Upload Resources */
     VkCommandPool upload_cmd_pool {};
     VkCommandBuffer upload_cmd {};
