@@ -52,7 +52,7 @@ public:
      */
     PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0);
     /* Create a new texture resource. */
-    PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, void* data = nullptr, TextureMeta meta = TextureMeta());
+    PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta());
     /* Create a new image resource. */
     PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u);
     /* Create a new sampler resource. */
@@ -62,6 +62,8 @@ public:
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
+    /* Upload data to a GPU texture resource. */
+    PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size);
 
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);

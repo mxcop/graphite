@@ -132,23 +132,29 @@ int main() {
     int tex_width = -1;
     int tex_height = -1;
     int channels = -1;
+    unsigned char* data = nullptr;
 
-    float* data = stbi_loadf("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
-    /*if (data != nullptr)
-        free(data);
-    else {
+    data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
+    if (!data) {
         printf("failed to load image.\n");
         return EXIT_SUCCESS;
-    }*/
+    }
 
     /* Initialise a debug texture */
     Texture debug_texture {};
-    if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0}, data);
+    if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0});
         r.is_err()) {
         printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     } else
         debug_texture = r.unwrap();
+
+    if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
+        printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+    free(data);
+
     Image debug_image {};
     if (const Result r = bank.create_image(debug_texture); r.is_err()) {
         printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());

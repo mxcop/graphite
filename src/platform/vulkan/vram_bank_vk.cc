@@ -232,7 +232,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     return Ok(resource.handle);
 }
 
-Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, void* data, TextureMeta meta) {
+Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta) {
     /* Make sure the texture usage is valid */
     if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
 
@@ -267,59 +267,6 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
         return Err("failed to allocate image resource.");
     }
 
-    if (data) {
-        int channels = -1;
-        switch (fmt) {
-            case TextureFormat::Invalid:
-                return Err("invalid texture format.");
-                break;
-            case TextureFormat::RGBA8Unorm:
-                channels = 4;
-                break;
-            case TextureFormat::EnumLimit:
-                return Err("invalid texture format.");
-                break;
-        }
-
-        /* Create staging buffer */
-        const u64 buffer_size = (u64)size.x * (u64)size.y * channels;
-        VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        staging_buffer_ci.size = buffer_size;
-        staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        staging_buffer_ci.queueFamilyIndexCount = 1u;
-        staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
-
-        /* Staging memory allocation info */
-        VmaAllocationCreateInfo alloc_ci {};
-        alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-        alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
-
-        /* Create the staging buffer & allocate it using VMA */
-        VkBuffer staging_buffer {};
-        VmaAllocation alloc {};
-        if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS)
-            return Err("failed to create staging buffer.");
-        memcpy(alloc->GetMappedData(), data, buffer_size);
-
-        VkBufferImageCopy region = {};
-        region.bufferOffset = 0;
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-        region.imageOffset = {0, 0, 0};
-        region.imageExtent = {size.x, size.y, 1};
-
-        if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
-        vkCmdCopyBufferToImage(upload_cmd, staging_buffer, resource.data.image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
-        if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
-
-        /* Destroy staging buffer */
-        vmaDestroyBuffer(vma_allocator, staging_buffer, alloc);
-    }
     return Ok(resource.handle);
 }
 
@@ -491,6 +438,65 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_o
 
     /* Destroy staging buffer */
     vmaDestroyBuffer(vma_allocator, staging_buffer, alloc);
+    return Ok();
+}
+
+Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const u64 size) {
+    /* Make sure the texture can be transfered to */
+    TextureSlot& texture_slot = textures.get(texture);
+    if (has_flag(texture_slot.usage, TextureUsage::TransferDst) == false) return Err("the texture flags don't support transferring to.");
+
+    /* Staging buffer creation info */
+    VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    staging_buffer_ci.size= size;
+    staging_buffer_ci.usage= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode= VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount= 1u;
+    staging_buffer_ci.pQueueFamilyIndices= &gpu->queue_families.queue_combined;
+
+    /* Staging memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the staging buffer & allocate it using VMA */
+    VkBuffer staging_buffer;
+    VmaAllocation alloc;
+    if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS) return Err("failed to create staging buffer");
+
+    /* Copy data into the staging buffer */
+    void* staging_memory = nullptr;
+    vmaMapMemory(vma_allocator, alloc, &staging_memory);
+    memcpy(staging_memory, data, size); 
+    vmaUnmapMemory(vma_allocator, alloc);
+
+    VkBufferImageCopy copy {};
+    copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u};
+    copy.imageExtent = VkExtent3D{MAX(texture_slot.size.x, 1u), MAX(texture_slot.size.y, 1u), MAX(texture_slot.size.z, 1u)};
+
+    /* Create an image layout transition barrier */
+    VkImageMemoryBarrier2 image_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    image_barrier.srcAccessMask = VK_ACCESS_2_NONE;
+    image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    image_barrier.dstAccessMask = VK_ACCESS_2_NONE;
+    image_barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    image_barrier.image = texture_slot.image;
+    image_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
+
+    /* Render target dependency info */
+    VkDependencyInfo dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    dep_info.imageMemoryBarrierCount = 1u;
+    dep_info.pImageMemoryBarriers = &image_barrier;
+
+    if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
+    vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
+    vkCmdCopyBufferToImage(upload_cmd, staging_buffer, texture_slot.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &copy);
+    if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
+
+    vmaDestroyBuffer(vma_allocator, staging_buffer, alloc); /* Destroy staging buffer */
+
     return Ok();
 }
 
