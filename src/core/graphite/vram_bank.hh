@@ -20,6 +20,10 @@ PLATFORM_STRUCT struct SamplerSlot;
 
 class GPUAdapter;
 
+/* Constexprs */
+constexpr u32 BINDLESS_TEXTURE_SLOT = 0u;
+constexpr u32 BINDLESS_BUFFER_SLOT = 1u;
+
 /**
  * @warning Never use this class directly!
  * This is an interface for the platform-specific class.
