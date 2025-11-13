@@ -292,7 +292,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     const Result push_result = node_push_descriptors(*this, pipeline, node);
     if (push_result.is_err()) return push_result;
     vkCmdBindDescriptorSets(
-        graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr
+        graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr
     );
     VRAMBank& bank = gpu->get_vram_bank();
 
