@@ -3,6 +3,8 @@ import common;
 RWTexture2D<float4> out_texture;
 ConstantBuffer<FrameData> frame_data;
 StructuredBuffer<Pixel> in_buffer;
+Texture2D<float4> debug_tex;
+SamplerState linear_sampler;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
 
@@ -53,4 +55,6 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
     // Exponential tonemap
     col = 1.0 - exp(-col);
     out_texture[thread_id] = float4(col, 1);
+
+    out_texture[thread_id] = debug_tex.SampleLevel(linear_sampler, uv, 0);
 }

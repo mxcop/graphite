@@ -233,7 +233,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     return Ok(resource.handle);
 }
 
-Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta) {
+Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, void* data, TextureMeta meta) {
     /* Make sure the texture usage is valid */
     if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
 
@@ -266,6 +266,60 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     /* Create the texture & allocate it using VMA */
     if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to allocate image resource.");
+    }
+
+    if (data) {
+        int channels = -1;
+        switch (fmt) {
+            case TextureFormat::Invalid:
+                return Err("invalid texture format.");
+                break;
+            case TextureFormat::RGBA8Unorm:
+                channels = 4;
+                break;
+            case TextureFormat::EnumLimit:
+                return Err("invalid texture format.");
+                break;
+        }
+
+        /* Create staging buffer */
+        const u64 buffer_size = (u64)size.x * (u64)size.y * channels;
+        VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        staging_buffer_ci.size = buffer_size;
+        staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        staging_buffer_ci.queueFamilyIndexCount = 1u;
+        staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+        /* Staging memory allocation info */
+        VmaAllocationCreateInfo alloc_ci {};
+        alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+        /* Create the staging buffer & allocate it using VMA */
+        VkBuffer staging_buffer {};
+        VmaAllocation alloc {};
+        if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS)
+            return Err("failed to create staging buffer.");
+        memcpy(alloc->GetMappedData(), data, buffer_size);
+
+        VkBufferImageCopy region = {};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = {0, 0, 0};
+        region.imageExtent = {size.x, size.y, 1};
+
+        if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
+        vkCmdCopyBufferToImage(upload_cmd, staging_buffer, resource.data.image, VK_IMAGE_LAYOUT_GENERAL, 1, &region);
+        if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
+
+        /* Destroy staging buffer */
+        vmaDestroyBuffer(vma_allocator, staging_buffer, alloc);
     }
     return Ok(resource.handle);
 }

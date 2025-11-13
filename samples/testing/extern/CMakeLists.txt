@@ -17,3 +17,8 @@ target_include_directories(sample-testing
     PRIVATE "./imgui"
     PRIVATE "./imgui/backends"
 )
+
+# STB Image
+target_include_directories(sample-testing
+    PRIVATE "./stb_image"
+)
