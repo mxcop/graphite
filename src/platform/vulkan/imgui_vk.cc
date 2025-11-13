@@ -98,7 +98,7 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functi
     }
 
     /* Get the render target information */
-    const RenderTargetSlot& rt_data = gpu.get_vram_bank().get_render_target(rt);
+    const RenderTargetSlot& rt_data = gpu.get_vram_bank().render_targets.get(rt);
 
     /* Initialize imgui */
     ImGui_ImplVulkan_InitInfo init_info {};

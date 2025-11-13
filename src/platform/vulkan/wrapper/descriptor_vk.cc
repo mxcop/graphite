@@ -37,12 +37,12 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
                 bindings.push_back(render_target_layout(slot, dep));
                 break;
             case ResourceType::Buffer: {
-                const BufferSlot& buffer = gpu.get_vram_bank().get_buffer(dep.resource);
+                const BufferSlot& buffer = gpu.get_vram_bank().buffers.get(dep.resource);
                 bindings.push_back(buffer_layout(slot, dep, buffer.usage));
                 break;
             }
             case ResourceType::Image: {
-                const TextureSlot& texture = gpu.get_vram_bank().get_texture(dep.resource);
+                const TextureSlot& texture = gpu.get_vram_bank().textures.get(dep.resource);
                 bindings.push_back(image_layout(slot, dep, texture.usage));
                 break;
             }
@@ -117,6 +117,9 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
     std::vector<VkDescriptorBufferInfo> buffer_info(binding_count);
     std::vector<VkDescriptorImageInfo> texture_info(binding_count);
 
+    /* Get the active VRAM bank */
+    VRAMBank& bank = rg.gpu->get_vram_bank();
+
     /* Fill-in push descriptor write commands */
     u32 bindings = 0u;
     for (u32 i = 0u; i < binding_count; ++i) {
@@ -134,7 +137,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
 
         switch (rtype) {
             case ResourceType::RenderTarget: {
-                RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
+                RenderTargetSlot& rt = bank.render_targets.get(rg.target);
                 texture_info[bindings].sampler = VK_NULL_HANDLE;
                 texture_info[bindings].imageLayout = translate::desired_image_layout(TextureUsage::Storage | TextureUsage::Sampled, dep.flags);
                 texture_info[bindings].imageView = rt.view();
@@ -143,7 +146,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 break;
             }
             case ResourceType::Buffer: {
-                const BufferSlot& buffer = rg.gpu->get_vram_bank().get_buffer(dep.resource);
+                const BufferSlot& buffer = bank.buffers.get(dep.resource);
                 buffer_info[bindings].buffer = buffer.buffer;
                 buffer_info[bindings].offset = 0u;
                 buffer_info[bindings].range = buffer.size;
@@ -152,8 +155,8 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 break;
             }
             case ResourceType::Image: {
-                const ImageSlot& image = rg.gpu->get_vram_bank().get_image(dep.resource);
-                const TextureSlot& texture = rg.gpu->get_vram_bank().get_texture(image.texture);
+                const ImageSlot& image = bank.images.get(dep.resource);
+                const TextureSlot& texture = bank.textures.get(image.texture);
                 texture_info[bindings].sampler = VK_NULL_HANDLE;
                 texture_info[bindings].imageLayout = translate::desired_image_layout(texture.usage, dep.flags);
                 texture_info[bindings].imageView = image.view;
@@ -162,7 +165,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 break;
             }
             case ResourceType::Sampler: {
-                const SamplerSlot& sampler = rg.gpu->get_vram_bank().get_sampler(dep.resource);
+                const SamplerSlot& sampler = bank.samplers.get(dep.resource);
                 texture_info[bindings].sampler = sampler.sampler;
                 write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
                 write.pImageInfo = &texture_info[bindings];
@@ -188,6 +191,9 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
     std::vector<VkBufferMemoryBarrier2> buf_barriers {};
     std::vector<VkImageMemoryBarrier2> tex_barriers {};
 
+    /* Get the active VRAM bank */
+    VRAMBank& bank = rg.gpu->get_vram_bank();
+
     /* Gather barrier information */
     for (u32 i = start; i < end; ++i) {
         const Node& node = *rg.nodes[rg.waves[i].lane];
@@ -198,7 +204,7 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
 
             switch (rtype) {
                 case ResourceType::RenderTarget: {
-                    RenderTargetSlot& rt = rg.gpu->get_vram_bank().get_render_target(rg.target);
+                    RenderTargetSlot& rt = bank.render_targets.get(rg.target);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
                     barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
@@ -212,7 +218,7 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     break;
                 }
                 case ResourceType::Buffer: {
-                    const BufferSlot& buffer = rg.gpu->get_vram_bank().get_buffer(dep.resource);
+                    const BufferSlot& buffer = bank.buffers.get(dep.resource);
                     VkBufferMemoryBarrier2& barrier = buf_barriers.emplace_back(VkBufferMemoryBarrier2 { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
                     barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -224,8 +230,8 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     break;
                 }
                 case ResourceType::Image: {
-                    const ImageSlot& image = rg.gpu->get_vram_bank().get_image(dep.resource);
-                    TextureSlot& texture = rg.gpu->get_vram_bank().get_texture(image.texture);
+                    const ImageSlot& image = bank.images.get(dep.resource);
+                    TextureSlot& texture = bank.textures.get(image.texture);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
                     barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
