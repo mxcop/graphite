@@ -38,8 +38,8 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     { /* Init Bindless */
         /* Initialize the bindless resources */
         const VkDescriptorPoolSize bindless_pool_sizes[] {
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, BINDLESS_RESOURCE_LIMIT},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, BINDLESS_RESOURCE_LIMIT}
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, images.stack_size},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, buffers.stack_size}
         };
 
         /* Allocate the bindless descriptor pool */
@@ -65,12 +65,12 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         VkDescriptorSetLayoutBinding bindless_bindings[2u] {};
         bindless_bindings[0].binding = BINDLESS_TEXTURE_SLOT;
         bindless_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        bindless_bindings[0].descriptorCount = BINDLESS_RESOURCE_LIMIT;
+        bindless_bindings[0].descriptorCount = images.stack_size;
         bindless_bindings[0].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
 
         bindless_bindings[1].binding = BINDLESS_BUFFER_SLOT;
         bindless_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        bindless_bindings[1].descriptorCount = BINDLESS_RESOURCE_LIMIT;
+        bindless_bindings[1].descriptorCount = buffers.stack_size;
         bindless_bindings[1].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
 
         VkDescriptorSetLayoutCreateInfo bindless_set_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };

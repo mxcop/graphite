@@ -20,11 +20,6 @@ struct TargetDesc {
 #endif
 };
 
-/* Constexprs */
-constexpr u32 BINDLESS_RESOURCE_LIMIT = 32u;
-constexpr u32 BINDLESS_TEXTURE_SLOT = 0u;
-constexpr u32 BINDLESS_BUFFER_SLOT = 1u;
-
 /**
  * Video Memory Bank / Video Resource Manager.  
  * Used to create and manage GPU resources.
