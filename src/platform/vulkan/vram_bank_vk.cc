@@ -273,6 +273,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
 
     /* Size of the buffer in bytes */
     const u64 size = stride == 0 ? count : count * stride;
+    resource.data.size = size;
 
     /* Buffer creation info */
     VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -501,8 +502,6 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_o
     if (size == 0u) return Err("size is 0.");
 
     BufferSlot& slot = buffers.get(buffer);
-    slot.size = size;
-
     if (has_flag(slot.usage, BufferUsage::TransferDst) == false) {
         gpu->log(DebugSeverity::Warning, "attempted to upload to buffer without TransferDst flag.");
         return Ok();
