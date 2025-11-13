@@ -3,6 +3,8 @@ import common;
 RWTexture2D<float4> out_texture;
 ConstantBuffer<FrameData> frame_data;
 //StructuredBuffer<Pixel> in_buffer;
+Texture2D<float4> debug_tex;
+SamplerState linear_sampler;
 
 /* Source: XorDev <https://www.shadertoy.com/view/WclSWn> */ 
 
@@ -59,4 +61,6 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
 
     StructuredBuffer<Pixel> buf = bindless::storage_buffer<StructuredBuffer<Pixel>>(3);
     out_texture[thread_id] = buf[int(thread_id.x + thread_id.y * frame_data.win_width)].color;
+
+    out_texture[thread_id] = debug_tex.SampleLevel(linear_sampler, uv, 0);
 }

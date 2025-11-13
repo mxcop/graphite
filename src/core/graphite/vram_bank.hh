@@ -63,6 +63,8 @@ public:
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height) = 0;
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;
+    /* Upload data to a GPU texture resource. */
+    PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size) = 0;
 
     /* Destroy a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;

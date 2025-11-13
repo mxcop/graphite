@@ -6,6 +6,9 @@
 #include <dwmapi.h>
 #pragma comment(lib, "dwmapi")
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #include <graphite/gpu_adapter.hh>
 #include <graphite/vram_bank.hh>
 #include <graphite/render_graph.hh>
@@ -126,6 +129,46 @@ int main() {
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
     delete[] pixels;
 
+    int tex_width = -1;
+    int tex_height = -1;
+    int channels = -1;
+    unsigned char* data = nullptr;
+
+    data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
+    if (!data) {
+        printf("failed to load image.\n");
+        return EXIT_SUCCESS;
+    }
+
+    /* Initialise a debug texture */
+    Texture debug_texture {};
+    if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0});
+        r.is_err()) {
+        printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else
+        debug_texture = r.unwrap();
+
+    if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
+        printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    }
+    free(data);
+
+    Image debug_image {};
+    if (const Result r = bank.create_image(debug_texture); r.is_err()) {
+        printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else
+        debug_image = r.unwrap();
+
+    Sampler linear_sampler {};
+    if (const Result r = bank.create_sampler(); r.is_err()) {
+        printf("failed to initialize linear sampler.\nreason: %s\n", r.unwrap_err().c_str());
+        return EXIT_SUCCESS;
+    } else
+        linear_sampler = r.unwrap();
+
     /* Setup the framebuffer resize callback */ 
     WindowUserData user_data { &bank, rt };
     glfwSetWindowUserPointer(win, &user_data);
@@ -195,7 +238,8 @@ int main() {
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .read(const_buffer)
-            //.read(storage_buffer)
+            .read(debug_image)
+            .read(linear_sampler)
             .group_size(16, 8)
             .work_size(win_w, win_h);
 
@@ -215,7 +259,9 @@ int main() {
     bank.destroy_buffer(vertex_buffer);
     bank.destroy_texture(attachment);
     bank.destroy_image(attachment_img);
-
+    bank.destroy_texture(debug_texture);
+    bank.destroy_image(debug_image);
+    bank.destroy_sampler(linear_sampler);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
