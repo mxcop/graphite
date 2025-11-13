@@ -110,7 +110,6 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     pipeline.descriptors = r_layout.unwrap();
 
     /* Pipeline layout creation info */
-    /* Pipeline layout creation info */
     const VkDescriptorSetLayout desc_layouts[] {pipeline.descriptors, gpu->get_vram_bank().bindless_layout};
     VkPipelineLayoutCreateInfo layout_ci {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     layout_ci.setLayoutCount = sizeof(desc_layouts) / sizeof(VkDescriptorSetLayout);
