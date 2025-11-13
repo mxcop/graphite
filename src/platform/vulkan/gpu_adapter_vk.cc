@@ -116,10 +116,6 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     desc_features.descriptorBindingStorageBufferUpdateAfterBind = true;
     desc_features.descriptorBindingPartiallyBound = true;
     desc_features.runtimeDescriptorArray = true;
-    desc_features.shaderSampledImageArrayNonUniformIndexing = true;
-    desc_features.shaderStorageBufferArrayNonUniformIndexing = true;
-    desc_features.descriptorBindingVariableDescriptorCount = true;
-    desc_features.descriptorBindingUpdateUnusedWhilePending = true;
 
     /* Enable synchronization 2.0 features */
     VkPhysicalDeviceSynchronization2Features sync_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
