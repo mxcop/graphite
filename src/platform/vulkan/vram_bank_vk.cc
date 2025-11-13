@@ -383,8 +383,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     }
 
     /* Insert readonly images into the bindless descriptor set */
-    if (has_flag(texture_slot.usage, TextureUsage::Sampled))
-    { 
+    if (has_flag(texture_slot.usage, TextureUsage::Sampled)) { 
         /* Create the bindless descriptor write template */
         VkDescriptorImageInfo image_info {};
         image_info.sampler = VK_NULL_HANDLE;
