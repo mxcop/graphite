@@ -587,6 +587,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
     image_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
+    texture_slot.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     /* Render target dependency info */
     VkDependencyInfo dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
