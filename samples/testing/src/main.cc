@@ -216,7 +216,7 @@ int main() {
         /* End the imgui frame */
         ImGui::Render();
 
-        rg.new_graph();
+        rg.new_graph().unwrap();
 
         /* Fill Storage Buffer Pass */
         rg.add_compute_pass("buffer fill pass", "buffer-fill")
@@ -253,15 +253,15 @@ int main() {
     }
 
     /* Cleanup resources */
-    bank.destroy_render_target(rt);
-    bank.destroy_buffer(const_buffer);
-    bank.destroy_buffer(storage_buffer);
-    bank.destroy_buffer(vertex_buffer);
-    bank.destroy_texture(attachment);
-    bank.destroy_image(attachment_img);
-    bank.destroy_texture(debug_texture);
-    bank.destroy_image(debug_image);
-    bank.destroy_sampler(linear_sampler);
+    bank.release(rt);
+    bank.release(const_buffer);
+    bank.release(storage_buffer);
+    bank.release(vertex_buffer);
+    bank.release(attachment);
+    bank.release(attachment_img);
+    bank.release(debug_texture);
+    bank.release(debug_image);
+    bank.release(linear_sampler);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

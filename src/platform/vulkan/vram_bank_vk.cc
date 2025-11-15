@@ -604,14 +604,15 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     return Ok();
 }
 
+Texture VRAMBank::get_texture(Image image) { 
+    return images.get(image).texture; 
+}
+
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
-    /* Wait for the queue to idle */
-    vkQueueWaitIdle(gpu->queues.queue_combined);
-    
     /* Push the handle back onto the stock, and get its slot for cleanup */
     RenderTargetSlot& slot = render_targets.push(render_target);
 
-    /* Destroy the images & views */
+    /* Destroy the images, layouts, views, & semaphores */
     delete[] slot.images;
     delete[] slot.old_layouts;
     for (u32 i = 0u; i < slot.image_count; ++i) {
@@ -621,10 +622,8 @@ void VRAMBank::destroy_render_target(RenderTarget &render_target) {
     delete[] slot.views;
     delete[] slot.semaphores;
 
-    /* Destroy the swapchain */
+    /* Destroy the swapchain & surface */
     vkDestroySwapchainKHR(gpu->logical_device, slot.swapchain, nullptr);
-
-    /* Destroy the KHR surface */
     vkDestroySurfaceKHR(gpu->instance, slot.surface, nullptr);
 }
 

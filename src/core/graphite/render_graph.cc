@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 
+#include "vram_bank.hh"
 #include "nodes/compute_node.hh"
 #include "nodes/raster_node.hh"
 
@@ -11,14 +12,29 @@ const GraphExecution &AgnRenderGraph::active_graph() const { return graphs[activ
 
 GraphExecution &AgnRenderGraph::active_graph() { return graphs[active_graph_index]; }
 
-void AgnRenderGraph::new_graph(u32 node_count) {
-    /* Clear out the nodes list */
-    for (Node* old_node : nodes)
+Result<void> AgnRenderGraph::new_graph(u32 node_count) {
+    /* Wait until it's safe to release resources */
+    VRAMBank& bank = gpu->get_vram_bank();
+    if (Result r = wait_until_safe(); r.is_err()) return r;
+
+    /* Decrement reference counters for all resources used in the graph */
+    for (Node* old_node : nodes) {
+        for (const Dependency& dep : old_node->dependencies) {
+            bank.remove_reference(dep.resource);
+            if (dep.resource.get_type() == ResourceType::Image) {
+                /* For images, we also need to add a reference to the underlying texture */
+                bank.remove_reference(bank.get_texture((Image&)dep.resource));
+            }
+        }
         delete old_node;
+    }
+
+    /* Reset the nodes & waves */
     nodes.clear();
     nodes.reserve(node_count);
     waves.clear();
     waves.reserve(node_count);
+    return Ok();
 }
 
 /* Collection of metadata for a graph node. (used during graph compilation) */
@@ -44,6 +60,18 @@ Result<void> AgnRenderGraph::end_graph() {
 
     /* Reset the current render target to NULL */
     target = RenderTarget();
+    VRAMBank& bank = gpu->get_vram_bank();
+
+    /* Increment reference counters for all resources used in the graph */
+    for (Node* node : nodes) {
+        for (const Dependency& dep : node->dependencies) {
+            bank.add_reference(dep.resource);
+            if (dep.resource.get_type() == ResourceType::Image) {
+                /* For images, we also need to add a reference to the underlying texture */
+                bank.add_reference(bank.get_texture((Image&)dep.resource));
+            }
+        }
+    }
 
     /* Propegate dependency versions through the graph */
     std::vector<NodeMeta> node_meta(nodes.size());
