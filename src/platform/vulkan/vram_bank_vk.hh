@@ -46,6 +46,17 @@ class VRAMBank : public AgnVRAMBank {
     /* End recording immediate commands, submit, and wait for commands to finish. */
     bool end_upload();
 
+    /* Destroy a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
+    /* Destroy a texture resource. */
+    PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
+    /* Destroy a image resource. */
+    PLATFORM_SPECIFIC void destroy_image(Image& image);
+    /* Destroy a sampler resource. */
+    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler);
+
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u);
@@ -69,17 +80,6 @@ public:
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
     /* Upload data to a GPU texture resource. */
     PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size);
-
-    /* Destroy a render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
-    /* Destroy a buffer resource. */
-    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
-    /* Destroy a texture resource. */
-    PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
-    /* Destroy a image resource. */
-    PLATFORM_SPECIFIC void destroy_image(Image& image);
-    /* Destroy a sampler resource. */
-    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();

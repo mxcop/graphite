@@ -58,6 +58,10 @@ int main() {
         return EXIT_SUCCESS;
     }
 
+    /* Get the VRAM bank */
+    VRAMBank& bank = gpu.get_vram_bank();
+
+{
     /* Initialize the Render Graph */
     RenderGraph rg = RenderGraph();
     rg.set_shader_path("samples/testing/kernels");
@@ -66,9 +70,6 @@ int main() {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }
-
-    /* Get the VRAM bank */
-    VRAMBank& bank = gpu.get_vram_bank();
 
     /* Create a window using GLFW */
     glfwInit();
@@ -253,21 +254,15 @@ int main() {
     }
 
     /* Cleanup resources */
-    bank.destroy_render_target(rt);
-    bank.destroy_buffer(const_buffer);
-    bank.destroy_buffer(storage_buffer);
-    bank.destroy_buffer(vertex_buffer);
-    bank.destroy_texture(attachment);
-    bank.destroy_image(attachment_img);
-    bank.destroy_texture(debug_texture);
-    bank.destroy_image(debug_image);
-    bank.destroy_sampler(linear_sampler);
     imgui.destroy().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
     /* Cleanup the VRAM bank & GPU adapter */
     rg.destroy().expect("failed to destroy render graph.");
+    printf("destroyed rg!\n");
+}
+    printf("destroying vram bank!\n");
     bank.destroy().expect("failed to destroy vram bank.");
     gpu.destroy().expect("failed to destroy gpu adapter.");
 

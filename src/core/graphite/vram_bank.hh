@@ -42,6 +42,24 @@ protected:
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
 
+    /* Increment handle reference counter. */
+    void inc_handle_refs(OpaqueHandle& handle);
+    /* Decrement handle reference counter. */
+    void dec_handle_refs(OpaqueHandle& handle);
+
+    /* Destroy a resource. */
+    void destroy_resource(OpaqueHandle& handle);
+    /* Destroy a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
+    /* Destroy a texture resource. */
+    PLATFORM_SPECIFIC void destroy_texture(Texture& texture) = 0;
+    /* Destroy a image resource. */
+    PLATFORM_SPECIFIC void destroy_image(Image& image) = 0;
+    /* Destroy a sampler resource. */
+    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler) = 0;
+
 public:
     /* Create a new render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;
@@ -66,22 +84,12 @@ public:
     /* Upload data to a GPU texture resource. */
     PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size) = 0;
 
-    /* Destroy a render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target) = 0;
-    /* Destroy a buffer resource. */
-    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer) = 0;
-    /* Destroy a texture resource. */
-    PLATFORM_SPECIFIC void destroy_texture(Texture& texture) = 0;
-    /* Destroy a image resource. */
-    PLATFORM_SPECIFIC void destroy_image(Image& image) = 0;
-    /* Destroy a sampler resource. */
-    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler) = 0;
-
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy() = 0;
 
     /* To access the init function. */
     friend class AgnGPUAdapter;
+    friend struct OpaqueHandle;
 
     /* To access the get_buffer() function. */
     friend Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node& node);

@@ -28,11 +28,11 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     }
 
     /* Initialize the Stack Pools */
-    render_targets.init(8u);
-    buffers.init(8u);
-    textures.init(8u);
-    images.init(8u);
-    samplers.init(8u);
+    render_targets.init(this, 8u);
+    buffers.init(this, 8u);
+    textures.init(this, 8u);
+    images.init(this, 8u);
+    samplers.init(this, 8u);
 
     { /* Init Bindless */
         /* Initialize the bindless resources */
@@ -151,6 +151,12 @@ bool VRAMBank::end_upload() {
 }
 
 Result<void> VRAMBank::destroy() {
+    for (i32 i = render_targets.stack_ptr - 1; i >= 0; --i) destroy_resource(render_targets.stack[i]);
+    for (i32 i = buffers.stack_ptr - 1; i >= 0; --i) destroy_resource(buffers.stack[i]);
+    for (i32 i = textures.stack_ptr - 1; i >= 0; --i) destroy_resource(textures.stack[i]);
+    for (i32 i = images.stack_ptr - 1; i >= 0; --i) destroy_resource(images.stack[i]);
+    for (i32 i = samplers.stack_ptr - 1; i >= 0; --i) destroy_resource(samplers.stack[i]);  
+
     vkDestroyDescriptorPool(gpu->logical_device, bindless_pool, nullptr);
     vkDestroyDescriptorSetLayout(gpu->logical_device, bindless_layout, nullptr);
 
