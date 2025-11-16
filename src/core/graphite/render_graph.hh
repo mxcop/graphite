@@ -62,6 +62,9 @@ protected:
     /* Move on to the next graph execution, should be called at the end of `dispatch()`. */
     inline void next_graph() { if (++active_graph_index >= max_graphs_in_flight) active_graph_index = 0u; };
 
+    /* Wait until it's safe to create a new graph. */
+    PLATFORM_SPECIFIC Result<void> wait_until_safe() = 0;
+
 public:
     /* Set the path from which to load shader files. (default: `"."`) */
     void set_shader_path(std::string path) { shader_path = path; };
@@ -80,7 +83,7 @@ public:
      * 
      * @param node_count Expected number of nodes in the graph.
      */
-    void new_graph(u32 node_count = 128u);
+    Result<void> new_graph(u32 node_count = 128u);
 
     /**
      * @brief End the current graph, this will sort & compile the graph.

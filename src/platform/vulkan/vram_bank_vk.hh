@@ -41,6 +41,17 @@ class VRAMBank : public AgnVRAMBank {
     /* Initialize the VRAM bank. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu);
 
+    /* Destroy a render target resource. (aka, swapchain) */
+    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
+    /* Destroy a buffer resource. */
+    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
+    /* Destroy a texture resource. */
+    PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
+    /* Destroy a image resource. */
+    PLATFORM_SPECIFIC void destroy_image(Image& image);
+    /* Destroy a sampler resource. */
+    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler);
+
     /* Begin recording immediate commands. */
     bool begin_upload();
     /* End recording immediate commands, submit, and wait for commands to finish. */
@@ -70,16 +81,8 @@ public:
     /* Upload data to a GPU texture resource. */
     PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size);
 
-    /* Destroy a render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC void destroy_render_target(RenderTarget& render_target);
-    /* Destroy a buffer resource. */
-    PLATFORM_SPECIFIC void destroy_buffer(Buffer& buffer);
-    /* Destroy a texture resource. */
-    PLATFORM_SPECIFIC void destroy_texture(Texture& texture);
-    /* Destroy a image resource. */
-    PLATFORM_SPECIFIC void destroy_image(Image& image);
-    /* Destroy a sampler resource. */
-    PLATFORM_SPECIFIC void destroy_sampler(Sampler& sampler);
+    /* Get the texture which an image was created from. */
+    PLATFORM_SPECIFIC Texture get_texture(Image image);
 
     /* Destroy the VRAM bank, free all its resources. */
     PLATFORM_SPECIFIC Result<void> destroy();

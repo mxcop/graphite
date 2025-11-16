@@ -39,6 +39,9 @@ class RenderGraph : public AgnRenderGraph {
     /* Shader pipeline cache */
     PipelineCache pipeline_cache {};
 
+    /* Wait until it's safe to create a new graph. */
+    PLATFORM_SPECIFIC Result<void> wait_until_safe();
+
     /* Queue all lanes for a given wave. */
     Result<void> queue_wave(const GraphExecution& graph, u32 start, u32 end);
 

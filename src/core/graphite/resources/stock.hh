@@ -20,6 +20,7 @@ template<typename Slot, typename Handle, ResourceType RType>
 class Stock {
     Handle* stack = nullptr; /* Handle stack. */
     Slot* pool = nullptr; /* Slot pool. */
+    u32* refs = nullptr; /* Reference counters. */
 
     u32 stack_ptr = 0u; /* Stack pointer. */
     u32 stack_size = 0u; /* Stack size, same as the pool size. */
@@ -32,7 +33,7 @@ class Stock {
     Stock& operator=(const Stock&) = delete;
 
     /* Create a Stack Pool of given size. */
-    Stock(const u32 size) : stack(new Handle[size] {}), pool(new Slot[size] {}), stack_size(size) {
+    Stock(const u32 size) : stack(new Handle[size] {}), pool(new Slot[size] {}), refs(new u32[size] {}), stack_size(size) {
         /* Initialize the handle stack */
         for (u32 i = 0u; i < size; ++i) stack[i] = reinterpret_cast<Handle&>(OpaqueHandle(i + 1u, RType));
     }
@@ -44,6 +45,7 @@ class Stock {
         /* Allocate the new resources. */
         stack = new Handle[size] {};
         pool = new Slot[size] {};
+        refs = new u32[size] {};
         stack_size = size;
 
         /* Initialize the handle stack */
@@ -52,16 +54,19 @@ class Stock {
 
     /* Free the Stack Pool resources. */
     void destroy() {
-        if (stack != nullptr) delete[] stack;
-        if (pool  != nullptr) delete[] pool;
+        delete[] stack;
+        delete[] pool;
+        delete[] refs;
         stack_ptr = stack_size = 0u;
         stack = nullptr;
         pool = nullptr;
+        refs = nullptr;
     }
 
     /* Pop a new resource off the stack. */
     StockPair<Slot, Handle> pop() {
         assert(stack_ptr < stack_size && "stock overflow!");
+        refs[stack_ptr] = 1u;
         const Handle handle = stack[stack_ptr++];
         Slot& data = pool[handle.index - 1u];
         return StockPair(handle, data);
@@ -73,6 +78,17 @@ class Stock {
         Slot& data = pool[handle.index - 1u];
         handle = Handle();
         return data;
+    }
+
+    /* Increment handle reference counter. */
+    void add_reference(OpaqueHandle handle) {
+        refs[handle.index - 1u]++;
+    }
+
+    /* Decrement handle reference counter. (returns true if there are no more references) */
+    bool remove_reference(OpaqueHandle handle) {
+        if (refs[handle.index - 1u] > 0u) refs[handle.index - 1u]--;
+        return refs[handle.index - 1u] == 0u;
     }
 
 public:

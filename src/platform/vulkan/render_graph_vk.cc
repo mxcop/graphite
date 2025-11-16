@@ -103,11 +103,6 @@ Result<void> RenderGraph::dispatch() {
 
     /* In nanoseconds (one second) */
     constexpr uint64_t TIMEOUT = 1'000'000'000u;
-
-    /* Wait for this graph to be out of flight before re-using its resources */
-    if (vkWaitForFences(gpu->logical_device, 1u, &graph.flight_fence, true, TIMEOUT) != VK_SUCCESS) {
-        return Err("failed while waiting for graph in-flight fence.");
-    }
     
     /* If this graph has a render target, fetch it */
     const bool has_target = target.is_null() == false;
@@ -215,6 +210,17 @@ Result<void> RenderGraph::dispatch() {
     next_graph.staging_stack_ptr = 0u;
     next_graph.staging_commands.clear();
 
+    return Ok();
+}
+
+Result<void> RenderGraph::wait_until_safe() {
+    /* In nanoseconds (one second) */
+    constexpr uint64_t TIMEOUT = 1'000'000'000u;
+
+    /* Wait for this graph to be out of flight before re-using its resources */
+    if (vkWaitForFences(gpu->logical_device, 1u, &active_graph().flight_fence, true, TIMEOUT) != VK_SUCCESS) {
+        return Err("failed while waiting for graph in-flight fence.");
+    }
     return Ok();
 }
 
@@ -484,6 +490,11 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
 }
 
 Result<void> RenderGraph::destroy() {
+    /* Wait for all graph executions to finish */
+    for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
+        new_graph();
+    }
+
     /* Wait for the queue to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
 
