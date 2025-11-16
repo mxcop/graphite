@@ -54,9 +54,9 @@ class Stock {
 
     /* Free the Stack Pool resources. */
     void destroy() {
-        if (stack != nullptr) delete[] stack;
-        if (pool  != nullptr) delete[] pool;
-        if (refs  != nullptr) delete[] refs;
+        delete[] stack;
+        delete[] pool;
+        delete[] refs;
         stack_ptr = stack_size = 0u;
         stack = nullptr;
         pool = nullptr;
