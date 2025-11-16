@@ -150,7 +150,7 @@ bool VRAMBank::end_upload() {
     return true;
 }
 
-Result<void> VRAMBank::destroy() {
+Result<void> VRAMBank::deinit() {
     vkDestroyDescriptorPool(gpu->logical_device, bindless_pool, nullptr);
     vkDestroyDescriptorSetLayout(gpu->logical_device, bindless_layout, nullptr);
 

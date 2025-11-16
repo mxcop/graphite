@@ -17,7 +17,6 @@ const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 /* Custom vulkan debug msg callback */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
 
-/* Initialize the GPU adapter. */
 Result<void> GPUAdapter::init(bool debug_mode) {
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
@@ -168,8 +167,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     return Ok();
 }
 
-/* Destroy the GPU adapter, free all its resources. */
-Result<void> GPUAdapter::destroy() {
+Result<void> GPUAdapter::deinit() {
     vkDestroyCommandPool(logical_device, cmd_pool, nullptr);
 
     vkDestroyDevice(logical_device, nullptr);

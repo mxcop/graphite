@@ -163,7 +163,7 @@ void ImGUI::render(VkCommandBuffer cmd) {
     ImGui_ImplGraphics_RenderDrawData(functions, draw_data, cmd);
 }
 
-Result<void> ImGUI::destroy() {
+Result<void> ImGUI::deinit() {
     vkDeviceWaitIdle(gpu->logical_device);
     ImGui_ImplGraphics_Shutdown(functions);
     vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);

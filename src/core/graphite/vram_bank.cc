@@ -1,6 +1,6 @@
 #include "vram_bank.hh"
 
-void AgnVRAMBank::release(OpaqueHandle& resource) {
+void AgnVRAMBank::destroy(OpaqueHandle& resource) {
     remove_reference(resource);
     /* Set the handle to NULL */
     resource = OpaqueHandle();

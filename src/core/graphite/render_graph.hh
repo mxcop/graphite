@@ -115,8 +115,8 @@ public:
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch() = 0;
 
-    /* Destroy the Render Graph, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy() = 0;
+    /* De-initialize the Render Graph, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit() = 0;
 };
 
 #include PLATFORM_INCLUDE(render_graph)

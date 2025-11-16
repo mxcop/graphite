@@ -85,11 +85,11 @@ public:
     /* Get the texture which an image was created from. */
     PLATFORM_SPECIFIC Texture get_texture(Image image) = 0;
 
-    /* Release a resource. */
-    void release(OpaqueHandle& resource);
+    /* Destroy a resource. */
+    void destroy(OpaqueHandle& resource);
 
-    /* Destroy the VRAM bank, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy() = 0;
+    /* De-initialize the VRAM bank, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit() = 0;
 
     /* To access the init function. */
     friend class AgnGPUAdapter;

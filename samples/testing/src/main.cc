@@ -253,23 +253,23 @@ int main() {
     }
 
     /* Cleanup resources */
-    bank.release(rt);
-    bank.release(const_buffer);
-    bank.release(storage_buffer);
-    bank.release(vertex_buffer);
-    bank.release(attachment);
-    bank.release(attachment_img);
-    bank.release(debug_texture);
-    bank.release(debug_image);
-    bank.release(linear_sampler);
-    imgui.destroy().expect("failed to destroy imgui.");
+    bank.destroy(rt);
+    bank.destroy(const_buffer);
+    bank.destroy(storage_buffer);
+    bank.destroy(vertex_buffer);
+    bank.destroy(attachment);
+    bank.destroy(attachment_img);
+    bank.destroy(debug_texture);
+    bank.destroy(debug_image);
+    bank.destroy(linear_sampler);
+    imgui.deinit().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
     /* Cleanup the VRAM bank & GPU adapter */
-    rg.destroy().expect("failed to destroy render graph.");
-    bank.destroy().expect("failed to destroy vram bank.");
-    gpu.destroy().expect("failed to destroy gpu adapter.");
+    rg.deinit().expect("failed to destroy render graph.");
+    bank.deinit().expect("failed to destroy vram bank.");
+    gpu.deinit().expect("failed to destroy gpu adapter.");
 
     glfwTerminate();
 

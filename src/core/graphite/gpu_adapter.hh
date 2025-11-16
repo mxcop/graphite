@@ -42,8 +42,8 @@ public:
     /* Get the VRAM bank for this GPU adapter. */
     VRAMBank& get_vram_bank();
 
-    /* Destroy the GPU adapter, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy() = 0;
+    /* De-initialize the GPU adapter, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit() = 0;
 };
 
 #include PLATFORM_INCLUDE(gpu_adapter)

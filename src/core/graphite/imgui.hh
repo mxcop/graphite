@@ -55,8 +55,8 @@ public:
     /* Remove a texture resource from the immediate mode GUI. */
     PLATFORM_SPECIFIC void remove_texture(Texture texture) = 0;
     
-    /* Destroy the immediate mode GUI, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy() = 0;
+    /* De-initialize the immediate mode GUI, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit() = 0;
 };
 
 #include PLATFORM_INCLUDE(imgui)

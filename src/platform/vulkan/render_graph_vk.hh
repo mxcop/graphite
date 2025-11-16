@@ -67,8 +67,8 @@ public:
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch();
 
-    /* Destroy the Render Graph, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    /* De-initialize the Render Graph, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit();
 
     /* To access nodes and waves. "./wrapper/descriptor_vk.cc" */
     friend Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node& node);
