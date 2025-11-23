@@ -489,7 +489,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
 }
 
-Result<void> RenderGraph::destroy() {
+Result<void> RenderGraph::deinit() {
     /* Wait for all graph executions to finish */
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         new_graph();

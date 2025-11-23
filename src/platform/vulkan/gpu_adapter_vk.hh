@@ -29,8 +29,8 @@ public:
     /* Initialize the GPU adapter. */
     PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false);
 
-    /* Destroy the GPU adapter, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    /* De-initialize the GPU adapter, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit();
 
     /* To access the hidden graphics resources. */
     friend class PipelineCache;

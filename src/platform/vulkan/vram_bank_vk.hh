@@ -84,8 +84,8 @@ public:
     /* Get the texture which an image was created from. */
     PLATFORM_SPECIFIC Texture get_texture(Image image);
 
-    /* Destroy the VRAM bank, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    /* De-initialize the VRAM bank, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit();
 
     /* To access resource getters. "./wrapper/descriptor_vk.cc" */
     friend Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node& node);

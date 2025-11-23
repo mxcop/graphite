@@ -30,8 +30,8 @@ public:
     /* Remove a texture resource from the immediate mode GUI. */
     PLATFORM_SPECIFIC void remove_texture(Texture texture);
 
-    /* Destroy the immediate mode GUI, free all its resources. */
-    PLATFORM_SPECIFIC Result<void> destroy();
+    /* De-initialize the immediate mode GUI, free all its resources. */
+    PLATFORM_SPECIFIC Result<void> deinit();
 
     /* To access 'render()' function. */
     friend class RenderGraph;
