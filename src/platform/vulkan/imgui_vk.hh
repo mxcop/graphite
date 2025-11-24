@@ -24,11 +24,11 @@ public:
     /* Start a new immediate frame. */
     PLATFORM_SPECIFIC void new_frame();
 
-    /* Add a texture resource to the immediate mode GUI. */
-    PLATFORM_SPECIFIC u64 add_texture(Texture texture);
+    /* Add an image resource to the immediate mode GUI. */
+    PLATFORM_SPECIFIC u64 add_image(Image image);
     
-    /* Remove a texture resource from the immediate mode GUI. */
-    PLATFORM_SPECIFIC void remove_texture(Texture texture);
+    /* Remove an image resource from the immediate mode GUI. */
+    PLATFORM_SPECIFIC void remove_image(Image image);
 
     /* De-initialize the immediate mode GUI, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit();

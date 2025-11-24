@@ -146,15 +146,18 @@ void ImGUI::new_frame() {
     ImGui_ImplGraphics_NewFrame(functions);
 }
 
-u64 ImGUI::add_texture(Texture texture) {
-    // gpu->get_vram_bank().get_texture(texture);
-    // TODO: Get image view and image layout for texture here.
-    // return ImGui_ImplGraphics_AddTexture(functions, bilinear_sampler, );
-    return 0;
+u64 ImGUI::add_image(Image image) {
+    const ImageSlot& image_data = gpu->get_vram_bank().images.get(image);
+    const VkDescriptorSet handle = ImGui_ImplGraphics_AddTexture(functions, bilinear_sampler, image_data.view, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
+
+    image_map[image.get_index()] = (u64&)handle;
+    return (u64&)handle;
 }
 
-void ImGUI::remove_texture(Texture texture) {
-    // TODO: Remove texture from ImGUI and remove it from the std::unordered_map
+void ImGUI::remove_image(Image image) {
+    if (image_map.count(image.get_index()) == 0) return;
+    ImGui_ImplGraphics_RemoveTexture(functions, (VkDescriptorSet&)image_map[image.get_index()]);
+    image_map.erase(image.get_index());
 }
 
 void ImGUI::render(VkCommandBuffer cmd) {
