@@ -72,8 +72,6 @@ public:
     void set_max_graphs_in_flight(u32 max) { max_graphs_in_flight = max; };
     /* Set the staging memory limit per graph in flight. (default: `65536`) */
     void set_staging_limit(u64 bytes) { graph_staging_limit = bytes; };
-    /* Add an immediate mode gui to this render graph. (only works when rendering to a render target) */
-    void add_imgui(ImGUI& gui) { imgui = &gui; };
 
     /* Initialize the Render Graph. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu) = 0;
@@ -108,6 +106,9 @@ public:
      * @return The new compute node to be customized using the builder pattern.
      */
     RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path);
+    
+    /* Add an immediate mode gui to this render graph. */
+    void add_imgui(ImGUI& gui, RenderTarget rt) { imgui = &gui; target = rt; };
     
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC void upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;

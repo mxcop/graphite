@@ -1,6 +1,6 @@
 #pragma once
 
-// #include <unordered_map>
+#include <unordered_map>
 
 #include "platform/platform.hh"
 
@@ -39,8 +39,8 @@ protected:
     /* Collection of imgui functions. */
     ImGUIFunctions functions {};
 
-    /* Map of texture resources mapped to imgui. */
-    // std::unordered_map<Texture, u64> texture_map {};
+    /* Map of image resources mapped to imgui. */
+    std::unordered_map<u32, u64> image_map {};
 
 public:
     /* Initialize the immediate mode GUI. */
@@ -49,11 +49,14 @@ public:
     /* Start a new immediate frame. */
     PLATFORM_SPECIFIC void new_frame() = 0;
     
-    /* Add a texture resource to the immediate mode GUI. */
-    PLATFORM_SPECIFIC u64 add_texture(Texture texture) = 0;
+    /* Add an image resource to the immediate mode GUI. */
+    PLATFORM_SPECIFIC u64 add_image(Image image) = 0;
     
-    /* Remove a texture resource from the immediate mode GUI. */
-    PLATFORM_SPECIFIC void remove_texture(Texture texture) = 0;
+    /* Get the image index of an image resource. */
+    u64 get_image(Image image) { return image_map[image.get_index()]; };
+    
+    /* Remove an image resource from the immediate mode GUI. */
+    PLATFORM_SPECIFIC void remove_image(Image image) = 0;
     
     /* De-initialize the immediate mode GUI, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit() = 0;

@@ -28,6 +28,10 @@ Result<void> AgnRenderGraph::new_graph(u32 node_count) {
         }
         delete old_node;
     }
+    
+    /* Remove immediate mode gui & render target */
+    imgui = nullptr;
+    target = RenderTarget();
 
     /* Reset the nodes & waves */
     nodes.clear();
@@ -59,7 +63,6 @@ Result<void> AgnRenderGraph::end_graph() {
     std::unordered_map<u32, u32> source_map {};
 
     /* Reset the current render target to NULL */
-    target = RenderTarget();
     VRAMBank& bank = gpu->get_vram_bank();
 
     /* Increment reference counters for all resources used in the graph */

@@ -183,8 +183,7 @@ int main() {
         return EXIT_SUCCESS;
     }
 
-    /* Add the immediate mode GUI to the render graph */
-    rg.add_imgui(imgui);
+    imgui.add_image(debug_image);
 
     /* Main loop */
     for (;;) {
@@ -212,6 +211,7 @@ int main() {
         ImGui::NewFrame();
 
         ImGui::ShowDemoWindow();
+        ImGui::Image(ImTextureRef(imgui.get_image(debug_image)), ImVec2(480, 480));
 
         /* End the imgui frame */
         ImGui::Render();
@@ -242,6 +242,9 @@ int main() {
             .read(linear_sampler)
             .group_size(16, 8)
             .work_size(win_w, win_h);
+
+        /* Add the immediate mode GUI to the render graph */
+        rg.add_imgui(imgui, rt);
 
         rg.end_graph().expect("failed to compile render graph.");
         rg.dispatch().expect("failed to dispatch render graph.");
