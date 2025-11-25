@@ -113,6 +113,8 @@ VkDescriptorSetLayoutBinding sampler_layout(u32 slot, const Dependency& dep) {
 Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeline, const Node &node) {
     /* Allocate memory for all the write commands and descriptors */
     const u32 binding_count = (u32)node.dependencies.size();
+    if (binding_count < 1) return;
+
     std::vector<VkWriteDescriptorSet> writes(binding_count);
     std::vector<VkDescriptorBufferInfo> buffer_info(binding_count);
     std::vector<VkDescriptorImageInfo> texture_info(binding_count);
