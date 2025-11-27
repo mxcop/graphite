@@ -8,12 +8,21 @@ target_compile_definitions(volk PRIVATE VK_USE_PLATFORM_WIN32_KHR)
 target_include_directories(volk PUBLIC ".")
 
 # Vulkan
-find_package(Vulkan REQUIRED)
+# find_package(Vulkan REQUIRED)
 target_compile_definitions(volk PRIVATE VK_USE_PLATFORM_WIN32_KHR)
 target_compile_definitions(volk PRIVATE VK_NO_PROTOTYPES)
-if(TARGET Vulkan::Vulkan)
+# if(TARGET Vulkan::Vulkan)
   # Note: We don't use target_link_libraries for Vulkan::Vulkan to avoid a static dependency on libvulkan1
-  target_include_directories(volk PUBLIC ${Vulkan_INCLUDE_DIRS})
+  # target_include_directories(volk PUBLIC ${Vulkan_INCLUDE_DIRS})
+# elseif(DEFINED ENV{VULKAN_SDK})
+  #target_include_directories(volk PUBLIC "$ENV{VULKAN_SDK}/include")
+# endif()
+
+if(DEFINED ENV{VULKAN_SDK_INSTALL_DIR})
+    target_include_directories(volk PUBLIC "$ENV{VULKAN_SDK_INSTALL_DIR}/include")
 elseif(DEFINED ENV{VULKAN_SDK})
-  target_include_directories(volk PUBLIC "$ENV{VULKAN_SDK}/include")
+    target_include_directories(volk PUBLIC "$ENV{VULKAN_SDK}/include")
+else()
+    message(FATAL_ERROR "No Vulkan SDK found!")
 endif()
+	
