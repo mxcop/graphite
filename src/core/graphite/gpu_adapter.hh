@@ -32,6 +32,9 @@ protected:
     /* Initialize the VRAM bank for this GPU adapter. */
     Result<void> init_vram_bank();
 
+    /* De-initialize the VRAM bank for this GPU adapter. */
+    void deinit_vram_bank();
+
 public:
     /* Initialize the GPU adapter. */
     PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false) = 0;

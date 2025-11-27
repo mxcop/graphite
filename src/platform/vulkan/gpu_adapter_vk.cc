@@ -159,7 +159,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         return Err("failed to create command pool for render graph.");
     }
 
-    /* Initialize VRAM banks */
+    /* Initialize VRAM bank */
     if (const Result r = init_vram_bank(); r.is_err()) {
         return Err(r.unwrap_err());
     }
@@ -175,7 +175,9 @@ Result<void> GPUAdapter::deinit() {
         vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
     }
     vkDestroyInstance(instance, nullptr);
-
+    
+    /* De-initialize VRAM bank */
+    deinit_vram_bank();
     return Ok();
 }
 

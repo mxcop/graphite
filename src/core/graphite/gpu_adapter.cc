@@ -33,6 +33,9 @@ Result<void> AgnGPUAdapter::init_vram_bank() {
     return Ok();
 }
 
+/* De-initialize the VRAM bank for this GPU adapter. */
+void AgnGPUAdapter::deinit_vram_bank() { delete vram_bank; }
+
 /* Get the VRAM bank for this GPU adapter. */
 VRAMBank& AgnGPUAdapter::get_vram_bank() {
     return *vram_bank;
