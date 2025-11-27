@@ -329,7 +329,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
         attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.loadOp = translate::load_operation(node.pixel_load_op);
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color_attachments.emplace_back(attachment);
     }
@@ -466,7 +466,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     VkRenderingAttachmentInfoKHR attachment_info { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
     attachment_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment_info.loadOp = imgui->clear_screen ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment_info.imageView = rt.view();
 
     /* Rendering info */

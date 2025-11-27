@@ -137,6 +137,7 @@ VkBorderColor sampler_border_color(BorderColor color) {
     }
 }
 
+/* Get the number of bytes per vertex attribute for a given vertex attribute format. */
 u32 vertex_attribute_size(const AttrFormat fmt) {
     switch (fmt) {
         case AttrFormat::X32_SFloat:
@@ -152,6 +153,7 @@ u32 vertex_attribute_size(const AttrFormat fmt) {
     }
 }
 
+/* Convert the platform-agnostic vertex attribute format to a vertex format. */
 VkFormat vertex_format(const AttrFormat fmt) {
     switch (fmt) {
         case AttrFormat::X32_SFloat:
@@ -167,6 +169,7 @@ VkFormat vertex_format(const AttrFormat fmt) {
     }
 }
 
+/* Convert the platform-agnostic primitive topology. */
 VkPrimitiveTopology primitive_topology(const Topology topology) {
     switch (topology) {
         case Topology::TriangleList:
@@ -175,6 +178,18 @@ VkPrimitiveTopology primitive_topology(const Topology topology) {
             return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
         default:
             return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+    }
+}
+
+/* Convert the platform-agnostic load operation. */
+VkAttachmentLoadOp load_operation(const LoadOp op) {
+    switch (op) {
+        case LoadOp::Load:
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+        case LoadOp::Clear:
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        default:
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     }
 }
 

@@ -24,6 +24,12 @@ enum class Topology : u32 {
     EnumLimit     /* Anything above or equal is invalid. */
 };
 
+/* Pixel load operation. */
+enum class LoadOp : u32 {
+    Load, /* Load pixel data already present. */
+    Clear /* Clear pixel data. */
+};
+
 /**
  * Render Graph Rasterisation Node.
  * Used to build a rasterisation shader pass.
@@ -41,6 +47,7 @@ class RasterNode : public Node {
     /* Vertex shader attributes */
     std::vector<AttrFormat> attributes {};
     Topology prim_topology = Topology::Invalid;
+    LoadOp pixel_load_op = LoadOp::Load;
 
     /* Extents */
     u32 raster_w = 0u, raster_h = 0u, raster_x = 0u, raster_y = 0u;
@@ -57,6 +64,9 @@ class RasterNode : public Node {
 
     /* Set the vertex primitive topology of the pass. */
     RasterNode& topology(const Topology type);
+
+    /* Set the pixel load operation of the pass. */
+    RasterNode& load_op(const LoadOp op);
 
     /* Add a bindable resource as an output for this node. */
     RasterNode& write(BindHandle resource, ShaderStages stages);

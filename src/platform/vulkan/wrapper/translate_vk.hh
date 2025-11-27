@@ -57,4 +57,7 @@ VkFormat vertex_format(const AttrFormat fmt);
 /* Convert the platform-agnostic primitive topology. */
 VkPrimitiveTopology primitive_topology(const Topology topology);
 
+/* Convert the platform-agnostic load operation. */
+VkAttachmentLoadOp load_operation(const LoadOp op);
+
 } /* translate */
