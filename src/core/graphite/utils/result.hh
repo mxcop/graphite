@@ -128,8 +128,8 @@ class Result<void> {
 
    public:
     Result() : ok(0u) {}
-    Result(result::ok<void>&& ok) : ok(0u) {}
-    Result(result::err&& err) : ok(1u) {}
+    Result(result::ok<void>&&) : ok(0u) {}
+    Result(result::err&&) : ok(1u) {}
 
     /** @return True if the result contains an error. */
     inline bool is_err() const { return ok > 0u; }

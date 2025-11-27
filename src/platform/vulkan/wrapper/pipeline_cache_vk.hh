@@ -28,7 +28,7 @@ public:
     PipelineCache() = default;
 
     /* Initialize the pipeline cache. */
-    void init(GPUAdapter& gpu) { this->gpu = &gpu; };
+    void init(GPUAdapter& gpu_adapter) { this->gpu = &gpu_adapter; };
 
     /* Evict any pipelines from the pipeline cache. */
     void evict();
