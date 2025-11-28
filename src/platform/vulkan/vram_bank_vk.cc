@@ -609,6 +609,9 @@ Texture VRAMBank::get_texture(Image image) {
 }
 
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
+    /* For render targets we need to wait for queue idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    
     /* Push the handle back onto the stock, and get its slot for cleanup */
     RenderTargetSlot& slot = render_targets.push(render_target);
 
