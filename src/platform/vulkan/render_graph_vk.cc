@@ -426,7 +426,9 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
     }
 
     /* Queue copy commands */
-    vkCmdCopyBuffer2KHR(graph.cmd, copies.data());
+    for (const VkCopyBufferInfo2& copy : copies) {
+        vkCmdCopyBuffer2KHR(graph.cmd, &copy);
+    }
 
     /* End debug label for this node */
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
