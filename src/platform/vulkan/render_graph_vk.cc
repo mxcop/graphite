@@ -392,6 +392,8 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
     /* Compile the staging copy commands */
     std::vector<VkBufferCopy2> regions {};
     std::vector<VkCopyBufferInfo2> copies {};
+    regions.reserve(graph.staging_commands.size());
+    copies.reserve(graph.staging_commands.size());
 
     VRAMBank& bank = gpu->get_vram_bank();
     for (const StagingCommand& cmd : graph.staging_commands) {
