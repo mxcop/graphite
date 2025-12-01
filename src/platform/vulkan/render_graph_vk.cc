@@ -61,6 +61,8 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 }
 
 void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
+    if (size == 0u) return; /* Return early if there's no data to upload */
+
     /* Fetch the buffer resource slot from the vram bank */
     VRAMBank& bank = gpu->get_vram_bank();
     const BufferSlot& slot = bank.buffers.get(buffer);
