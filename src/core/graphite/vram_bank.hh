@@ -60,7 +60,7 @@ protected:
 
 public:
     /* Create a new render target resource. (aka, swapchain) */
-    PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, u32 width = 1440u, u32 height = 810u) = 0;
+    PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, bool vsync = true, u32 width = 1440u, u32 height = 810u) = 0;
     /**
      * @brief Create a new buffer resource.
      * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
