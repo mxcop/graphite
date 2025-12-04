@@ -11,6 +11,7 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 
     /* Allocate graph executions ring buffer */
     graphs = new GraphExecution[max_graphs_in_flight] {};
+    resources = new std::vector<BindHandle>[max_graphs_in_flight] {};
     active_graph_index = 0u;
 
     /* Command buffer allocation info */
@@ -497,12 +498,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
 
 Result<void> RenderGraph::deinit() {
     /* Wait for all graph executions to finish */
-    for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
-        new_graph();
-    }
-
-    /* Wait for the queue to idle */
-    vkQueueWaitIdle(gpu->queues.queue_combined);
+    flush_graph();
 
     /* Evict the pipeline cache */
     pipeline_cache.evict();
@@ -513,6 +509,7 @@ Result<void> RenderGraph::deinit() {
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
         vmaDestroyBuffer(gpu->get_vram_bank().vma_allocator, graphs[i].staging_buffer, graphs[i].staging_alloc);
     }
+    delete[] resources;
     delete[] graphs;
 
     return Ok();
