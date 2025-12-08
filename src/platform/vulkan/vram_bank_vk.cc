@@ -525,10 +525,11 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
 }
 
 Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
-    /* Wait for the queue to idle */
+    /* Wait for the device to idle */
     vkDeviceWaitIdle(gpu->logical_device);
     TextureSlot& data = textures.get(texture);
     data.size = size;
+    data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     /* Destroy All Image Views */
     for (u32 i = 0; i < data.images.size(); i++) {
@@ -552,6 +553,7 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     texture_ci.usage = translate::texture_usage(data.usage);
     texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    texture_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     /* Memory allocation info */
     VmaAllocationCreateInfo alloc_ci {};
