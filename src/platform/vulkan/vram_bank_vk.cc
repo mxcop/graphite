@@ -523,6 +523,42 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     return Ok();
 }
 
+Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
+    /* Wait for the queue to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    TextureSlot& data = textures.get(texture);
+
+    /* Destroy Image */
+    vmaDestroyImage(vma_allocator, data.image, data.alloc);
+
+    VkFormat format = translate::texture_format(data.format);
+
+    /* Image creation info */
+    VkImageCreateInfo texture_ci {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    texture_ci.format = format;
+    texture_ci.extent = {MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u)};
+    texture_ci.mipLevels = MAX(1u, data.meta.mips);
+    texture_ci.arrayLayers = MAX(1u, data.meta.arrays);
+    texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
+    texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    texture_ci.usage = translate::texture_usage(data.usage);
+    texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the texture & allocate it using VMA */
+    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &data.image, &data.alloc, nullptr) !=
+        VK_SUCCESS) {
+        return Err("failed to allocate image resource.");
+    }
+
+    return Ok();
+}
+
 Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
     if (size == 0u) return Err("size is 0.");
 
