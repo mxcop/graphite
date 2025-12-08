@@ -62,5 +62,11 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
     StructuredBuffer<Pixel> buf = bindless::storage_buffer<StructuredBuffer<Pixel>>(3);
     out_texture[thread_id] = buf[int(thread_id.x + thread_id.y * frame_data.win_width)].color;
 
-    out_texture[thread_id] = attachment_tex.SampleLevel(linear_sampler, uv, 0);
+    uint2 resolution = 0;
+    attachment_tex.GetDimensions(resolution.x, resolution.y);
+
+    uint2 pixel = thread_id.xy;
+    float2 attachment_tex_uv = (float2(pixel) + 0.5f) / float2(resolution);
+    out_texture[thread_id] = attachment_tex.SampleLevel(linear_sampler, attachment_tex_uv, 0);
+    out_texture[thread_id] = float4(attachment_tex_uv, 0.0f, 1.0f);
 }
