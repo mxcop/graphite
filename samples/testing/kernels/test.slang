@@ -68,5 +68,4 @@ void entry(int2 thread_id: SV_DispatchThreadID) {
     uint2 pixel = thread_id.xy;
     float2 attachment_tex_uv = (float2(pixel) + 0.5f) / float2(resolution);
     out_texture[thread_id] = attachment_tex.SampleLevel(linear_sampler, attachment_tex_uv, 0);
-    out_texture[thread_id] = float4(attachment_tex_uv, 0.0f, 1.0f);
 }

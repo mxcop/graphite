@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 /* Interface header */
 #include "graphite/vram_bank.hh"
 
@@ -153,6 +155,9 @@ struct TextureSlot {
     TextureUsage usage {};
     TextureFormat format {};
     TextureMeta meta {};
+
+    /* List of Images created from this Texture */
+    std::vector<Image> images {};
 };
 
 /* Image resource slot. */
