@@ -129,38 +129,38 @@ int main() {
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
     delete[] pixels;
 
-    int tex_width = -1;
-    int tex_height = -1;
-    int channels = -1;
-    unsigned char* data = nullptr;
+    //int tex_width = -1;
+    //int tex_height = -1;
+    //int channels = -1;
+    //unsigned char* data = nullptr;
 
-    data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
-    if (!data) {
-        printf("failed to load image.\n");
-        return EXIT_SUCCESS;
-    }
+    //data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
+    //if (!data) {
+    //    printf("failed to load image.\n");
+    //    return EXIT_SUCCESS;
+    //}
 
-    /* Initialise a debug texture */
-    Texture debug_texture {};
-    if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0});
-        r.is_err()) {
-        printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    } else
-        debug_texture = r.unwrap();
+    ///* Initialise a debug texture */
+    //Texture debug_texture {};
+    //if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0});
+    //    r.is_err()) {
+    //    printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+    //    return EXIT_SUCCESS;
+    //} else
+    //    debug_texture = r.unwrap();
 
-    if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
-        printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    }
-    free(data);
+    //if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
+    //    printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+    //    return EXIT_SUCCESS;
+    //}
+    //free(data);
 
-    Image debug_image {};
-    if (const Result r = bank.create_image(debug_texture); r.is_err()) {
-        printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    } else
-        debug_image = r.unwrap();
+    //Image debug_image {};
+    //if (const Result r = bank.create_image(debug_texture); r.is_err()) {
+    //    printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());
+    //    return EXIT_SUCCESS;
+    //} else
+    //    debug_image = r.unwrap();
 
     Sampler linear_sampler {};
     if (const Result r = bank.create_sampler(); r.is_err()) {
@@ -183,7 +183,7 @@ int main() {
         return EXIT_SUCCESS;
     }
 
-    imgui.add_image(debug_image);
+    //imgui.add_image(debug_image);
 
     /* Main loop */
     for (;;) {
@@ -211,7 +211,7 @@ int main() {
         ImGui::NewFrame();
 
         ImGui::ShowDemoWindow();
-        ImGui::Image(ImTextureRef(imgui.get_image(debug_image)), ImVec2(480, 480));
+        //ImGui::Image(ImTextureRef(imgui.get_image(debug_image)), ImVec2(480, 480));
 
         /* End the imgui frame */
         ImGui::Render();
@@ -238,7 +238,7 @@ int main() {
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .read(const_buffer)
-            .read(debug_image)
+            .read(attachment_img)
             .read(linear_sampler)
             .group_size(16, 8)
             .work_size(win_w, win_h);
@@ -262,8 +262,8 @@ int main() {
     bank.destroy(vertex_buffer);
     bank.destroy(attachment);
     bank.destroy(attachment_img);
-    bank.destroy(debug_texture);
-    bank.destroy(debug_image);
+    //bank.destroy(debug_texture);
+    //bank.destroy(debug_image);
     bank.destroy(linear_sampler);
     imgui.deinit().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
