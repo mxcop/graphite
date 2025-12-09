@@ -387,6 +387,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     StockPair resource = images.pop();
     resource.data.texture = texture;
     TextureSlot& texture_slot = textures.get(texture);
+    texture_slot.images.push_back(resource.handle);
     
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
@@ -517,6 +518,96 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
         /* Create new image view */
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &data.views[i]) != VK_SUCCESS) {
             return Err("failed to create image view for render target.");
+        }
+    }
+
+    return Ok();
+}
+
+Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
+    /* Wait for the device to idle */
+    vkDeviceWaitIdle(gpu->logical_device);
+    TextureSlot& data = textures.get(texture);
+    data.size = size;
+    data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    /* Destroy All Image Views */
+    for (u32 i = 0; i < data.images.size(); i++) {
+        ImageSlot& image = images.get(data.images[i]);
+        vkDestroyImageView(gpu->logical_device, image.view, nullptr);
+    }
+
+    /* Destroy Image */
+    vmaDestroyImage(vma_allocator, data.image, data.alloc);
+
+    VkFormat format = translate::texture_format(data.format);
+
+    /* Image creation info */
+    VkImageCreateInfo texture_ci {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    texture_ci.format = format;
+    texture_ci.extent = {MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u)};
+    texture_ci.mipLevels = MAX(1u, data.meta.mips);
+    texture_ci.arrayLayers = MAX(1u, data.meta.arrays);
+    texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
+    texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    texture_ci.usage = translate::texture_usage(data.usage);
+    texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    texture_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the texture & allocate it using VMA */
+    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &data.image, &data.alloc, nullptr) !=
+        VK_SUCCESS) {
+        return Err("failed to allocate image resource.");
+    }
+
+    /* Re-create Image Views */
+    for (u32 i = 0; i < data.images.size(); i++) {
+        ImageSlot& image = images.get(data.images[i]);
+
+        ///* Image access sub resource range */
+        //VkImageSubresourceRange sub_range {};
+        //sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
+        //sub_range.baseMipLevel = ;
+        //sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
+        //sub_range.baseArrayLayer = layer;
+        //sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
+        //resource.data.sub_range = sub_range;
+
+        /* Image view creation info */
+        VkImageViewCreateInfo view_ci {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        view_ci.image = data.image;
+        view_ci.viewType = size.is_2d() ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+        view_ci.format = translate::texture_format(data.format);
+        view_ci.subresourceRange = image.sub_range;
+
+        /* Create the image view */
+        if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &image.view) != VK_SUCCESS) {
+            return Err("failed to create image view.");
+        }
+
+        /* Insert readonly images into the bindless descriptor set */
+        if (has_flag(data.usage, TextureUsage::Sampled)) {
+            /* Create the bindless descriptor write template */
+            VkDescriptorImageInfo image_info {};
+            image_info.sampler = VK_NULL_HANDLE;
+            image_info.imageView = image.view;
+            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet bindless_write {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+            bindless_write.dstSet = bindless_set;
+            bindless_write.dstArrayElement = data.images[i].get_index() - 1u;
+            bindless_write.descriptorCount = 1u;
+            bindless_write.pImageInfo = &image_info;
+            bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            bindless_write.dstBinding = BINDLESS_TEXTURE_SLOT;
+
+            vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
         }
     }
 

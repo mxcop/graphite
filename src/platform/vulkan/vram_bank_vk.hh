@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 /* Interface header */
 #include "graphite/vram_bank.hh"
 
@@ -76,6 +78,9 @@ public:
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
+    /* Resize a texture resource. */
+    PLATFORM_SPECIFIC Result<void> resize_texture(Texture& texture, Size3D size);
+
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
     /* Upload data to a GPU texture resource. */
@@ -150,6 +155,9 @@ struct TextureSlot {
     TextureUsage usage {};
     TextureFormat format {};
     TextureMeta meta {};
+
+    /* List of Images created from this Texture */
+    std::vector<Image> images {};
 };
 
 /* Image resource slot. */

@@ -77,6 +77,9 @@ public:
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height) = 0;
+    /* Resize a texture resource. */
+    PLATFORM_SPECIFIC Result<void> resize_texture(Texture& texture, Size3D size) = 0;
+
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;
     /* Upload data to a GPU texture resource. */

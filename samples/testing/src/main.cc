@@ -19,6 +19,8 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
 
+static bool resized = false;
+
 struct FrameData {
     float time;
     float win_width;
@@ -41,13 +43,14 @@ void win_resize_cb(GLFWwindow* win, int width, int height) {
     if (width == 0 || height == 0) return; /* Don't resize when minimized */
     WindowUserData* user_data = (WindowUserData*)glfwGetWindowUserPointer(win);
     user_data->bank->resize_render_target(user_data->rt, width, height);
+    resized = true;
 }
 
 int main() {
     float dt = 0.0f;
     float last_frame = 0.0f;
     float total_time = 0.0f;
-    
+
     /* Set a custom debug logger callback */
     GPUAdapter gpu = GPUAdapter();
     gpu.set_logger(color_logger, DebugLevel::Verbose);
@@ -79,32 +82,38 @@ int main() {
     DwmSetWindowAttribute(glfwGetWin32Window(win), 20, &dark, sizeof(BOOL));
 
     /* Initialize the Render Target */
-    const TargetDesc target { glfwGetWin32Window(win) };
+    const TargetDesc target {glfwGetWin32Window(win)};
     RenderTarget rt {};
     if (const Result r = bank.create_render_target(target); r.is_err()) {
         printf("failed to initialize render target.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else rt = r.unwrap();
+    } else
+        rt = r.unwrap();
 
     /* Initialise a texture that will be used as a color attachment */
     Texture attachment {};
-    if (const Result r = bank.create_texture(TextureUsage::ColorAttachment | TextureUsage::Sampled, TextureFormat::RGBA8Unorm, {1440, 810, 0}); r.is_err()) {
+    if (const Result r = bank.create_texture(
+            TextureUsage::ColorAttachment | TextureUsage::Sampled, TextureFormat::RGBA8Unorm, {1440, 810, 0}
+        );
+        r.is_err()) {
         printf("failed to initialize attachment texture.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else attachment = r.unwrap();
+    } else
+        attachment = r.unwrap();
     Image attachment_img {};
-    if (const Result r = bank.create_image(attachment);
-        r.is_err()) {
+    if (const Result r = bank.create_image(attachment); r.is_err()) {
         printf("failed to initialize attachment image.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else attachment_img = r.unwrap();
+    } else
+        attachment_img = r.unwrap();
 
     /* Initialise a test buffer */
     Buffer const_buffer {};
     if (const Result r = bank.create_buffer(BufferUsage::Constant | BufferUsage::TransferDst, sizeof(FrameData)); r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else const_buffer = r.unwrap();
+    } else
+        const_buffer = r.unwrap();
 
     /* Initialise a vertex buffer */
     Buffer vertex_buffer {};
@@ -112,55 +121,59 @@ int main() {
         r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else vertex_buffer = r.unwrap();
+    } else
+        vertex_buffer = r.unwrap();
     std::vector<Vertex> vertices {};
-    vertices.push_back({ -0.5f, 0.5f, 0.0f });
-    vertices.push_back({ 0.0f, -0.5f, 0.0f });
-    vertices.push_back({ 0.5f, 0.5f, 0.0f });
+    vertices.push_back({-0.5f, 0.5f, 0.0f});
+    vertices.push_back({0.0f, -0.5f, 0.0f});
+    vertices.push_back({0.5f, 0.5f, 0.0f});
     bank.upload_buffer(vertex_buffer, vertices.data(), 0, sizeof(Vertex) * 3);
 
     /* Initialise a storage buffer */
     Buffer storage_buffer {};
-    if (const Result r = bank.create_buffer(BufferUsage::Storage | BufferUsage::TransferDst, 1440 * 810, sizeof(float) * 4); r.is_err()) {
+    if (const Result r = bank.create_buffer(BufferUsage::Storage | BufferUsage::TransferDst, 1440 * 810, sizeof(float) * 4);
+        r.is_err()) {
         printf("failed to initialise constant buffer.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
-    } else storage_buffer = r.unwrap();
+    } else
+        storage_buffer = r.unwrap();
     float* pixels = new float[4 * 1440 * 810] {};
     bank.upload_buffer(storage_buffer, pixels, 0, sizeof(float) * 4 * 1440 * 810);
     delete[] pixels;
 
-    int tex_width = -1;
-    int tex_height = -1;
-    int channels = -1;
-    unsigned char* data = nullptr;
+    // int tex_width = -1;
+    // int tex_height = -1;
+    // int channels = -1;
+    // unsigned char* data = nullptr;
 
-    data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
-    if (!data) {
-        printf("failed to load image.\n");
-        return EXIT_SUCCESS;
-    }
+    // data = stbi_load("samples/testing/assets/test.png", &tex_width, &tex_height, &channels, 4);
+    // if (!data) {
+    //     printf("failed to load image.\n");
+    //     return EXIT_SUCCESS;
+    // }
 
-    /* Initialise a debug texture */
-    Texture debug_texture {};
-    if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm, {(u32)tex_width, (u32)tex_height, 0});
-        r.is_err()) {
-        printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    } else
-        debug_texture = r.unwrap();
+    ///* Initialise a debug texture */
+    // Texture debug_texture {};
+    // if (const Result r = bank.create_texture(TextureUsage::Sampled | TextureUsage::TransferDst, TextureFormat::RGBA8Unorm,
+    // {(u32)tex_width, (u32)tex_height, 0});
+    //     r.is_err()) {
+    //     printf("failed to initialize debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+    //     return EXIT_SUCCESS;
+    // } else
+    //     debug_texture = r.unwrap();
 
-    if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
-        printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    }
-    free(data);
+    // if (const Result r = bank.upload_texture(debug_texture, data, tex_width * tex_height * channels); r.is_err()) {
+    //     printf("failed to upload the debug texture.\nreason: %s\n", r.unwrap_err().c_str());
+    //     return EXIT_SUCCESS;
+    // }
+    // free(data);
 
-    Image debug_image {};
-    if (const Result r = bank.create_image(debug_texture); r.is_err()) {
-        printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());
-        return EXIT_SUCCESS;
-    } else
-        debug_image = r.unwrap();
+    // Image debug_image {};
+    // if (const Result r = bank.create_image(debug_texture); r.is_err()) {
+    //     printf("failed to initialize debug image.\nreason: %s\n", r.unwrap_err().c_str());
+    //     return EXIT_SUCCESS;
+    // } else
+    //     debug_image = r.unwrap();
 
     Sampler linear_sampler {};
     if (const Result r = bank.create_sampler(); r.is_err()) {
@@ -169,8 +182,8 @@ int main() {
     } else
         linear_sampler = r.unwrap();
 
-    /* Setup the framebuffer resize callback */ 
-    WindowUserData user_data { &bank, rt };
+    /* Setup the framebuffer resize callback */
+    WindowUserData user_data {&bank, rt};
     glfwSetWindowUserPointer(win, &user_data);
     glfwSetFramebufferSizeCallback(win, win_resize_cb);
 
@@ -183,7 +196,7 @@ int main() {
         return EXIT_SUCCESS;
     }
 
-    imgui.add_image(debug_image);
+    // imgui.add_image(debug_image);
 
     /* Main loop */
     for (;;) {
@@ -192,12 +205,19 @@ int main() {
         dt = currentFrame - last_frame;
         total_time += dt;
         last_frame = currentFrame;
-        
+
         /* Poll events */
         glfwPollEvents();
         int win_w, win_h;
         glfwGetWindowSize(win, &win_w, &win_h);
 
+        if (resized) {
+            int width, height;
+            glfwGetWindowSize(win, &width, &height);
+
+            gpu.get_vram_bank().resize_texture(attachment, {(u32)width, (u32)height, 0});
+            resized = false;
+        }
         /* Update constant buffer */
         FrameData frame_data {};
         frame_data.time = total_time;
@@ -211,7 +231,7 @@ int main() {
         ImGui::NewFrame();
 
         ImGui::ShowDemoWindow();
-        ImGui::Image(ImTextureRef(imgui.get_image(debug_image)), ImVec2(480, 480));
+        // ImGui::Image(ImTextureRef(imgui.get_image(debug_image)), ImVec2(480, 480));
 
         /* End the imgui frame */
         ImGui::Render();
@@ -227,18 +247,18 @@ int main() {
 
         /* Test Rasterisation Pass */
         RasterNode& graphics_pass = rg.add_raster_pass("graphics pass", "graphics-test-vert", "graphics-test-frag")
-            .topology(Topology::TriangleList)
-            .attribute(AttrFormat::XYZ32_SFloat) // Position
-            .read(const_buffer, ShaderStages::Pixel)
-            .attach(attachment_img)
-            .raster_extent(win_w, win_h);
+                                        .topology(Topology::TriangleList)
+                                        .attribute(AttrFormat::XYZ32_SFloat)  // Position
+                                        .read(const_buffer, ShaderStages::Pixel)
+                                        .attach(attachment_img)
+                                        .raster_extent(win_w, win_h);
         graphics_pass.draw(vertex_buffer, 3);
 
         /* Test Pass */
         rg.add_compute_pass("render pass", "test")
             .write(rt)
             .read(const_buffer)
-            .read(debug_image)
+            .read(attachment_img)
             .read(linear_sampler)
             .group_size(16, 8)
             .work_size(win_w, win_h);
@@ -262,8 +282,8 @@ int main() {
     bank.destroy(vertex_buffer);
     bank.destroy(attachment);
     bank.destroy(attachment_img);
-    bank.destroy(debug_texture);
-    bank.destroy(debug_image);
+    // bank.destroy(debug_texture);
+    // bank.destroy(debug_image);
     bank.destroy(linear_sampler);
     imgui.deinit().expect("failed to destroy imgui.");
     ImGui_ImplGlfw_Shutdown();
