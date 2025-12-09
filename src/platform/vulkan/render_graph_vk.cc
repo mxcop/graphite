@@ -116,7 +116,14 @@ Result<void> RenderGraph::dispatch() {
         const VkResult swapchain_result = vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image);
 
         /* Don't render anything if the swapchain is out of date */
-        if (swapchain_result == VK_ERROR_OUT_OF_DATE_KHR) return Ok();
+        if (swapchain_result == VK_ERROR_OUT_OF_DATE_KHR) {
+            /* Reset the staging buffer for the next graph */
+            GraphExecution& next_graph = active_graph();
+            next_graph.staging_stack_ptr = 0u;
+            next_graph.staging_commands.clear();
+
+            return Ok();
+        }
 
         if (swapchain_result != VK_SUCCESS) {
             return Err("failed to acquire next swapchain image for render target.");
