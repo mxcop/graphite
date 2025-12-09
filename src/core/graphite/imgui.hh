@@ -57,7 +57,7 @@ public:
     PLATFORM_SPECIFIC u64 add_image(Image image) = 0;
     
     /* Get the image index of an image resource. */
-    u64 get_image(Image image) { return image_map[image.get_index()]; };
+    u64 get_image(Image image) { return image_map[image.raw()]; };
     
     /* Remove an image resource from the immediate mode GUI. */
     PLATFORM_SPECIFIC void remove_image(Image image) = 0;

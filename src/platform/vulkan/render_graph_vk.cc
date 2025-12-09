@@ -449,6 +449,41 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     if (imgui == nullptr || target.is_null()) return;
     RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
 
+    /* Transition all imgui images */
+    for (const auto& [raw, imgui_image] : imgui->image_map) {
+        VRAMBank& bank = gpu->get_vram_bank();
+
+        const ImageSlot& image = bank.images.get((Image&)raw);
+        TextureSlot& texture = bank.textures.get(image.texture);
+
+        /* Imgui image sync barrier */
+        VkImageMemoryBarrier2 barrier {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+        barrier.oldLayout = texture.layout;
+        barrier.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+        texture.layout = barrier.newLayout;
+        barrier.image = texture.image;
+        barrier.subresourceRange = image.sub_range;
+
+        /* Render target dependency info */
+        VkDependencyInfo viewport_dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+        viewport_dep_info.imageMemoryBarrierCount = 1u;
+        viewport_dep_info.pImageMemoryBarriers = &barrier;
+
+        if (gpu->validation) {
+            /* Start debug label for imgui */
+            VkDebugUtilsLabelEXT debug_label {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+            debug_label.pLabelName = "transition imgui images";
+            vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+        }
+
+        /* Insert a pipeline barrier for the image */
+        vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
+    }
+
     /* Make imgui render target sync barrier */
     VkImageMemoryBarrier2 viewport_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
     viewport_barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;

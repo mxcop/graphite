@@ -150,14 +150,14 @@ u64 ImGUI::add_image(Image image) {
     const ImageSlot& image_data = gpu->get_vram_bank().images.get(image);
     const VkDescriptorSet handle = ImGui_ImplGraphics_AddTexture(functions, bilinear_sampler, image_data.view, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
 
-    image_map[image.get_index()] = (u64&)handle;
+    image_map[image.raw()] = (u64&)handle;
     return (u64&)handle;
 }
 
 void ImGUI::remove_image(Image image) {
-    if (image_map.count(image.get_index()) == 0) return;
-    ImGui_ImplGraphics_RemoveTexture(functions, (VkDescriptorSet&)image_map[image.get_index()]);
-    image_map.erase(image.get_index());
+    if (image_map.count(image.raw()) == 0) return;
+    ImGui_ImplGraphics_RemoveTexture(functions, (VkDescriptorSet&)image_map[image.raw()]);
+    image_map.erase(image.raw());
 }
 
 void ImGUI::render(VkCommandBuffer cmd) {
