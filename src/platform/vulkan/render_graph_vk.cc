@@ -473,7 +473,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     VkRenderingAttachmentInfoKHR attachment_info { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
     attachment_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_info.loadOp = imgui->clear_screen ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;;
     attachment_info.imageView = rt.view();
 
     /* Rendering info */

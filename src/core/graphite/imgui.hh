@@ -35,6 +35,7 @@ struct ImGUIFunctions {
 class AgnImGUI {
 protected:
     GPUAdapter* gpu = nullptr;
+    bool clear_screen = false;
 
     /* Collection of imgui functions. */
     ImGUIFunctions functions {};
@@ -45,6 +46,9 @@ protected:
 public:
     /* Initialize the immediate mode GUI. */
     PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions) = 0;
+
+    /* Set whether the immediate mode GUI should clear the screen before rendering. (default: false) */
+    void set_clear_screen(bool value = false) { clear_screen = value; };
 
     /* Start a new immediate frame. */
     PLATFORM_SPECIFIC void new_frame() = 0;
