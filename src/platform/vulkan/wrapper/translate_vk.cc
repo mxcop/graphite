@@ -20,6 +20,7 @@ VkImageLayout desired_image_layout(TextureUsage usage, DependencyFlags flags) {
     } else {
         /* If texture is used as write resource, only Storage will work. */
         if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
+        if (has_flag(flags, DependencyFlags::Attachment)) return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
     }
     return VK_IMAGE_LAYOUT_UNDEFINED;
 }
@@ -63,8 +64,8 @@ VkBufferUsageFlags buffer_usage(BufferUsage usage) {
     if (has_flag(usage, BufferUsage::Constant)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     if (has_flag(usage, BufferUsage::Storage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     if (has_flag(usage, BufferUsage::Vertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    //if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    //if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    // if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    // if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     return flags;
 }
 
@@ -97,9 +98,7 @@ VkImageUsageFlags texture_usage(TextureUsage usage) {
 }
 
 /* Convert the platform-agnostic filter to Vulkan sampler filter. */
-VkFilter sampler_filter(Filter filter) {
-    return filter == Filter::Nearest ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
-}
+VkFilter sampler_filter(Filter filter) { return filter == Filter::Nearest ? VK_FILTER_NEAREST : VK_FILTER_LINEAR; }
 
 /* Convert the platform-agnostic address mode to Vulkan sampler address mode. */
 VkSamplerAddressMode sampler_address_mode(AddressMode mode) {
@@ -137,6 +136,7 @@ VkBorderColor sampler_border_color(BorderColor color) {
     }
 }
 
+/* Get the number of bytes per vertex attribute for a given vertex attribute format. */
 u32 vertex_attribute_size(const AttrFormat fmt) {
     switch (fmt) {
         case AttrFormat::X32_SFloat:
@@ -152,6 +152,7 @@ u32 vertex_attribute_size(const AttrFormat fmt) {
     }
 }
 
+/* Convert the platform-agnostic vertex attribute format to a vertex format. */
 VkFormat vertex_format(const AttrFormat fmt) {
     switch (fmt) {
         case AttrFormat::X32_SFloat:
@@ -167,6 +168,7 @@ VkFormat vertex_format(const AttrFormat fmt) {
     }
 }
 
+/* Convert the platform-agnostic primitive topology. */
 VkPrimitiveTopology primitive_topology(const Topology topology) {
     switch (topology) {
         case Topology::TriangleList:
@@ -178,4 +180,16 @@ VkPrimitiveTopology primitive_topology(const Topology topology) {
     }
 }
 
-} /* translate */
+/* Convert the platform-agnostic load operation. */
+VkAttachmentLoadOp load_operation(const LoadOp op) {
+    switch (op) {
+        case LoadOp::Load:
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+        case LoadOp::Clear:
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        default:
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+}
+
+}  // namespace translate

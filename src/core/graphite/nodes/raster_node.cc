@@ -45,6 +45,11 @@ RasterNode& RasterNode::topology(const Topology type) {
     return *this;
 }
 
+RasterNode& RasterNode::load_op(const LoadOp op) {
+    pixel_load_op = op;
+    return *this;
+}
+
 DrawCall::DrawCall(
     RasterNode& parent_pass, const Buffer vertex_buffer, const u32 vertex_count, const u32 vertex_offset,
     const u32 instance_count, const u32 instance_offset

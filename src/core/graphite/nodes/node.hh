@@ -60,4 +60,5 @@ public:
 
     Node() = delete;
     Node(std::string_view label, NodeType type);
+    virtual ~Node() = default;
 };

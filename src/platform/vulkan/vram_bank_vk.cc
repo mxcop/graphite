@@ -162,7 +162,7 @@ Result<void> VRAMBank::deinit() {
     return Ok();
 }
 
-Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u32 width, u32 height) {
+Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bool vsync, u32 width, u32 height) {
     /* Pop a new render target off the stock */
     StockPair resource = render_targets.pop();
 
@@ -207,6 +207,32 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
         return Err("failed to find rgba unorm surface format.");
     }
 
+    /* Get the available surface presentation modes */
+    u32 present_mode_count = 0u;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->physical_device, resource.data.surface, &present_mode_count, nullptr);
+    VkPresentModeKHR* present_modes = new VkPresentModeKHR[present_mode_count] {};
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->physical_device, resource.data.surface, &present_mode_count, present_modes);
+
+    /* Find the presentation mode we want */
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    for (u32 i = 0u; i < present_mode_count; ++i) {
+        /* Mailbox is the preferred vsync present mode */
+        if (vsync == true && present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            present_mode = present_modes[i];
+            break;
+        }
+        /* FIFO is the back-up vsync present mode */
+        if (vsync == true && present_modes[i] == VK_PRESENT_MODE_FIFO_KHR) {
+            present_mode = present_modes[i];
+        }
+        /* Immediate is the preferred non-vsync present mode */
+        if (vsync == false && present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+            present_mode = present_modes[i];
+            break;
+        }
+    }
+    delete[] present_modes; /* Free the present modes */
+
     /* Swapchain creation info */
     VkSwapchainCreateInfoKHR swapchain_ci { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     swapchain_ci.surface = resource.data.surface;
@@ -219,7 +245,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.presentMode = present_mode;
     swapchain_ci.clipped = true;
 
     /* Create the swapchain */
@@ -302,7 +328,6 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
 
         VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         bindless_write.dstSet = bindless_set;
-        bindless_write.dstBinding = 0u;
         bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
         bindless_write.descriptorCount = 1u;
         bindless_write.pBufferInfo = &buffer_info;
@@ -361,6 +386,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     StockPair resource = images.pop();
     resource.data.texture = texture;
     TextureSlot& texture_slot = textures.get(texture);
+    texture_slot.images.push_back(resource.handle);
     
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
@@ -497,6 +523,95 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     return Ok();
 }
 
+Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
+    /* Wait for the device to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+
+    size.x = MAX(1, size.x);
+    size.y = MAX(1, size.y);
+
+    if (size.x > 8192 || size.y > 8192) {
+        return Err("texture size was larger 8192.");
+    }
+
+    TextureSlot& data = textures.get(texture);
+    data.size = size;
+    data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    /* Destroy All Image Views */
+    for (u32 i = 0; i < data.images.size(); i++) {
+        ImageSlot& image = images.get(data.images[i]);
+        vkDestroyImageView(gpu->logical_device, image.view, nullptr);
+    }
+
+    /* Destroy Image */
+    vmaDestroyImage(vma_allocator, data.image, data.alloc);
+
+    VkFormat format = translate::texture_format(data.format);
+
+    /* Image creation info */
+    VkImageCreateInfo texture_ci {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+    texture_ci.format = format;
+    texture_ci.extent = {MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u)};
+    texture_ci.mipLevels = MAX(1u, data.meta.mips);
+    texture_ci.arrayLayers = MAX(1u, data.meta.arrays);
+    texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
+    texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    texture_ci.usage = translate::texture_usage(data.usage);
+    texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    texture_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the texture & allocate it using VMA */
+    if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &data.image, &data.alloc, nullptr) !=
+        VK_SUCCESS) {
+        return Err("failed to allocate image resource.");
+    }
+
+    /* Re-create Image Views */
+    for (u32 i = 0; i < data.images.size(); i++) {
+        ImageSlot& image = images.get(data.images[i]);
+
+        /* Image view creation info */
+        VkImageViewCreateInfo view_ci {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+        view_ci.image = data.image;
+        view_ci.viewType = size.is_2d() ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_3D;
+        view_ci.format = translate::texture_format(data.format);
+        view_ci.subresourceRange = image.sub_range;
+
+        /* Create the image view */
+        if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &image.view) != VK_SUCCESS) {
+            return Err("failed to create image view.");
+        }
+
+        /* Insert readonly images into the bindless descriptor set */
+        if (has_flag(data.usage, TextureUsage::Sampled)) {
+            /* Create the bindless descriptor write template */
+            VkDescriptorImageInfo image_info {};
+            image_info.sampler = VK_NULL_HANDLE;
+            image_info.imageView = image.view;
+            image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            VkWriteDescriptorSet bindless_write {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+            bindless_write.dstSet = bindless_set;
+            bindless_write.dstArrayElement = data.images[i].get_index() - 1u;
+            bindless_write.descriptorCount = 1u;
+            bindless_write.pImageInfo = &image_info;
+            bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            bindless_write.dstBinding = BINDLESS_TEXTURE_SLOT;
+
+            vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
+        }
+    }
+
+    return Ok();
+}
+
 Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
     if (size == 0u) return Err("size is 0.");
 
@@ -609,6 +724,9 @@ Texture VRAMBank::get_texture(Image image) {
 }
 
 void VRAMBank::destroy_render_target(RenderTarget &render_target) {
+    /* For render targets we need to wait for queue idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+    
     /* Push the handle back onto the stock, and get its slot for cleanup */
     RenderTargetSlot& slot = render_targets.push(render_target);
 

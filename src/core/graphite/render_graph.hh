@@ -53,6 +53,7 @@ protected:
 
     /* List of graph executions */
     GraphExecution* graphs = nullptr;
+    std::vector<BindHandle>* resources = nullptr;
     u32 active_graph_index = 0u;
     
     /* Get a reference to the active graph execution. */
@@ -61,6 +62,8 @@ protected:
     GraphExecution& active_graph();
     /* Move on to the next graph execution, should be called at the end of `dispatch()`. */
     inline void next_graph() { if (++active_graph_index >= max_graphs_in_flight) active_graph_index = 0u; };
+    /* Waits for all graph executions to finish. */
+    void flush_graph();
 
     /* Wait until it's safe to create a new graph. */
     PLATFORM_SPECIFIC Result<void> wait_until_safe() = 0;

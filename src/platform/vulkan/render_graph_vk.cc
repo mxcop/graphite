@@ -11,6 +11,7 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 
     /* Allocate graph executions ring buffer */
     graphs = new GraphExecution[max_graphs_in_flight] {};
+    resources = new std::vector<BindHandle>[max_graphs_in_flight] {};
     active_graph_index = 0u;
 
     /* Command buffer allocation info */
@@ -61,6 +62,8 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
 }
 
 void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
+    if (size == 0u) return; /* Return early if there's no data to upload */
+
     /* Fetch the buffer resource slot from the vram bank */
     VRAMBank& bank = gpu->get_vram_bank();
     const BufferSlot& slot = bank.buffers.get(buffer);
@@ -113,7 +116,14 @@ Result<void> RenderGraph::dispatch() {
         const VkResult swapchain_result = vkAcquireNextImageKHR(gpu->logical_device, rt->swapchain, TIMEOUT, graph.start_semaphore, VK_NULL_HANDLE, &rt->current_image);
 
         /* Don't render anything if the swapchain is out of date */
-        if (swapchain_result == VK_ERROR_OUT_OF_DATE_KHR) return Ok();
+        if (swapchain_result == VK_ERROR_OUT_OF_DATE_KHR) {
+            /* Reset the staging buffer for the next graph */
+            GraphExecution& next_graph = active_graph();
+            next_graph.staging_stack_ptr = 0u;
+            next_graph.staging_commands.clear();
+
+            return Ok();
+        }
 
         if (swapchain_result != VK_SUCCESS) {
             return Err("failed to acquire next swapchain image for render target.");
@@ -329,7 +339,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
         attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.loadOp = translate::load_operation(node.pixel_load_op);
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color_attachments.emplace_back(attachment);
     }
@@ -392,6 +402,8 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
     /* Compile the staging copy commands */
     std::vector<VkBufferCopy2> regions {};
     std::vector<VkCopyBufferInfo2> copies {};
+    regions.reserve(graph.staging_commands.size());
+    copies.reserve(graph.staging_commands.size());
 
     VRAMBank& bank = gpu->get_vram_bank();
     for (const StagingCommand& cmd : graph.staging_commands) {
@@ -424,16 +436,54 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
     }
 
     /* Queue copy commands */
-    vkCmdCopyBuffer2KHR(graph.cmd, copies.data());
+    for (const VkCopyBufferInfo2& copy : copies) {
+        vkCmdCopyBuffer2KHR(graph.cmd, &copy);
+    }
 
     /* End debug label for this node */
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
 }
 
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
+#ifdef GRAPHITE_IMGUI
     /* If this graph doesn't have a render target, don't render imgui */
     if (imgui == nullptr || target.is_null()) return;
     RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
+
+    /* Transition all imgui images */
+    for (const auto& [raw, imgui_image] : imgui->image_map) {
+        VRAMBank& bank = gpu->get_vram_bank();
+
+        const ImageSlot& image = bank.images.get((Image&)raw);
+        TextureSlot& texture = bank.textures.get(image.texture);
+
+        /* Imgui image sync barrier */
+        VkImageMemoryBarrier2 barrier {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+        barrier.oldLayout = texture.layout;
+        barrier.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+        texture.layout = barrier.newLayout;
+        barrier.image = texture.image;
+        barrier.subresourceRange = image.sub_range;
+
+        /* Render target dependency info */
+        VkDependencyInfo viewport_dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+        viewport_dep_info.imageMemoryBarrierCount = 1u;
+        viewport_dep_info.pImageMemoryBarriers = &barrier;
+
+        if (gpu->validation) {
+            /* Start debug label for imgui */
+            VkDebugUtilsLabelEXT debug_label {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+            debug_label.pLabelName = "transition imgui images";
+            vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+        }
+
+        /* Insert a pipeline barrier for the image */
+        vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
+    }
 
     /* Make imgui render target sync barrier */
     VkImageMemoryBarrier2 viewport_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
@@ -466,7 +516,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     VkRenderingAttachmentInfoKHR attachment_info { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
     attachment_info.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment_info.loadOp = imgui->clear_screen ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;;
     attachment_info.imageView = rt.view();
 
     /* Rendering info */
@@ -487,16 +537,12 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
 
     /* End debug label for this node */
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
+#endif
 }
 
 Result<void> RenderGraph::deinit() {
     /* Wait for all graph executions to finish */
-    for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
-        new_graph();
-    }
-
-    /* Wait for the queue to idle */
-    vkQueueWaitIdle(gpu->queues.queue_combined);
+    flush_graph();
 
     /* Evict the pipeline cache */
     pipeline_cache.evict();
@@ -507,6 +553,7 @@ Result<void> RenderGraph::deinit() {
         vkDestroySemaphore(gpu->logical_device, graphs[i].start_semaphore, nullptr);
         vmaDestroyBuffer(gpu->get_vram_bank().vma_allocator, graphs[i].staging_buffer, graphs[i].staging_alloc);
     }
+    delete[] resources;
     delete[] graphs;
 
     return Ok();

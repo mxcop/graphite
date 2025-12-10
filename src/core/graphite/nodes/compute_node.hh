@@ -4,8 +4,6 @@
 
 #include "node.hh"
 
-class RenderTarget;
-
 /**
  * Render Graph Compute Node.  
  * Used to build a compute shader pass.
