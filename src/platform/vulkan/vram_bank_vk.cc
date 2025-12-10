@@ -328,7 +328,6 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
 
         VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
         bindless_write.dstSet = bindless_set;
-        bindless_write.dstBinding = 0u;
         bindless_write.dstArrayElement = resource.handle.get_index() - 1u;
         bindless_write.descriptorCount = 1u;
         bindless_write.pBufferInfo = &buffer_info;
@@ -526,7 +525,15 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
 
 Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     /* Wait for the device to idle */
-    vkDeviceWaitIdle(gpu->logical_device);
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+
+    size.x = MAX(1, size.x);
+    size.y = MAX(1, size.y);
+
+    if (size.x > 8192 || size.y > 8192) {
+        return Err("texture size was larger 8192.");
+    }
+
     TextureSlot& data = textures.get(texture);
     data.size = size;
     data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -569,15 +576,6 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     /* Re-create Image Views */
     for (u32 i = 0; i < data.images.size(); i++) {
         ImageSlot& image = images.get(data.images[i]);
-
-        ///* Image access sub resource range */
-        //VkImageSubresourceRange sub_range {};
-        //sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
-        //sub_range.baseMipLevel = ;
-        //sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
-        //sub_range.baseArrayLayer = layer;
-        //sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
-        //resource.data.sub_range = sub_range;
 
         /* Image view creation info */
         VkImageViewCreateInfo view_ci {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
