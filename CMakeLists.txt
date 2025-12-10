@@ -4,17 +4,18 @@ project(graphite)
 # C++ standard version
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
 
+# Options
+option(GRAPHITE_SAMPLES "Include Graphite samples directory." ON)
+set(GRAPHITE_PLATFORM "Vulkan")
+
 # Library target
 add_library(graphite)
-# set_target_properties(graphite PROPERTIES OUTPUT_NAME ${CMAKE_PROJECT_NAME})
 
 # Add compiler definitions
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Debug>:DEBUG=1>)
 target_compile_definitions(graphite PRIVATE $<$<CONFIG:Release>:NDEBUG=1>)
 
 # Target build platform
-set(GRAPHITE_PLATFORM "Vulkan")
-
 if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     set(PLATFORM_EXT vk)
     set(PLATFORM vulkan)
@@ -22,6 +23,22 @@ endif()
 
 target_compile_definitions(graphite PUBLIC PLATFORM_EXT=${PLATFORM_EXT})
 target_compile_definitions(graphite PUBLIC PLATFORM=${PLATFORM})
+
+# ImGUI support
+if(GRAPHITE_IMGUI_DIR)
+    # Sources
+    target_sources(graphite
+        PRIVATE "${GRAPHITE_IMGUI_DIR}/backends/imgui_impl_vulkan.cpp"
+    )
+
+    # Includes
+    target_include_directories(graphite
+        PUBLIC "${GRAPHITE_IMGUI_DIR}"
+        PUBLIC "${GRAPHITE_IMGUI_DIR}/backends"
+    )
+
+    target_compile_definitions(graphite PUBLIC GRAPHITE_IMGUI=1)
+endif()
 
 # Include directories
 target_include_directories(graphite PUBLIC "./src/")
@@ -70,7 +87,10 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     )
 endif()
 
-add_subdirectory("samples")
+# Samples directory
+if(GRAPHITE_SAMPLES)
+    add_subdirectory("samples")
+endif()
 
 # External dependencies
 add_subdirectory("extern")

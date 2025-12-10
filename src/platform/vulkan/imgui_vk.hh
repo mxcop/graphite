@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef GRAPHITE_IMGUI
+
 /* Interface header */
 #include "graphite/imgui.hh"
 
@@ -19,7 +21,7 @@ class ImGUI : public AgnImGUI {
 
 public:
     /* Initialize the immediate mode GUI. */
-    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt, ImGUIFunctions functions);
+    PLATFORM_SPECIFIC Result<void> init(GPUAdapter& gpu, RenderTarget rt);
     
     /* Start a new immediate frame. */
     PLATFORM_SPECIFIC void new_frame();
@@ -37,13 +39,4 @@ public:
     friend class RenderGraph;
 };
 
-/* List of imgui platform specific functions. */
-#define IMGUI_FUNCTIONS {               \
-    ImGui_ImplVulkan_Init,              \
-    ImGui_ImplVulkan_AddTexture,        \
-    ImGui_ImplVulkan_RemoveTexture,     \
-    ImGui_ImplVulkan_NewFrame,          \
-    ImGui::GetDrawData,                 \
-    ImGui_ImplVulkan_RenderDrawData,    \
-    ImGui_ImplVulkan_Shutdown           \
-}
+#endif

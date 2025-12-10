@@ -445,6 +445,7 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
 }
 
 void RenderGraph::queue_imgui(const GraphExecution &graph) {
+#ifdef GRAPHITE_IMGUI
     /* If this graph doesn't have a render target, don't render imgui */
     if (imgui == nullptr || target.is_null()) return;
     RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
@@ -536,6 +537,7 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
 
     /* End debug label for this node */
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
+#endif
 }
 
 Result<void> RenderGraph::deinit() {

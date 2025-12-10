@@ -1,5 +1,9 @@
 #include "imgui_vk.hh"
 
+#ifdef GRAPHITE_IMGUI
+
+#include <imgui_impl_vulkan.h> /* Vulkan impl for ImGUI */
+
 #include "graphite/gpu_adapter.hh"
 #include "graphite/vram_bank.hh"
 
@@ -18,74 +22,8 @@ const VkDescriptorPoolSize DESC_POOL_SIZES[] {
     {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 256u}
 };
 
-/* ImGUI vulkan pipeline info */
-struct ImGui_ImplVulkan_PipelineInfo {
-    VkRenderPass RenderPass;
-    uint32_t Subpass; 
-    VkSampleCountFlagBits MSAASamples = {};
-    VkPipelineRenderingCreateInfoKHR PipelineRenderingCreateInfo;
-};
-
-/* ImGUI vulkan init info */
-struct ImGui_ImplVulkan_InitInfo {
-    uint32_t ApiVersion;
-    VkInstance Instance;
-    VkPhysicalDevice PhysicalDevice;
-    VkDevice Device;
-    uint32_t QueueFamily;
-    VkQueue Queue;
-    VkDescriptorPool DescriptorPool;     
-    uint32_t DescriptorPoolSize;    
-    uint32_t MinImageCount;      
-    uint32_t ImageCount;      
-    VkPipelineCache PipelineCache; 
-    ImGui_ImplVulkan_PipelineInfo PipelineInfoMain;
-    bool UseDynamicRendering;
-    const VkAllocationCallbacks* Allocator;
-    void (*CheckVkResultFn)(VkResult err);
-    VkDeviceSize MinAllocationSize;
-    VkShaderModuleCreateInfo CustomShaderVertCreateInfo;
-    VkShaderModuleCreateInfo CustomShaderFragCreateInfo;
-};
-
-/* ImGUI graphics init function. */
-bool ImGui_ImplGraphics_Init(ImGUIFunctions functions, ImGui_ImplVulkan_InitInfo* init_info) {
-    return reinterpret_cast<bool(*)(void*)>(functions.graphics_init)(init_info);
-}
-
-/* ImGUI add texture function. */
-VkDescriptorSet ImGui_ImplGraphics_AddTexture(ImGUIFunctions functions, VkSampler sampler, VkImageView image_view, VkImageLayout image_layout) {
-    return reinterpret_cast<VkDescriptorSet(*)(VkSampler, VkImageView, VkImageLayout)>(functions.add_texture)(sampler, image_view, image_layout);
-}
-
-/* ImGUI remove texture function. */
-void ImGui_ImplGraphics_RemoveTexture(ImGUIFunctions functions, VkDescriptorSet desc_set) {
-    reinterpret_cast<void(*)(VkDescriptorSet)>(functions.remove_texture)(desc_set);
-}
-
-/* ImGUI graphics new frame function. */
-void ImGui_ImplGraphics_NewFrame(ImGUIFunctions functions) {
-    reinterpret_cast<void(*)()>(functions.new_frame)();
-}
-
-/* ImGUI get draw data function. */
-void* ImGui_GetDrawData(ImGUIFunctions functions) {
-    return reinterpret_cast<void*(*)()>(functions.draw_data)();
-}
-
-/* ImGUI graphics render draw data function. */
-void ImGui_ImplGraphics_RenderDrawData(ImGUIFunctions functions, void* draw_data, VkCommandBuffer cmd) {
-    reinterpret_cast<void(*)(void*, VkCommandBuffer, void*)>(functions.render)(draw_data, cmd, nullptr);
-}
-
-/* ImGUI graphics shutdown function. */
-void ImGui_ImplGraphics_Shutdown(ImGUIFunctions functions) {
-    reinterpret_cast<void(*)()>(functions.graphics_shutdown)();
-}
-
-Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functions) {
+Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt) {
     this->gpu = &gpu;
-    this->functions = functions;
 
     /* Allocate the imgui descriptor pool */
     VkDescriptorPoolCreateInfo pool_ci { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
@@ -121,7 +59,7 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functi
     init_info.PipelineInfoMain.PipelineRenderingCreateInfo.pColorAttachmentFormats = &rt_data.format;
 
     /* Initialize ImGUI */
-    if (!ImGui_ImplGraphics_Init(functions, &init_info)) {
+    if (!ImGui_ImplVulkan_Init(&init_info)) {
         return Err("failed to init imgui for vulkan.");
     }
 
@@ -143,12 +81,12 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt, ImGUIFunctions functi
 }
 
 void ImGUI::new_frame() {
-    ImGui_ImplGraphics_NewFrame(functions);
+    ImGui_ImplVulkan_NewFrame();
 }
 
 u64 ImGUI::add_image(Image image) {
     const ImageSlot& image_data = gpu->get_vram_bank().images.get(image);
-    const VkDescriptorSet handle = ImGui_ImplGraphics_AddTexture(functions, bilinear_sampler, image_data.view, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
+    const VkDescriptorSet handle = ImGui_ImplVulkan_AddTexture(bilinear_sampler, image_data.view, VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL);
 
     image_map[image.raw()] = (u64&)handle;
     return (u64&)handle;
@@ -156,20 +94,22 @@ u64 ImGUI::add_image(Image image) {
 
 void ImGUI::remove_image(Image image) {
     if (image_map.count(image.raw()) == 0) return;
-    ImGui_ImplGraphics_RemoveTexture(functions, (VkDescriptorSet&)image_map[image.raw()]);
+    ImGui_ImplVulkan_RemoveTexture((VkDescriptorSet&)image_map[image.raw()]);
     image_map.erase(image.raw());
 }
 
 void ImGUI::render(VkCommandBuffer cmd) {
-    void* draw_data = ImGui_GetDrawData(functions);
+    ImDrawData* draw_data = ImGui::GetDrawData();
     if (draw_data == nullptr) return;
-    ImGui_ImplGraphics_RenderDrawData(functions, draw_data, cmd);
+    ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 }
 
 Result<void> ImGUI::deinit() {
     vkDeviceWaitIdle(gpu->logical_device);
-    ImGui_ImplGraphics_Shutdown(functions);
+    ImGui_ImplVulkan_Shutdown();
     vkDestroyDescriptorPool(gpu->logical_device, desc_pool, nullptr);
     vkDestroySampler(gpu->logical_device, bilinear_sampler, nullptr);
     return Ok();
 }
+
+#endif
