@@ -5,6 +5,8 @@
 #include "utils/result.hh"
 #include "utils/debug.hh"
 
+#include "utils/types.hh"
+
 class VRAMBank;
 
 /* Debug logger data. */
@@ -25,6 +27,13 @@ protected:
 
     /* VRAM bank for this GPU adapter. */
     VRAMBank* vram_bank = nullptr;
+
+    /* Maximum amount of resources. */
+    u32 max_render_targets = 8u;
+    u32 max_buffers = 8u;
+    u32 max_textures = 8u;
+    u32 max_images = 8u;
+    u32 max_samplers = 8u;
     
     /* Log a message using the active debug logger. */
     void log(DebugSeverity severity, const char* msg);
@@ -47,6 +56,20 @@ public:
 
     /* De-initialize the GPU adapter, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit() = 0;
+
+    /* Set maximum resource count. */
+    void set_max_render_targets(const u32 count);
+    void set_max_buffers(const u32 count);
+    void set_max_textures(const u32 count);
+    void set_max_images(const u32 count);
+    void set_max_samplers(const u32 count);
+
+    /* Get maximum resource count. */
+    u32 get_max_render_targets() const;
+    u32 get_max_buffers() const;
+    u32 get_max_textures() const;
+    u32 get_max_images() const;
+    u32 get_max_samplers() const;
 };
 
 #include PLATFORM_INCLUDE(gpu_adapter)

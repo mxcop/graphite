@@ -28,11 +28,11 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     }
 
     /* Initialize the Stack Pools */
-    render_targets.init(8u);
-    buffers.init(8u);
-    textures.init(8u);
-    images.init(8u);
-    samplers.init(8u);
+    render_targets.init(gpu.get_max_render_targets());
+    buffers.init(gpu.get_max_buffers());
+    textures.init(gpu.get_max_textures());
+    images.init(gpu.get_max_images());
+    samplers.init(gpu.get_max_samplers());
 
     { /* Init Bindless */
         /* Initialize the bindless resources */
