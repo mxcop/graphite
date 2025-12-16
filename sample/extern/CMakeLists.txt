@@ -1,9 +1,9 @@
 # GLFW
 add_subdirectory("glfw")
-target_link_libraries(sample-testing PRIVATE glfw)
+target_link_libraries(sample PRIVATE glfw)
 
 # ImGUI
-target_sources(sample-testing
+target_sources(sample
     PRIVATE "./imgui/imgui_demo.cpp"
     PRIVATE "./imgui/imgui_draw.cpp"
     PRIVATE "./imgui/imgui_tables.cpp"
@@ -13,12 +13,12 @@ target_sources(sample-testing
     PRIVATE "./imgui/backends/imgui_impl_vulkan.cpp"
     PRIVATE "./imgui/backends/imgui_impl_win32.cpp"
 )
-target_include_directories(sample-testing
+target_include_directories(sample
     PRIVATE "./imgui"
     PRIVATE "./imgui/backends"
 )
 
 # STB Image
-target_include_directories(sample-testing
+target_include_directories(sample
     PRIVATE "./stb_image"
 )

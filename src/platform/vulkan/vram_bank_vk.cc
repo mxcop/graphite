@@ -526,8 +526,8 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     /* Wait for the device to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
 
-    size.x = MAX(1, size.x);
-    size.y = MAX(1, size.y);
+    size.x = std::max(1u, size.x);
+    size.y = std::max(1u, size.y);
 
     if (size.x > 8192 || size.y > 8192) {
         return Err("texture size was larger 8192.");
@@ -552,9 +552,9 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     VkImageCreateInfo texture_ci {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     texture_ci.format = format;
-    texture_ci.extent = {MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u)};
-    texture_ci.mipLevels = MAX(1u, data.meta.mips);
-    texture_ci.arrayLayers = MAX(1u, data.meta.arrays);
+    texture_ci.extent = {std::max(size.x, 1u), std::max(size.y, 1u), std::max(size.z, 1u)};
+    texture_ci.mipLevels = std::max(1u, data.meta.mips);
+    texture_ci.arrayLayers = std::max(1u, data.meta.arrays);
     texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
     texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     texture_ci.usage = translate::texture_usage(data.usage);
