@@ -82,12 +82,12 @@ class Stock {
 
     /* Increment handle reference counter. */
     void add_reference(OpaqueHandle handle) {
-        refs[handle.index - 1u]++;
+        refs[handle.index - 1u] += 1u;
     }
 
     /* Decrement handle reference counter. (returns true if there are no more references) */
     bool remove_reference(OpaqueHandle handle) {
-        if (refs[handle.index - 1u] > 0u) refs[handle.index - 1u]--;
+        if (refs[handle.index - 1u] > 0u) refs[handle.index - 1u] -= 1u;
         return refs[handle.index - 1u] == 0u;
     }
 

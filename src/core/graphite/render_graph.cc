@@ -12,6 +12,15 @@ const GraphExecution &AgnRenderGraph::active_graph() const { return graphs[activ
 
 GraphExecution &AgnRenderGraph::active_graph() { return graphs[active_graph_index]; }
 
+void AgnRenderGraph::flush_graph() {
+    /* Wait for all graph executions to finish */
+    for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
+        new_graph();
+        end_graph();
+        next_graph();
+    }
+}
+
 Result<void> AgnRenderGraph::new_graph(u32 node_count) {
     /* Wait until it's safe to release resources */
     VRAMBank& bank = gpu->get_vram_bank();
@@ -19,13 +28,6 @@ Result<void> AgnRenderGraph::new_graph(u32 node_count) {
 
     /* Decrement reference counters for all resources used in the graph */
     for (Node* old_node : nodes) {
-        for (const Dependency& dep : old_node->dependencies) {
-            bank.remove_reference(dep.resource);
-            if (dep.resource.get_type() == ResourceType::Image) {
-                /* For images, we also need to add a reference to the underlying texture */
-                bank.remove_reference(bank.get_texture((Image&)dep.resource));
-            }
-        }
         delete old_node;
     }
     
@@ -66,13 +68,25 @@ Result<void> AgnRenderGraph::end_graph() {
     VRAMBank& bank = gpu->get_vram_bank();
 
     /* Increment reference counters for all resources used in the graph */
+    std::vector<BindHandle> prev_resources = resources[active_graph_index];
+    resources[active_graph_index].clear();
     for (Node* node : nodes) {
         for (const Dependency& dep : node->dependencies) {
+            resources[active_graph_index].push_back(dep.resource);
             bank.add_reference(dep.resource);
             if (dep.resource.get_type() == ResourceType::Image) {
                 /* For images, we also need to add a reference to the underlying texture */
                 bank.add_reference(bank.get_texture((Image&)dep.resource));
             }
+        }
+    }
+
+    /* Decrement reference counters for all resources previously used in the graph */
+    for (BindHandle resource : prev_resources) {
+        bank.remove_reference(resource);
+        if (resource.get_type() == ResourceType::Image) {
+            /* For images, we also need to add a reference to the underlying texture */
+            bank.remove_reference(bank.get_texture((Image&)resource));
         }
     }
 
