@@ -1,9 +1,8 @@
 #include "vram_bank_vk.hh"
 
-#include "wrapper/translate_vk.hh"
+#include <utility>
 
-#define MAX(A, B) ((A > B) ? A : B)
-#define MIN(A, B) ((A < B) ? A : B)
+#include "wrapper/translate_vk.hh"
 
 Result<void> VRAMBank::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
@@ -180,11 +179,11 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, u3
     }
 
     /* Use up to 4 images that are available, this allows for triple buffering */
-    resource.data.image_count = MIN(4, MAX(1, surface_features.maxImageCount));
+    resource.data.image_count = std::min(4u, std::max(1u, surface_features.maxImageCount));
 
     /* Set the width and height, with respect to the surface limits */
-    resource.data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
-    resource.data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+    resource.data.extent.width = std::min(std::max(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    resource.data.extent.height = std::min(std::max(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
 
     /* Get the available surface formats */
     u32 format_count = 0u;
@@ -332,9 +331,9 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     VkImageCreateInfo texture_ci { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     texture_ci.format = format;
-    texture_ci.extent = { MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u) };
-    texture_ci.mipLevels = MAX(1u, meta.mips);
-    texture_ci.arrayLayers = MAX(1u, meta.arrays);
+    texture_ci.extent = { std::max(size.x, 1u), std::max(size.y, 1u), std::max(size.z, 1u) };
+    texture_ci.mipLevels = std::max(1u, meta.mips);
+    texture_ci.arrayLayers = std::max(1u, meta.arrays);
     texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
     texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     texture_ci.usage = translate::texture_usage(usage);
@@ -366,9 +365,9 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     VkImageSubresourceRange sub_range {};
     sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
     sub_range.baseMipLevel = mip;
-    sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
+    sub_range.levelCount = std::max(1u, texture_slot.meta.mips - mip);
     sub_range.baseArrayLayer = layer;
-    sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
+    sub_range.layerCount = std::max(1u, texture_slot.meta.arrays - layer);
     resource.data.sub_range = sub_range;
 
     /* Image view creation info */
@@ -443,8 +442,8 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     }
 
     /* Set the width and height, with respect to the surface limits */
-    data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
-    data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+    data.extent.width = std::min(std::max(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    data.extent.height = std::min(std::max(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
 
     /* Swapchain re-creation info */
     VkSwapchainCreateInfoKHR swapchain_ci { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -574,8 +573,8 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     vmaUnmapMemory(vma_allocator, alloc);
 
     VkBufferImageCopy copy {};
-    copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u};
-    copy.imageExtent = VkExtent3D{MAX(texture_slot.size.x, 1u), MAX(texture_slot.size.y, 1u), MAX(texture_slot.size.z, 1u)};
+    copy.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u };
+    copy.imageExtent = VkExtent3D { std::max(texture_slot.size.x, 1u), std::max(texture_slot.size.y, 1u), std::max(texture_slot.size.z, 1u) };
 
     /* Create an image layout transition barrier */
     VkImageMemoryBarrier2 image_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
@@ -586,7 +585,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     image_barrier.oldLayout = texture_slot.layout;
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
-    image_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
+    image_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
     texture_slot.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     /* Render target dependency info */

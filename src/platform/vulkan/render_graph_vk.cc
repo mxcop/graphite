@@ -1,5 +1,7 @@
 #include "render_graph_vk.hh"
 
+#include <utility>
+
 #include "graphite/imgui.hh"
 #include "graphite/vram_bank.hh"
 #include "graphite/nodes/node.hh"
@@ -316,15 +318,15 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
             RenderTargetSlot& rt = bank.render_targets.get(target);
             attachment_view = rt.view();
-            min_raster_w = min(min_raster_w, rt.extent.width);
-            min_raster_h = min(min_raster_h, rt.extent.height);
+            min_raster_w = std::min(min_raster_w, (i32)rt.extent.width);
+            min_raster_h = std::min(min_raster_h, (i32)rt.extent.height);
         } else {
             const ImageSlot& image = bank.images.get(dep.resource);
             const TextureSlot& texture = bank.textures.get(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             attachment_view = image.view;
-            min_raster_w = min(min_raster_w, texture.size.x);
-            min_raster_h = min(min_raster_h, texture.size.y);
+            min_raster_w = std::min(min_raster_w, (i32)texture.size.x);
+            min_raster_h = std::min(min_raster_h, (i32)texture.size.y);
         }
 
         /* Fill in the attachment info */

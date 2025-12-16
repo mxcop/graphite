@@ -5,5 +5,6 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
     target_compile_definitions(graphite PUBLIC IMGUI_IMPL_VULKAN_USE_VOLK)
 
     # VMA
+    target_compile_definitions(graphite PRIVATE NOMINMAX)
     target_include_directories(graphite PUBLIC "./vma")
 endif()

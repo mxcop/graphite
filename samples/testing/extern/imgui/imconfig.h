@@ -139,7 +139,7 @@
 //#define IMGUI_DEBUG_PARANOID
 
 //---- Indicate we're using VOLK for the render graph
-#define IMGUI_IMPL_VULKAN_USE_VOLK
+//#define IMGUI_IMPL_VULKAN_USE_VOLK
 
 //---- Tip: You can add extra functions within the ImGui:: namespace from anywhere (e.g. your own sources/header files)
 /*
