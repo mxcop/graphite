@@ -81,6 +81,8 @@ VkFormat texture_format(TextureFormat format) {
     switch (format) {
         case TextureFormat::RGBA8Unorm:
             return VK_FORMAT_R8G8B8A8_UNORM;
+        case TextureFormat::RG32Uint:
+            return VK_FORMAT_R32G32_UINT;
         default:
             return VK_FORMAT_UNDEFINED;
     }

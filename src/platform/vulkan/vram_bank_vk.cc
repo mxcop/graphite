@@ -18,12 +18,12 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         vma_info.instance = gpu.instance;
 
         if (vmaImportVulkanFunctionsFromVolk(&vma_info, &vulkan_functions) != VK_SUCCESS)
-            return Err("Failed to import vulakn functions from volk (required for VMA init).");
+            return Err("failed to import vulkan functions from volk (required for vma init).");
 
         vma_info.pVulkanFunctions = &vulkan_functions;
 
         if (vmaCreateAllocator(&vma_info, &vma_allocator) != VK_SUCCESS)
-            return Err("Failed to initialise VMA.");
+            return Err("failed to initialise vma.");
     }
 
     /* Initialize the Stack Pools */
@@ -213,20 +213,20 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->physical_device, resource.data.surface, &present_mode_count, present_modes);
 
     /* Find the presentation mode we want */
-    VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    resource.data.present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     for (u32 i = 0u; i < present_mode_count; ++i) {
         /* Mailbox is the preferred vsync present mode */
         if (vsync == true && present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
             break;
         }
         /* FIFO is the back-up vsync present mode */
         if (vsync == true && present_modes[i] == VK_PRESENT_MODE_FIFO_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
         }
         /* Immediate is the preferred non-vsync present mode */
         if (vsync == false && present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
             break;
         }
     }
@@ -244,7 +244,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = present_mode;
+    swapchain_ci.presentMode = resource.data.present_mode;
     swapchain_ci.clipped = true;
 
     /* Create the swapchain */
@@ -483,7 +483,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.presentMode = data.present_mode;
     swapchain_ci.clipped = true;
     swapchain_ci.oldSwapchain = data.swapchain;
 

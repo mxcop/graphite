@@ -18,6 +18,7 @@ ENUM_CLASS_FLAGS(TextureUsage);
 enum class TextureFormat : u32 {
     Invalid = 0u, /* Invalid texture format. */
     RGBA8Unorm,   /* RGBA 8 bits per channel, unsigned normalized. */
+    RG32Uint,     /* RG 32 bits per channel, unsigned integer. */
     EnumLimit     /* Anything above or equal is invalid. */
 };
 

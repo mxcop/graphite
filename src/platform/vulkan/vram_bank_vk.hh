@@ -109,6 +109,7 @@ struct RenderTargetSlot {
     u32 image_count = 0u;
     VkFormat format {};
     VkColorSpaceKHR color_space {};
+    VkPresentModeKHR present_mode {};
 
     /* Swapchain resources */
     VkSwapchainKHR swapchain {};
