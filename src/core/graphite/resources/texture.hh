@@ -16,10 +16,11 @@ ENUM_CLASS_FLAGS(TextureUsage);
 
 /* Texture formats. */
 enum class TextureFormat : u32 {
-    Invalid = 0u, /* Invalid texture format. */
-    RGBA8Unorm,   /* RGBA 8 bits per channel, unsigned normalized. */
-    RG32Uint,     /* RG 32 bits per channel, unsigned integer. */
-    EnumLimit     /* Anything above or equal is invalid. */
+    Invalid = 0u,  /* Invalid texture format. */
+    RGBA8Unorm,    /* RGBA 8 bits per channel, unsigned normalized. */
+    RG32Uint,      /* RG 32 bits per channel, unsigned integer. */
+    RG11B10Ufloat, /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
+    EnumLimit      /* Anything above or equal is invalid. */
 };
 
 /* Texture meta data. */
