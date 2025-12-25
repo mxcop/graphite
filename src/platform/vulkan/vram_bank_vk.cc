@@ -665,11 +665,11 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
 
     /* Staging buffer creation info */
     VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    staging_buffer_ci.size= size;
-    staging_buffer_ci.usage= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    staging_buffer_ci.sharingMode= VK_SHARING_MODE_EXCLUSIVE;
-    staging_buffer_ci.queueFamilyIndexCount= 1u;
-    staging_buffer_ci.pQueueFamilyIndices= &gpu->queue_families.queue_combined;
+    staging_buffer_ci.size = size;
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
 
     /* Staging memory allocation info */
     VmaAllocationCreateInfo alloc_ci {};

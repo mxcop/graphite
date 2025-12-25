@@ -35,6 +35,10 @@ DrawCall& RasterNode::draw(
     return draws.emplace_back(*this, vertex_buffer, vertex_count, vertex_offset, instance_count, instance_offset);
 }
 
+DrawCall& RasterNode::draw_indirect(const Buffer vertex_buffer, const Buffer indirect_buffer) {
+    return draws.emplace_back(*this, vertex_buffer, indirect_buffer);
+}
+
 RasterNode& RasterNode::attribute(const AttrFormat format) {
     attributes.emplace_back(format);
     return *this;
@@ -60,6 +64,13 @@ DrawCall::DrawCall(
       vertex_offset(vertex_offset),
       instance_count(instance_count),
       instance_offset(instance_offset) {
+    parent_pass.dependencies.emplace_back(
+        vertex_buffer, DependencyFlags::Readonly | DependencyFlags::Unbound, DependencyStages::Vertex
+    );
+}
+
+DrawCall::DrawCall(RasterNode& parent_pass, const Buffer vertex_buffer, const Buffer indirect_buffer)
+    : parent_pass(parent_pass), vertex_buffer(vertex_buffer), indirect_buffer(indirect_buffer) {
     parent_pass.dependencies.emplace_back(
         vertex_buffer, DependencyFlags::Readonly | DependencyFlags::Unbound, DependencyStages::Vertex
     );

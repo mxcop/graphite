@@ -64,7 +64,7 @@ public:
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, bool vsync = true, u32 width = 1440u, u32 height = 810u);
     /**
      * @brief Create a new buffer resource.
-     * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
+     * @param count If "stride" is 0 this represents the number of bytes in the buffer,
      * otherwise it is the number of elements in the buffer.
      * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
      */

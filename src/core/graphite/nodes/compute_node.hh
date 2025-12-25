@@ -19,6 +19,10 @@ public:
 
     u32 group_x = 1u, group_y = 1u, group_z = 1u; /* Thread group size */
     u32 work_x = 1u, work_y = 1u, work_z = 1u; /* Work size */
+    
+    /* Indirect Dispatch. */
+    Buffer indirect_buffer {};
+    uint32_t indirect_offset = 0u;
 
     /* No copies allowed */
     ComputeNode(const ComputeNode&) = delete;
@@ -35,6 +39,9 @@ public:
 
     /* Set the work size for this node. (this will be divided by the `group_size` to get the dispatch size) */
     inline ComputeNode& work_size(u32 x, u32 y = 1u, u32 z = 1u) { work_x = x; work_y = y; work_z = z; return *this; }
+
+    /* Set the indirect_buffer which will be used to get the dispatch args buffer for the vkCmdDispatchIndirect call. */
+    inline ComputeNode& indirect_size(Buffer buffer) { indirect_buffer = buffer; return *this; }
 
     /* To access constructors */
     friend class AgnRenderGraph;

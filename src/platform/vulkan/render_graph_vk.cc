@@ -286,6 +286,14 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     if (push_result.is_err()) return push_result;
     vkCmdBindDescriptorSets(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr);
 
+    /* Indirect Dispatch */
+    if (!node.indirect_buffer.is_null())
+    {
+        VRAMBank& bank = gpu->get_vram_bank();
+        vkCmdDispatchIndirect(graph.cmd, bank.buffers.get(node.indirect_buffer).buffer, node.indirect_offset);
+        return Ok();
+    }
+
     /* Calculate the dispatch size */
     const u32 dispatch_x = div_up(node.work_x, node.group_x);
     const u32 dispatch_y = div_up(node.work_y, node.group_y);
@@ -385,10 +393,17 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         const VkDeviceSize offset = 0u;
         vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
 
-        /* Execute the draw */
-        vkCmdDraw(
-            graph.cmd, draw_call.vertex_count, draw_call.instance_count, draw_call.vertex_offset, draw_call.instance_offset
-        );
+        /* Check for indirect draw */
+        if (!draw_call.indirect_buffer.is_null()) {
+            vkCmdDrawIndirect(
+                graph.cmd, bank.buffers.get(draw_call.indirect_buffer).buffer, 0, 1, sizeof(VkDrawIndirectCommand)
+            );
+        } else {
+            /* Execute direct draw */
+            vkCmdDraw(
+                graph.cmd, draw_call.vertex_count, draw_call.instance_count, draw_call.vertex_offset, draw_call.instance_offset
+            );
+        }
     }
 
     /* End rendering */

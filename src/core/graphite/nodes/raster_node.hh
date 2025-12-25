@@ -85,6 +85,8 @@ class RasterNode : public Node {
         const Buffer vertex_buffer, const u32 vertex_count, const u32 vertex_offset = 0u, const u32 instance_count = 1u,
         const u32 instance_offset = 0u
     );
+    /* Create an indirect draw call for this raster pass. */
+    DrawCall& draw_indirect(const Buffer vertex_buffer, const Buffer indirect_buffer);
 
     /* To access constructors */
     friend class AgnRenderGraph;
@@ -95,6 +97,7 @@ struct DrawCall {
     RasterNode& parent_pass;
 
     Buffer vertex_buffer {};
+    Buffer indirect_buffer {};
     u32 vertex_count = 0u, vertex_offset = 0u;
     u32 instance_count = 0u, instance_offset = 0u;
 
@@ -103,4 +106,6 @@ struct DrawCall {
         RasterNode& parent_pass, const Buffer vertex_buffer, const u32 vertex_count, const u32 vertex_offset,
         const u32 instance_count, const u32 instance_offset
     );
+    /* Vertex buffer and indirect draw call constructor. */
+    DrawCall(RasterNode& parent_pass, const Buffer vertex_buffer, const Buffer indirect_buffer);
 };
