@@ -126,6 +126,10 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     render_features.pNext = (void*)&sync_features;
     render_features.dynamicRendering = true;
 
+    /* Enable modern device features */
+    VkPhysicalDeviceFeatures device_features {};
+    device_features.shaderInt64 = true; /* 64-bit integer support */
+
     /* Vulkan device creation info */
     VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
     device_ci.pNext = &render_features;
@@ -135,6 +139,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     device_ci.ppEnabledLayerNames = instance_layers;
     device_ci.enabledExtensionCount = device_ext_count;
     device_ci.ppEnabledExtensionNames = device_ext;
+    device_ci.pEnabledFeatures = &device_features;
 
     /* Create a Vulkan logical device */
     if (const VkResult r = vkCreateDevice(physical_device, &device_ci, nullptr, &logical_device); r != VK_SUCCESS) {
