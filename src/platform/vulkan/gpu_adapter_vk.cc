@@ -109,16 +109,8 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     device_queues_ci[2].queueCount = 1u;
     device_queues_ci[2].pQueuePriorities = &priority;
 
-    /* Enable descriptor indexing features */
-    VkPhysicalDeviceDescriptorIndexingFeaturesEXT desc_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    desc_features.descriptorBindingSampledImageUpdateAfterBind = true;
-    desc_features.descriptorBindingStorageBufferUpdateAfterBind = true;
-    desc_features.descriptorBindingPartiallyBound = true;
-    desc_features.runtimeDescriptorArray = true;
-
     /* Enable synchronization 2.0 features */
     VkPhysicalDeviceSynchronization2Features sync_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
-    sync_features.pNext = &desc_features;
     sync_features.synchronization2 = true;
 
     /* Enable dynamic rendering features */
@@ -126,13 +118,22 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     render_features.pNext = (void*)&sync_features;
     render_features.dynamicRendering = true;
 
+    /* Vulkan 1.2 features */
+    VkPhysicalDeviceVulkan12Features vulkan_features { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    vulkan_features.pNext = &render_features;
+    vulkan_features.shaderBufferInt64Atomics = true;
+    vulkan_features.descriptorBindingSampledImageUpdateAfterBind = true;
+    vulkan_features.descriptorBindingStorageBufferUpdateAfterBind = true;
+    vulkan_features.descriptorBindingPartiallyBound = true;
+    vulkan_features.runtimeDescriptorArray = true;
+
     /* Enable modern device features */
     VkPhysicalDeviceFeatures device_features {};
     device_features.shaderInt64 = true; /* 64-bit integer support */
 
     /* Vulkan device creation info */
     VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-    device_ci.pNext = &render_features;
+    device_ci.pNext = &vulkan_features;
     device_ci.queueCreateInfoCount = 3u;
     device_ci.pQueueCreateInfos = device_queues_ci;
     device_ci.enabledLayerCount = instance_layers_count;
