@@ -611,6 +611,60 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     return Ok();
 }
 
+Result<void> VRAMBank::resize_buffer(Buffer& buffer, u64 count, u64 stride) {
+    /* Wait for the device to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+
+    /* Get the buffer resource slot */
+    BufferSlot& data = buffers.get(buffer);
+
+    /* Size of the buffer in bytes */
+    const u64 size = stride == 0 ? count : count * stride;
+    data.size = size;
+
+    /* Destroy the existing buffer */
+    vmaDestroyBuffer(vma_allocator, data.buffer, data.alloc);
+
+    /* Buffer creation info */
+    VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    buffer_ci.size = size;
+    buffer_ci.usage = translate::buffer_usage(data.usage);
+    buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_ci.queueFamilyIndexCount = 1u;
+    buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the buffer & allocate it using VMA */
+    if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &data.buffer, &data.alloc, nullptr) != VK_SUCCESS) { 
+        return Err("failed to create buffer.");
+    }
+
+    /* Insert only Storage Buffers in the bindless descriptor set */
+    if (has_flag(data.usage, BufferUsage::Storage)) {
+        /* Create the bindless descriptor write template */
+        VkDescriptorBufferInfo buffer_info {};
+        buffer_info.buffer = data.buffer;
+        buffer_info.offset = 0u;
+        buffer_info.range = size;
+
+        VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        bindless_write.dstSet = bindless_set;
+        bindless_write.dstArrayElement = buffer.get_index() - 1u;
+        bindless_write.descriptorCount = 1u;
+        bindless_write.pBufferInfo = &buffer_info;
+        bindless_write.dstBinding = BINDLESS_BUFFER_SLOT;
+        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+        vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
+    }
+
+    return Ok();
+}
+
 Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) {
     if (size == 0u) return Err("size is 0.");
 
