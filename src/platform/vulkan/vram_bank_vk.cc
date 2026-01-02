@@ -492,9 +492,6 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
         return Err("failed to re-create swapchain for render target.");
     }
 
-    /* Destroy the old swapchain */
-    vkDestroySwapchainKHR(gpu->logical_device, swapchain_ci.oldSwapchain, nullptr);
-
     /* Get images from the swapchain */
     if (vkGetSwapchainImagesKHR(gpu->logical_device, data.swapchain, &data.image_count, data.images) != VK_SUCCESS) {
         return Err("failed to get swapchain images for render target.");
@@ -518,6 +515,9 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
             return Err("failed to create image view for render target.");
         }
     }
+
+    /* Destroy the old swapchain */
+    vkDestroySwapchainKHR(gpu->logical_device, swapchain_ci.oldSwapchain, nullptr);
 
     return Ok();
 }
