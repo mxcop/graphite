@@ -54,6 +54,16 @@ RasterNode& RasterNode::load_op(const LoadOp op) {
     return *this;
 }
 
+RasterNode& RasterNode::input_rate(const VertexInputRate rate) {
+    vertex_input_rate = rate;
+    return *this;
+}
+
+RasterNode& RasterNode::alpha_blending(const bool blend) {
+    alpha_blend = blend;
+    return *this;
+}
+
 DrawCall::DrawCall(
     RasterNode& parent_pass, const Buffer vertex_buffer, const u32 vertex_count, const u32 vertex_offset,
     const u32 instance_count, const u32 instance_offset

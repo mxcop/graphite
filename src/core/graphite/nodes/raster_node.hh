@@ -30,6 +30,12 @@ enum class LoadOp : u32 {
     Clear /* Clear pixel data. */
 };
 
+/* Vertex input rate. */
+enum class VertexInputRate : u32 {
+    Vertex, /* Advance one vertex with each vertex. */
+    Instance, /* Advance one vertex with each instance. */
+};
+
 /**
  * Render Graph Rasterisation Node.
  * Used to build a rasterisation shader pass.
@@ -48,6 +54,8 @@ class RasterNode : public Node {
     std::vector<AttrFormat> attributes {};
     Topology prim_topology = Topology::Invalid;
     LoadOp pixel_load_op = LoadOp::Load;
+    VertexInputRate vertex_input_rate = VertexInputRate::Vertex;
+    bool alpha_blend = false;
 
     /* Extents */
     u32 raster_w = 0u, raster_h = 0u, raster_x = 0u, raster_y = 0u;
@@ -67,6 +75,12 @@ class RasterNode : public Node {
 
     /* Set the pixel load operation of the pass. */
     RasterNode& load_op(const LoadOp op);
+
+    /* Set the vertex input rate of the pass. */
+    RasterNode& input_rate(const VertexInputRate rate);
+
+    /* Set the alpha blending of the pass. */
+    RasterNode& alpha_blending(const bool blend);
 
     /* Add a bindable resource as an output for this node. */
     RasterNode& write(BindHandle resource, ShaderStages stages);

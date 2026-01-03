@@ -195,4 +195,16 @@ VkAttachmentLoadOp load_operation(const LoadOp op) {
     }
 }
 
+/* Convert the platform-agnostic vertex input rate. */
+VkVertexInputRate vertex_input_rate(const VertexInputRate rate) {
+    switch (rate) {
+        case VertexInputRate::Vertex:
+            return VK_VERTEX_INPUT_RATE_VERTEX;
+        case VertexInputRate::Instance:
+            return VK_VERTEX_INPUT_RATE_INSTANCE;
+        default:
+            return VK_VERTEX_INPUT_RATE_MAX_ENUM;
+    }
+}
+
 }  // namespace translate

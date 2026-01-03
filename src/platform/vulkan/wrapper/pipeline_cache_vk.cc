@@ -140,7 +140,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     VkVertexInputBindingDescription vertex_binding {};
     vertex_binding.binding = 0u;
     vertex_binding.stride = vertex_stride;
-    vertex_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    vertex_binding.inputRate = translate::vertex_input_rate(node.vertex_input_rate);
 
     /* Pipeline vertex input state */
     VkPipelineVertexInputStateCreateInfo vertex_input { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
@@ -204,15 +204,14 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
 
         color_attachments.emplace_back(format);
         VkPipelineColorBlendAttachmentState blend_state {};
-        blend_state.blendEnable = /*node.alpha_blend ? VK_TRUE :*/ VK_FALSE /* <- Alpha blending */; // TODO: Implement Alpha Blending
+        blend_state.blendEnable = node.alpha_blend ? VK_TRUE : VK_FALSE /* <- Alpha blending */;
         blend_state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         blend_state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         blend_state.colorBlendOp = VK_BLEND_OP_ADD;
         blend_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         blend_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         blend_state.alphaBlendOp = VK_BLEND_OP_ADD;
-        blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-                                     VK_COLOR_COMPONENT_A_BIT;  // | (pass.alpha_blend ? 0u : VK_COLOR_COMPONENT_A_BIT);
+        blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | (node.alpha_blend ? 0u : VK_COLOR_COMPONENT_A_BIT);
         blend_attachments.emplace_back(blend_state);
     }
 

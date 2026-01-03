@@ -60,4 +60,7 @@ VkPrimitiveTopology primitive_topology(const Topology topology);
 /* Convert the platform-agnostic load operation. */
 VkAttachmentLoadOp load_operation(const LoadOp op);
 
+/* Convert the platform-agnostic vertex input rate. */
+VkVertexInputRate vertex_input_rate(const VertexInputRate rate);
+
 } /* translate */
