@@ -331,7 +331,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride,
     if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to create buffer.");
     }
-    if (name == "") name = "Buffer #" + std::to_string(resource.handle.get_index());
+    if (name.empty()) name = "Buffer #" + std::to_string(resource.handle.get_index());
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_BUFFER, (u64)resource.data.buffer, name.c_str());
     resource.data.name = name;
 
@@ -391,7 +391,7 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to allocate image resource.");
     }
-    if (name == "") name = "Texture #" + std::to_string(resource.handle.get_index());
+    if (name.empty()) name = "Texture #" + std::to_string(resource.handle.get_index());
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE, (u64)resource.data.image, name.c_str());
     resource.data.name = name;
 
@@ -428,7 +428,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer, std::s
     if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.view) != VK_SUCCESS) {
         return Err("failed to create image view.");
     }
-    if (name == "") name = "Image #" + std::to_string(resource.handle.get_index());
+    if (name.empty()) name = "Image #" + std::to_string(resource.handle.get_index());
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)resource.data.view, name.c_str());
     resource.data.name = name;
 
@@ -477,7 +477,7 @@ Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, Border
     if (vkCreateSampler(gpu->logical_device, &sampler_ci, nullptr, &resource.data.sampler) != VK_SUCCESS) {
         return Err("failed to create sampler.");
     }
-    if (name == "") name = "Sampler #" + std::to_string(resource.handle.get_index());
+    if (name.empty()) name = "Sampler #" + std::to_string(resource.handle.get_index());
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SAMPLER, (u64)resource.data.sampler, name.c_str());
     resource.data.name = name;
 
