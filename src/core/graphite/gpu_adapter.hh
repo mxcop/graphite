@@ -51,6 +51,9 @@ public:
     /* Set the debug logger callback. */
     void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);
 
+    /* Hook up the Tracy profiler. */
+    PLATFORM_SPECIFIC void hook_tracy() = 0;
+
     /* Get the VRAM bank for this GPU adapter. */
     VRAMBank& get_vram_bank();
 

@@ -170,7 +170,29 @@ Result<void> GPUAdapter::init(bool debug_mode) {
         return Err(r.unwrap_err());
     }
 
+#ifdef GRAPHITE_TRACY
+    hook_tracy();
+#endif
+
     return Ok();
+}
+
+void GPUAdapter::hook_tracy() {
+#ifdef GRAPHITE_TRACY
+    VkCommandBufferAllocateInfo alloc_info { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    alloc_info.commandPool = cmd_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+    
+    VkCommandBuffer cmd {};
+    vkAllocateCommandBuffers(logical_device, &alloc_info, &cmd);
+    
+    /* Create Tracy context */
+    tracy_ctx = TracyVkContext(physical_device, logical_device, queues.queue_combined, cmd);
+    
+    vkFreeCommandBuffers(logical_device, cmd_pool, 1, &cmd);
+    log(DebugSeverity::Info, "hooked up to tracy!");
+#endif
 }
 
 Result<void> GPUAdapter::deinit() {

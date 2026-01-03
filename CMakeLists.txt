@@ -30,22 +30,6 @@ if(GRAPHITE_SAMPLES)
     set(GRAPHITE_IMGUI_DIR "${CMAKE_SOURCE_DIR}/sample/extern/imgui/")
 endif()
 
-# ImGUI support
-if(GRAPHITE_IMGUI_DIR)
-    # Sources
-    target_sources(graphite
-        PRIVATE "${GRAPHITE_IMGUI_DIR}/backends/imgui_impl_vulkan.cpp"
-    )
-
-    # Includes
-    target_include_directories(graphite
-        PUBLIC "${GRAPHITE_IMGUI_DIR}"
-        PUBLIC "${GRAPHITE_IMGUI_DIR}/backends"
-    )
-
-    target_compile_definitions(graphite PUBLIC GRAPHITE_IMGUI=1)
-endif()
-
 # Include directories
 target_include_directories(graphite PUBLIC "./src/")
 target_include_directories(graphite PUBLIC "./src/platform/")

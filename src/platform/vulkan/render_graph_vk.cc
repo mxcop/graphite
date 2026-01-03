@@ -132,6 +132,11 @@ Result<void> RenderGraph::dispatch() {
         }
     }
 
+#ifdef GRAPHITE_TRACY
+    /* Collect performance counters */
+    TracyVkCollectHost(gpu->tracy_ctx);
+#endif
+
     /* Begin recording commands to the graphs command buffer */
     VkCommandBufferBeginInfo cmd_begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     cmd_begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -280,6 +285,12 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
 
+#ifdef GRAPHITE_TRACY
+    /* Create profiler zone */
+    // TracyVkZone(gpu->tracy_ctx, graph.cmd, node.label.data());
+    TracyVkZoneTransient(gpu->tracy_ctx, scope, graph.cmd, node.label.data(), node.label.size());
+#endif
+
     /* Bind the compute pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.pipeline);
     const Result push_result = node_push_descriptors(*this, pipeline, node);
@@ -287,8 +298,7 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     vkCmdBindDescriptorSets(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr);
 
     /* Indirect Dispatch */
-    if (!node.indirect_buffer.is_null())
-    {
+    if (!node.indirect_buffer.is_null()) {
         VRAMBank& bank = gpu->get_vram_bank();
         vkCmdDispatchIndirect(graph.cmd, bank.buffers.get(node.indirect_buffer).buffer, node.indirect_offset);
         return Ok();
@@ -310,6 +320,12 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     const Result cache_result = pipeline_cache.get_pipeline(shader_path, node);
     if (cache_result.is_err()) return Err(cache_result.unwrap_err());
     const Pipeline pipeline = cache_result.unwrap();
+
+#ifdef GRAPHITE_TRACY
+    /* Create profiler zone */
+    // TracyVkZone(gpu->tracy_ctx, graph.cmd, node.label.data());
+    TracyVkZoneTransient(gpu->tracy_ctx, scope, graph.cmd, node.label.data(), node.label.size());
+#endif
 
     /* Bind the pipeline */
     vkCmdBindPipeline(graph.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipeline);

@@ -6,6 +6,10 @@
 #include "vulkan/api_vk.hh" /* Vulkan API */
 #include "wrapper/queue_selection_vk.hh"
 
+#ifdef GRAPHITE_TRACY
+#include <tracy/TracyVulkan.hpp>
+#endif
+
 class Node;
 
 /**
@@ -25,9 +29,17 @@ class GPUAdapter : public AgnGPUAdapter {
     bool validation = false;
     VkDebugUtilsMessengerEXT debug_messenger {};
 
+#ifdef GRAPHITE_TRACY
+    /* Tracy */
+    TracyVkCtx tracy_ctx {};
+#endif
+
 public:
     /* Initialize the GPU adapter. */
     PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false);
+
+    /* Hook up the Tracy profiler. */
+    PLATFORM_SPECIFIC void hook_tracy();
 
     /* De-initialize the GPU adapter, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit();
