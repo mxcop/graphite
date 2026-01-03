@@ -46,7 +46,7 @@ protected:
 
 public:
     /* Initialize the GPU adapter. */
-    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false) = 0;
+    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false, bool sync_validation = false) = 0;
     
     /* Set the debug logger callback. */
     void set_logger(DebugLoggerFn callback = default_logger, DebugLevel level = DebugLevel::Warning, void* user_data = nullptr);

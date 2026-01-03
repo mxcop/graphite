@@ -49,6 +49,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         if (vkCreateDescriptorPool(gpu.logical_device, &bindless_pool_ci, nullptr, &bindless_pool) != VK_SUCCESS) {
             return Err("failed to create bindless descriptor pool.");
         }
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)bindless_pool, "Bindless Descriptor Pool");
 
         /* Create the bindless descriptor set layout */
         const VkDescriptorBindingFlags flags[] {
@@ -80,6 +81,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         if (vkCreateDescriptorSetLayout(gpu.logical_device, &bindless_set_ci, nullptr, &bindless_layout) != VK_SUCCESS) {
             return Err("failed to create bindless descriptor layout.");
         }
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)bindless_layout, "Bindless Descriptor Set Layout");
 
         /* Allocate the bindless descriptor set */
         VkDescriptorSetAllocateInfo bindless_set_ai { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
@@ -90,6 +92,7 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         if (vkAllocateDescriptorSets(gpu.logical_device, &bindless_set_ai, &bindless_set) != VK_SUCCESS) {
             return Err("failed to create bindless descriptor set.");
         }
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)bindless_set, "Bindless Descriptor Set");
     }
 
     /* Command pool creation info */
@@ -97,10 +100,11 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     pool_ci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     pool_ci.queueFamilyIndex = gpu.queue_families.queue_transfer;
 
-    /* Create command pool for command buffers */
+    /* Create command pool for upload command buffer */
     if (vkCreateCommandPool(gpu.logical_device, &pool_ci, nullptr, &upload_cmd_pool) != VK_SUCCESS) {
         return Err("failed to create command pool for render graph.");
     }
+    gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_COMMAND_POOL, (u64)upload_cmd_pool, "Upload Command Pool");
 
     /* Allocate upload command buffer */
     VkCommandBufferAllocateInfo cmd_ai { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -111,12 +115,15 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
     if (vkAllocateCommandBuffers(gpu.logical_device, &cmd_ai, &upload_cmd) != VK_SUCCESS) {
         return Err("failed to create upload command buffer.");
     }
+    gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_COMMAND_BUFFER, (u64)upload_cmd, "Upload Command Buffer");
 
     /* Create the upload fence */
     VkFenceCreateInfo fence_ci { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+
     if (vkCreateFence(gpu.logical_device, &fence_ci, nullptr, &upload_fence) != VK_SUCCESS) {
         return Err("failed to create upload fence");
     }
+    gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)upload_fence, "Upload Fence");
 
     return Ok();
 }
@@ -168,9 +175,11 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     /* Create a KHR surface */
     VkWin32SurfaceCreateInfoKHR surface_ci { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
     surface_ci.hwnd = target.window;
+
     if (vkCreateWin32SurfaceKHR(gpu->instance, &surface_ci, nullptr, &resource.data.surface) != VK_SUCCESS) {
         return Err("failed to create win32 surface.");
     }
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SURFACE_KHR, (u64)resource.data.surface, "Win32 Surface");
 
     /* Get the capabilities of the KHR surface */
     VkSurfaceCapabilitiesKHR surface_features {};
@@ -251,6 +260,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     if (vkCreateSwapchainKHR(gpu->logical_device, &swapchain_ci, nullptr, &resource.data.swapchain) != VK_SUCCESS) {
         return Err("failed to create swapchain for render target.");
     }
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SWAPCHAIN_KHR, (u64)resource.data.swapchain, "Swapchain");
 
     /* Get images from the swapchain */
     resource.data.images = new VkImage[resource.data.image_count] {};
@@ -278,16 +288,21 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.views[i]) != VK_SUCCESS) {
             return Err("failed to create image view for render target.");
         }
+        const std::string image_view_name = "Swapchain Image View #" + std::to_string(i);
+        gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)resource.data.views[i], image_view_name.c_str());
+
         /* Create image presentation semaphore */
         if (vkCreateSemaphore(gpu->logical_device, &sema_ci, nullptr, &resource.data.semaphores[i]) != VK_SUCCESS) {
             return Err("failed to create semaphore for render target.");
         }
+        const std::string semaphore_name = "Swapchain Image Semaphore #" + std::to_string(i);
+        gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SEMAPHORE, (u64)resource.data.semaphores[i], semaphore_name.c_str());
     }
 
     return Ok(resource.handle);
 }
 
-Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride) {
+Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride, std::string name) {
     /* Make sure the buffer usage is valid */
     if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
 
@@ -316,6 +331,9 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &resource.data.buffer, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to create buffer.");
     }
+    if (name == "") name = "Buffer #" + std::to_string(resource.handle.get_index());
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_BUFFER, (u64)resource.data.buffer, name.c_str());
+    resource.data.name = name;
 
     /* Insert only Storage Buffers in the bindless descriptor set */
     if (has_flag(usage, BufferUsage::Storage)) {
@@ -339,7 +357,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride)
     return Ok(resource.handle);
 }
 
-Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta) {
+Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta, std::string name) {
     /* Make sure the texture usage is valid */
     if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
 
@@ -373,11 +391,14 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     if (vmaCreateImage(vma_allocator, &texture_ci, &alloc_ci, &resource.data.image, &resource.data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to allocate image resource.");
     }
+    if (name == "") name = "Texture #" + std::to_string(resource.handle.get_index());
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE, (u64)resource.data.image, name.c_str());
+    resource.data.name = name;
 
     return Ok(resource.handle);
 }
 
-Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
+Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer, std::string name) {
     /* Make sure the texture is valid */
     if (texture.is_null()) return Err("cannot create image for texture which is null.");
 
@@ -407,6 +428,9 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &resource.data.view) != VK_SUCCESS) {
         return Err("failed to create image view.");
     }
+    if (name == "") name = "Image #" + std::to_string(resource.handle.get_index());
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)resource.data.view, name.c_str());
+    resource.data.name = name;
 
     /* Insert readonly images into the bindless descriptor set */
     if (has_flag(texture_slot.usage, TextureUsage::Sampled)) { 
@@ -430,7 +454,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     return Ok(resource.handle);
 }
 
-Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, BorderColor border) {
+Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, BorderColor border, std::string name) {
     /* Translate the filter, address mode, and border color */
     const VkFilter filter_mode = translate::sampler_filter(filter);
     const VkSamplerAddressMode address_mode = translate::sampler_address_mode(mode);
@@ -453,6 +477,10 @@ Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, Border
     if (vkCreateSampler(gpu->logical_device, &sampler_ci, nullptr, &resource.data.sampler) != VK_SUCCESS) {
         return Err("failed to create sampler.");
     }
+    if (name == "") name = "Sampler #" + std::to_string(resource.handle.get_index());
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SAMPLER, (u64)resource.data.sampler, name.c_str());
+    resource.data.name = name;
+
     return Ok(resource.handle);
 }
 
@@ -491,6 +519,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     if (vkCreateSwapchainKHR(gpu->logical_device, &swapchain_ci, nullptr, &data.swapchain) != VK_SUCCESS) {
         return Err("failed to re-create swapchain for render target.");
     }
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SWAPCHAIN_KHR, (u64)data.swapchain, "Win32 Surface");
 
     /* Get images from the swapchain */
     if (vkGetSwapchainImagesKHR(gpu->logical_device, data.swapchain, &data.image_count, data.images) != VK_SUCCESS) {
@@ -514,6 +543,8 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &data.views[i]) != VK_SUCCESS) {
             return Err("failed to create image view for render target.");
         }
+        const std::string image_view_name = "Swapchain Image View #" + std::to_string(i);
+        gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)data.views[i], image_view_name.c_str());
     }
 
     /* Destroy the old swapchain */
@@ -571,6 +602,7 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
         VK_SUCCESS) {
         return Err("failed to allocate image resource.");
     }
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE, (u64)data.image, data.name.c_str());
 
     /* Re-create Image Views */
     for (u32 i = 0; i < data.images.size(); i++) {
@@ -587,6 +619,7 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
         if (vkCreateImageView(gpu->logical_device, &view_ci, nullptr, &image.view) != VK_SUCCESS) {
             return Err("failed to create image view.");
         }
+        gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)image.view, image.name.c_str());
 
         /* Insert readonly images into the bindless descriptor set */
         if (has_flag(data.usage, TextureUsage::Sampled)) {
@@ -642,6 +675,7 @@ Result<void> VRAMBank::resize_buffer(Buffer& buffer, u64 count, u64 stride) {
     if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &data.buffer, &data.alloc, nullptr) != VK_SUCCESS) { 
         return Err("failed to create buffer.");
     }
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_BUFFER, (u64)data.buffer, data.name.c_str());
 
     /* Insert only Storage Buffers in the bindless descriptor set */
     if (has_flag(data.usage, BufferUsage::Storage)) {

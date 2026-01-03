@@ -68,13 +68,14 @@ public:
      * otherwise it is the number of elements in the buffer.
      * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
      */
-    PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0);
+    PLATFORM_SPECIFIC Result<Buffer> create_buffer(BufferUsage usage, u64 count, u64 stride = 0, std::string name = "");
     /* Create a new texture resource. */
-    PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta());
+    PLATFORM_SPECIFIC Result<Texture> create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta(), std::string name = "");
     /* Create a new image resource. */
-    PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u);
+    PLATFORM_SPECIFIC Result<Image> create_image(Texture texture, u32 mip = 0u, u32 layer = 0u, std::string name = "");
     /* Create a new sampler resource. */
-    PLATFORM_SPECIFIC Result<Sampler> create_sampler(Filter filter = Filter::Linear, AddressMode mode = AddressMode::Repeat, BorderColor border = BorderColor::RGB0A0_Float);
+    PLATFORM_SPECIFIC Result<Sampler> create_sampler(Filter filter = Filter::Linear, AddressMode mode = AddressMode::Repeat, BorderColor border = BorderColor::RGB0A0_Float, 
+        std::string name = "");
 
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
@@ -142,6 +143,7 @@ struct BufferSlot {
     /* Metadata */
     BufferUsage usage {};
     u64 size = 0u;
+    std::string name = "";
 };
 
 /* Texture resource slot. */
@@ -158,6 +160,7 @@ struct TextureSlot {
     TextureUsage usage {};
     TextureFormat format {};
     TextureMeta meta {};
+    std::string name = "";
 
     /* List of Images created from this Texture */
     std::vector<Image> images {};
@@ -171,9 +174,16 @@ struct ImageSlot {
     /* Image view */
     VkImageView view {};
     VkImageSubresourceRange sub_range {};
+
+    /* Metadata */
+    std::string name = "";
 };
 
 /* Sampler resource slot. */
 struct SamplerSlot {
+    /* Resource */
     VkSampler sampler {};
+
+    /* Metadata */
+    std::string name = "";
 };

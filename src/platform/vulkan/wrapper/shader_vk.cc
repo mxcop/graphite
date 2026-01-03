@@ -47,6 +47,7 @@ Result<VkShaderModule> from_alias(const VkDevice device, const std::string_view 
     if (vkCreateShaderModule(device, &create_info, nullptr, &module) != VK_SUCCESS) {
         return Err("failed to create shader module.");
     }
+    
     return Ok(module);
 }
 

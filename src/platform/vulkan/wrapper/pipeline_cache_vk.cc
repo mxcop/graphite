@@ -27,12 +27,16 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
 
     /* Fill in the pipeline struct */
     Pipeline pipeline {};
+    pipeline.name = node.compute_path;
+    pipeline.name.erase(pipeline.name.end() - 3, pipeline.name.end());
 
     /* Try to load the shader module for the new pipeline */
     const Result r_shader = shader::from_alias(gpu->logical_device, path, node.compute_path);
     if (r_shader.is_err()) return Err(r_shader.unwrap_err());
     const VkShaderModule shader = r_shader.unwrap();
-    
+    const std::string shader_name = "Compute Shader (" + std::string(node.compute_path) + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SHADER_MODULE, (u64)shader, shader_name.c_str());
+
     /* Create the descriptor layout for the new pipeline */
     const Result r_layout = node_descriptor_layout(*gpu, node);
     if (r_layout.is_err()) return Err(r_layout.unwrap_err());
@@ -48,6 +52,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (vkCreatePipelineLayout(gpu->logical_device, &layout_ci, nullptr, &pipeline.layout) != VK_SUCCESS) {
         return Err("failed to create pipeline layout for '%s' node.", node.label.data());
     }
+    const std::string pipeline_layout_name = "Compute Pipeline Layout (" + pipeline.name + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_PIPELINE_LAYOUT, (u64)pipeline.layout, pipeline_layout_name.c_str());
 
     /* Pipeline stage creation info */
     VkPipelineShaderStageCreateInfo stage_ci { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -64,6 +70,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (vkCreateComputePipelines(gpu->logical_device, VK_NULL_HANDLE, 1u, &pipeline_ci, nullptr, &pipeline.pipeline) != VK_SUCCESS) {
         return Err("failed to create pipeline for '%s' node.", node.label.data());
     }
+    const std::string pipeline_name = "Compute Pipeline (" + pipeline.name + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_PIPELINE, (u64)pipeline.pipeline, pipeline_name.c_str());
 
     /* We can free the shader module after compiling the pipeline */
     vkDestroyShaderModule(gpu->logical_device, shader, nullptr);
@@ -82,16 +90,22 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
 
     /* Fill in the pipeline struct */
     Pipeline pipeline {};
+    pipeline.name = std::string(node.vertex_path);
+    pipeline.name.erase(pipeline.name.end() - 3, pipeline.name.end());
 
     /* Try to load the vertex shader module for the new pipeline */
     const Result r_vert_shader = shader::from_alias(gpu->logical_device, path, node.vertex_path);
     if (r_vert_shader.is_err()) return Err(r_vert_shader.unwrap_err());
     const VkShaderModule vert_shader = r_vert_shader.unwrap();
+    const std::string v_shader_name = "Vertex Shader (" + std::string(node.vertex_path) + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SHADER_MODULE, (u64)vert_shader, v_shader_name.c_str());
 
     /* Try to load the pixel shader module for the new pipeline */
     const Result r_frag_shader = shader::from_alias(gpu->logical_device, path, node.pixel_path);
     if (r_frag_shader.is_err()) return Err(r_frag_shader.unwrap_err());
     const VkShaderModule frag_shader = r_frag_shader.unwrap();
+    const std::string f_shader_name = "Fragment Shader (" + std::string(node.pixel_path) + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_SHADER_MODULE, (u64)frag_shader, f_shader_name.c_str());
 
     /* Pipeline shader stages */
     VkPipelineShaderStageCreateInfo stages[2] {};
@@ -108,6 +122,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     const Result r_layout = node_descriptor_layout(*gpu, node);
     if (r_layout.is_err()) return Err(r_layout.unwrap_err());
     pipeline.descriptors = r_layout.unwrap();
+    const std::string pd_name = "Push Descriptor Set Layout (" + pipeline.name + " Pipeline)";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)pipeline.descriptors, pd_name.c_str());
 
     /* Pipeline layout creation info */
     const VkDescriptorSetLayout desc_layouts[] {pipeline.descriptors, gpu->get_vram_bank().bindless_layout};
@@ -119,6 +135,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (vkCreatePipelineLayout(gpu->logical_device, &layout_ci, nullptr, &pipeline.layout) != VK_SUCCESS) {
         return Err("failed to create pipeline layout for '%s' node.", node.label.data());
     }
+    const std::string pipeline_layout_name = "Raster Pipeline Layout (" + pipeline.name + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_PIPELINE_LAYOUT, (u64)pipeline.layout, pipeline_layout_name.c_str());
 
     /* Vertex attributes */
     std::vector<VkVertexInputAttributeDescription> vertex_attributes {};
@@ -255,6 +273,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (vkCreateGraphicsPipelines(gpu->logical_device, nullptr, 1u, &pipeline_ci, nullptr, &pipeline.pipeline) != VK_SUCCESS) {
         return Err("failed to create pipeline for '%s' node.", node.label.data());
     }
+    const std::string pipeline_name = "Raster Pipeline (" + pipeline.name + ")";
+    gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_PIPELINE, (u64)pipeline.pipeline, pipeline_name.c_str());
 
     /* We can free the shader modules after compiling the pipeline */
     vkDestroyShaderModule(gpu->logical_device, vert_shader, nullptr);

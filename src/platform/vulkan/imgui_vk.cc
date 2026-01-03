@@ -34,6 +34,7 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt) {
     if (vkCreateDescriptorPool(gpu.logical_device, &pool_ci, nullptr, &desc_pool) != VK_SUCCESS) {
         return Err("failed to create imgui descriptor pool.");
     }
+    gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)desc_pool, "ImGui Descriptor Pool");
 
     /* Get the render target information */
     const RenderTargetSlot& rt_data = gpu.get_vram_bank().render_targets.get(rt);
@@ -77,6 +78,8 @@ Result<void> ImGUI::init(GPUAdapter &gpu, RenderTarget rt) {
     if (vkCreateSampler(gpu.logical_device, &sampler_ci, nullptr, &bilinear_sampler) != VK_SUCCESS) { 
         return Err("failed to create bilinear sampler for imgui.");
     }
+    gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_SAMPLER, (u64)bilinear_sampler, "ImGui Sampler");
+
     return Ok();
 }
 

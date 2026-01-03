@@ -27,10 +27,13 @@ class GPUAdapter : public AgnGPUAdapter {
 
 public:
     /* Initialize the GPU adapter. */
-    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false);
+    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false, bool sync_validation = false);
 
     /* De-initialize the GPU adapter, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit();
+
+    /* Sets a desired name to a Vulkan specific Object/Resource .*/
+    void set_object_name(VkObjectType type, u64 handle, const char* name);
 
     /* To access the hidden graphics resources. */
     friend class PipelineCache;

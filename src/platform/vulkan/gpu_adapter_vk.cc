@@ -17,7 +17,7 @@ const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 /* Custom vulkan debug msg callback */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
 
-Result<void> GPUAdapter::init(bool debug_mode) {
+Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation) {
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
@@ -32,17 +32,21 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     app_info.pApplicationName = "graphite";
     app_info.pEngineName = "graphite";
     app_info.apiVersion = VK_API_VERSION;
-    
+
     /* Debug utilities messenger (for debug mode) */
-    VkDebugUtilsMessengerCreateInfoEXT debug_utils { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    debug_utils.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_utils.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+    VkDebugUtilsMessengerCreateInfoEXT debug_utils {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+    debug_utils.messageSeverity =
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_utils.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                              VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
     debug_utils.pUserData = (void*)&logger;
     debug_utils.pfnUserCallback = vk_debug_callback;
 
     /* Vulkan instance extensions & layers */
     const u32 instance_ext_count = validation ? 3u : 2u;
-    const char* const instance_ext[3] = {VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
+    const char* const instance_ext[3] = {
+        VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+    };
     const u32 instance_layers_count = validation ? 1u : 0u;
     const char* const instance_layers[1] = {VALIDATION_LAYER};
 
@@ -54,6 +58,19 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     /* Vulkan instance creation info */
     VkInstanceCreateInfo instance_ci { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     if (validation) {
+        const VkBool32 setting_validate_sync = sync_validation ? VK_TRUE : VK_FALSE;
+        
+        const VkLayerSettingEXT settings[] = {
+            {VALIDATION_LAYER, "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_sync}
+        };
+
+        VkLayerSettingsCreateInfoEXT layer_settings_ci = { VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT };
+        layer_settings_ci.pNext = nullptr;
+        layer_settings_ci.settingCount = static_cast<uint32_t>(std::size(settings));
+        layer_settings_ci.pSettings = settings;
+
+        debug_utils.pNext = &layer_settings_ci;
+
         instance_ci.pNext = &debug_utils;
         instance_ci.enabledLayerCount = instance_layers_count;
         instance_ci.ppEnabledLayerNames = instance_layers;
@@ -154,6 +171,13 @@ Result<void> GPUAdapter::init(bool debug_mode) {
 
     /* Get the logical device queues */
     queues = get_queues(logical_device, queue_families);
+    
+    /* Set Debug Names */
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_INSTANCE, (u64)instance, "Vulkan Instance");
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_DEVICE, (u64)logical_device, "Vulkan Physical Device");
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_QUEUE, (u64)queues.queue_combined, "Combined Queue");
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_QUEUE, (u64)queues.queue_compute, "Compute Queue");
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_QUEUE, (u64)queues.queue_transfer, "Transfer Queue");
 
     /* Command pool creation info */
     VkCommandPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
@@ -164,6 +188,7 @@ Result<void> GPUAdapter::init(bool debug_mode) {
     if (vkCreateCommandPool(logical_device, &pool_ci, nullptr, &cmd_pool) != VK_SUCCESS) {
         return Err("failed to create command pool for render graph.");
     }
+    set_object_name(VkObjectType::VK_OBJECT_TYPE_COMMAND_POOL, (u64)cmd_pool, "Command Pool");
 
     /* Initialize VRAM bank */
     if (const Result r = init_vram_bank(); r.is_err()) {
@@ -185,6 +210,19 @@ Result<void> GPUAdapter::deinit() {
     /* De-initialize VRAM bank */
     deinit_vram_bank();
     return Ok();
+}
+
+void GPUAdapter::set_object_name(VkObjectType type, u64 handle, const char* name) { 
+    if (!validation) {
+        log(DebugSeverity::Warning, "Cannot set vulkan object name. Debug utils extension is not enabled.");
+        return;
+    }
+    
+    VkDebugUtilsObjectNameInfoEXT name_info = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+    name_info.objectType = type;
+    name_info.objectHandle = handle;
+    name_info.pObjectName = name;
+    vkSetDebugUtilsObjectNameEXT(logical_device, &name_info);
 }
 
 /* Vulkan validation layer callback function. */
