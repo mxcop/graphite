@@ -64,8 +64,7 @@ VkBufferUsageFlags buffer_usage(BufferUsage usage) {
     if (has_flag(usage, BufferUsage::Constant)) flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
     if (has_flag(usage, BufferUsage::Storage)) flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     if (has_flag(usage, BufferUsage::Vertex)) flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    // if (has_flag(usage, BufferUsage::eIndex)) flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    // if (has_flag(usage, BufferUsage::eIndirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+    if (has_flag(usage, BufferUsage::Indirect)) flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
     return flags;
 }
 
@@ -81,6 +80,10 @@ VkFormat texture_format(TextureFormat format) {
     switch (format) {
         case TextureFormat::RGBA8Unorm:
             return VK_FORMAT_R8G8B8A8_UNORM;
+        case TextureFormat::RG32Uint:
+            return VK_FORMAT_R32G32_UINT;
+        case TextureFormat::RG11B10Ufloat:
+            return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
         default:
             return VK_FORMAT_UNDEFINED;
     }

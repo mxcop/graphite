@@ -24,6 +24,12 @@ endif()
 target_compile_definitions(graphite PUBLIC PLATFORM_EXT=${PLATFORM_EXT})
 target_compile_definitions(graphite PUBLIC PLATFORM=${PLATFORM})
 
+# Samples directory
+if(GRAPHITE_SAMPLES)
+    add_subdirectory("sample")
+    set(GRAPHITE_IMGUI_DIR "${CMAKE_SOURCE_DIR}/sample/extern/imgui/")
+endif()
+
 # ImGUI support
 if(GRAPHITE_IMGUI_DIR)
     # Sources
@@ -85,11 +91,6 @@ if(GRAPHITE_PLATFORM STREQUAL "Vulkan")
         ${PLATFORM_DIR}/vulkan/wrapper/shader_vk.cc
         ${PLATFORM_DIR}/vulkan/wrapper/translate_vk.cc
     )
-endif()
-
-# Samples directory
-if(GRAPHITE_SAMPLES)
-    add_subdirectory("samples")
 endif()
 
 # External dependencies

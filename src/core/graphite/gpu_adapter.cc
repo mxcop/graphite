@@ -40,3 +40,15 @@ void AgnGPUAdapter::deinit_vram_bank() { delete vram_bank; }
 VRAMBank& AgnGPUAdapter::get_vram_bank() {
     return *vram_bank;
 }
+
+void AgnGPUAdapter::set_max_render_targets(const u32 count) { max_render_targets = count; }
+void AgnGPUAdapter::set_max_buffers(const u32 count) { max_buffers = count; }
+void AgnGPUAdapter::set_max_textures(const u32 count) { max_textures = count; }
+void AgnGPUAdapter::set_max_images(const u32 count) { max_images = count; }
+void AgnGPUAdapter::set_max_samplers(const u32 count) { max_samplers = count; }
+
+u32 AgnGPUAdapter::get_max_render_targets() const { return max_render_targets; }
+u32 AgnGPUAdapter::get_max_buffers() const { return max_buffers; }
+u32 AgnGPUAdapter::get_max_textures() const { return max_textures; }
+u32 AgnGPUAdapter::get_max_images() const { return max_images; }
+u32 AgnGPUAdapter::get_max_samplers() const { return max_samplers; }

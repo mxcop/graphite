@@ -1,5 +1,7 @@
 #include "render_graph_vk.hh"
 
+#include <utility>
+
 #include "graphite/imgui.hh"
 #include "graphite/vram_bank.hh"
 #include "graphite/nodes/node.hh"
@@ -284,6 +286,14 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     if (push_result.is_err()) return push_result;
     vkCmdBindDescriptorSets(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr);
 
+    /* Indirect Dispatch */
+    if (!node.indirect_buffer.is_null())
+    {
+        VRAMBank& bank = gpu->get_vram_bank();
+        vkCmdDispatchIndirect(graph.cmd, bank.buffers.get(node.indirect_buffer).buffer, node.indirect_offset);
+        return Ok();
+    }
+
     /* Calculate the dispatch size */
     const u32 dispatch_x = div_up(node.work_x, node.group_x);
     const u32 dispatch_y = div_up(node.work_y, node.group_y);
@@ -324,15 +334,15 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
             RenderTargetSlot& rt = bank.render_targets.get(target);
             attachment_view = rt.view();
-            min_raster_w = min(min_raster_w, rt.extent.width);
-            min_raster_h = min(min_raster_h, rt.extent.height);
+            min_raster_w = std::min(min_raster_w, (i32)rt.extent.width);
+            min_raster_h = std::min(min_raster_h, (i32)rt.extent.height);
         } else {
             const ImageSlot& image = bank.images.get(dep.resource);
             const TextureSlot& texture = bank.textures.get(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             attachment_view = image.view;
-            min_raster_w = min(min_raster_w, texture.size.x);
-            min_raster_h = min(min_raster_h, texture.size.y);
+            min_raster_w = std::min(min_raster_w, (i32)texture.size.x);
+            min_raster_h = std::min(min_raster_h, (i32)texture.size.y);
         }
 
         /* Fill in the attachment info */
@@ -383,10 +393,17 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         const VkDeviceSize offset = 0u;
         vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
 
-        /* Execute the draw */
-        vkCmdDraw(
-            graph.cmd, draw_call.vertex_count, draw_call.instance_count, draw_call.vertex_offset, draw_call.instance_offset
-        );
+        /* Check for indirect draw */
+        if (!draw_call.indirect_buffer.is_null()) {
+            vkCmdDrawIndirect(
+                graph.cmd, bank.buffers.get(draw_call.indirect_buffer).buffer, 0, 1, sizeof(VkDrawIndirectCommand)
+            );
+        } else {
+            /* Execute direct draw */
+            vkCmdDraw(
+                graph.cmd, draw_call.vertex_count, draw_call.instance_count, draw_call.vertex_offset, draw_call.instance_offset
+            );
+        }
     }
 
     /* End rendering */

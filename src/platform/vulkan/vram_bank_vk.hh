@@ -64,7 +64,7 @@ public:
     PLATFORM_SPECIFIC Result<RenderTarget> create_render_target(const TargetDesc& target, bool vsync = true, u32 width = 1440u, u32 height = 810u);
     /**
      * @brief Create a new buffer resource.
-     * @param count If "stride" is 0 this represents the number of bytes in the buffer (for Constant buffers),
+     * @param count If "stride" is 0 this represents the number of bytes in the buffer,
      * otherwise it is the number of elements in the buffer.
      * @param stride The size in bytes of an element in the buffer, leave 0 for Constant buffers.
      */
@@ -80,6 +80,8 @@ public:
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
     /* Resize a texture resource. */
     PLATFORM_SPECIFIC Result<void> resize_texture(Texture& texture, Size3D size);
+    /* Resize a buffer resource. */
+    PLATFORM_SPECIFIC Result<void> resize_buffer(Buffer& buffer, u64 count, u64 stride = 0);
 
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
@@ -109,6 +111,7 @@ struct RenderTargetSlot {
     u32 image_count = 0u;
     VkFormat format {};
     VkColorSpaceKHR color_space {};
+    VkPresentModeKHR present_mode {};
 
     /* Swapchain resources */
     VkSwapchainKHR swapchain {};

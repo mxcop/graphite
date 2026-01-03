@@ -63,7 +63,7 @@ int main() {
 
     /* Initialize the Render Graph */
     RenderGraph rg = RenderGraph();
-    rg.set_shader_path("samples/testing/kernels");
+    rg.set_shader_path("sample/kernels");
     rg.set_max_graphs_in_flight(2u); /* Double buffering */
     if (const Result r = rg.init(gpu); r.is_err()) {
         printf("failed to initialize render graph.\nreason: %s\n", r.unwrap_err().c_str());
@@ -191,7 +191,7 @@ int main() {
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForVulkan(win, true);
     ImGUI imgui = ImGUI();
-    if (const Result r = imgui.init(gpu, rt, IMGUI_FUNCTIONS); r.is_err()) {
+    if (const Result r = imgui.init(gpu, rt); r.is_err()) {
         printf("failed to initialize imgui.\nreason: %s\n", r.unwrap_err().c_str());
         return EXIT_SUCCESS;
     }

@@ -1,9 +1,8 @@
 #include "vram_bank_vk.hh"
 
-#include "wrapper/translate_vk.hh"
+#include <utility>
 
-#define MAX(A, B) ((A > B) ? A : B)
-#define MIN(A, B) ((A < B) ? A : B)
+#include "wrapper/translate_vk.hh"
 
 Result<void> VRAMBank::init(GPUAdapter& gpu) {
     this->gpu = &gpu;
@@ -19,20 +18,20 @@ Result<void> VRAMBank::init(GPUAdapter& gpu) {
         vma_info.instance = gpu.instance;
 
         if (vmaImportVulkanFunctionsFromVolk(&vma_info, &vulkan_functions) != VK_SUCCESS)
-            return Err("Failed to import vulakn functions from volk (required for VMA init).");
+            return Err("failed to import vulkan functions from volk (required for vma init).");
 
         vma_info.pVulkanFunctions = &vulkan_functions;
 
         if (vmaCreateAllocator(&vma_info, &vma_allocator) != VK_SUCCESS)
-            return Err("Failed to initialise VMA.");
+            return Err("failed to initialise vma.");
     }
 
     /* Initialize the Stack Pools */
-    render_targets.init(8u);
-    buffers.init(8u);
-    textures.init(8u);
-    images.init(8u);
-    samplers.init(8u);
+    render_targets.init(gpu.get_max_render_targets());
+    buffers.init(gpu.get_max_buffers());
+    textures.init(gpu.get_max_textures());
+    images.init(gpu.get_max_images());
+    samplers.init(gpu.get_max_samplers());
 
     { /* Init Bindless */
         /* Initialize the bindless resources */
@@ -180,11 +179,11 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     }
 
     /* Use up to 4 images that are available, this allows for triple buffering */
-    resource.data.image_count = MIN(4, MAX(1, surface_features.maxImageCount));
+    resource.data.image_count = std::min(4u, std::max(1u, surface_features.maxImageCount));
 
     /* Set the width and height, with respect to the surface limits */
-    resource.data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
-    resource.data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+    resource.data.extent.width = std::min(std::max(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    resource.data.extent.height = std::min(std::max(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
 
     /* Get the available surface formats */
     u32 format_count = 0u;
@@ -214,20 +213,20 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->physical_device, resource.data.surface, &present_mode_count, present_modes);
 
     /* Find the presentation mode we want */
-    VkPresentModeKHR present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    resource.data.present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     for (u32 i = 0u; i < present_mode_count; ++i) {
         /* Mailbox is the preferred vsync present mode */
         if (vsync == true && present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
             break;
         }
         /* FIFO is the back-up vsync present mode */
         if (vsync == true && present_modes[i] == VK_PRESENT_MODE_FIFO_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
         }
         /* Immediate is the preferred non-vsync present mode */
         if (vsync == false && present_modes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-            present_mode = present_modes[i];
+            resource.data.present_mode = present_modes[i];
             break;
         }
     }
@@ -245,7 +244,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = present_mode;
+    swapchain_ci.presentMode = resource.data.present_mode;
     swapchain_ci.clipped = true;
 
     /* Create the swapchain */
@@ -357,9 +356,9 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     VkImageCreateInfo texture_ci { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     texture_ci.format = format;
-    texture_ci.extent = { MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u) };
-    texture_ci.mipLevels = MAX(1u, meta.mips);
-    texture_ci.arrayLayers = MAX(1u, meta.arrays);
+    texture_ci.extent = { std::max(size.x, 1u), std::max(size.y, 1u), std::max(size.z, 1u) };
+    texture_ci.mipLevels = std::max(1u, meta.mips);
+    texture_ci.arrayLayers = std::max(1u, meta.arrays);
     texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
     texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     texture_ci.usage = translate::texture_usage(usage);
@@ -392,9 +391,9 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer) {
     VkImageSubresourceRange sub_range {};
     sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
     sub_range.baseMipLevel = mip;
-    sub_range.levelCount = MAX(1u, texture_slot.meta.mips - mip);
+    sub_range.levelCount = std::max(1u, texture_slot.meta.mips - mip);
     sub_range.baseArrayLayer = layer;
-    sub_range.layerCount = MAX(1u, texture_slot.meta.arrays - layer);
+    sub_range.layerCount = std::max(1u, texture_slot.meta.arrays - layer);
     resource.data.sub_range = sub_range;
 
     /* Image view creation info */
@@ -469,8 +468,8 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     }
 
     /* Set the width and height, with respect to the surface limits */
-    data.extent.width = MIN(MAX(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
-    data.extent.height = MIN(MAX(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
+    data.extent.width = std::min(std::max(width, surface_features.minImageExtent.width), surface_features.maxImageExtent.width);
+    data.extent.height = std::min(std::max(width, surface_features.minImageExtent.height), surface_features.maxImageExtent.height);
 
     /* Swapchain re-creation info */
     VkSwapchainCreateInfoKHR swapchain_ci { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -484,7 +483,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     swapchain_ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    swapchain_ci.presentMode = VK_PRESENT_MODE_MAILBOX_KHR; /* TODO: Vsync parameter. */
+    swapchain_ci.presentMode = data.present_mode;
     swapchain_ci.clipped = true;
     swapchain_ci.oldSwapchain = data.swapchain;
 
@@ -492,9 +491,6 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     if (vkCreateSwapchainKHR(gpu->logical_device, &swapchain_ci, nullptr, &data.swapchain) != VK_SUCCESS) {
         return Err("failed to re-create swapchain for render target.");
     }
-
-    /* Destroy the old swapchain */
-    vkDestroySwapchainKHR(gpu->logical_device, swapchain_ci.oldSwapchain, nullptr);
 
     /* Get images from the swapchain */
     if (vkGetSwapchainImagesKHR(gpu->logical_device, data.swapchain, &data.image_count, data.images) != VK_SUCCESS) {
@@ -520,6 +516,9 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
         }
     }
 
+    /* Destroy the old swapchain */
+    vkDestroySwapchainKHR(gpu->logical_device, swapchain_ci.oldSwapchain, nullptr);
+
     return Ok();
 }
 
@@ -527,8 +526,8 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     /* Wait for the device to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
 
-    size.x = MAX(1, size.x);
-    size.y = MAX(1, size.y);
+    size.x = std::max(1u, size.x);
+    size.y = std::max(1u, size.y);
 
     if (size.x > 8192 || size.y > 8192) {
         return Err("texture size was larger 8192.");
@@ -553,9 +552,9 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     VkImageCreateInfo texture_ci {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
     texture_ci.format = format;
-    texture_ci.extent = {MAX(size.x, 1u), MAX(size.y, 1u), MAX(size.z, 1u)};
-    texture_ci.mipLevels = MAX(1u, data.meta.mips);
-    texture_ci.arrayLayers = MAX(1u, data.meta.arrays);
+    texture_ci.extent = {std::max(size.x, 1u), std::max(size.y, 1u), std::max(size.z, 1u)};
+    texture_ci.mipLevels = std::max(1u, data.meta.mips);
+    texture_ci.arrayLayers = std::max(1u, data.meta.arrays);
     texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
     texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
     texture_ci.usage = translate::texture_usage(data.usage);
@@ -607,6 +606,60 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
 
             vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
         }
+    }
+
+    return Ok();
+}
+
+Result<void> VRAMBank::resize_buffer(Buffer& buffer, u64 count, u64 stride) {
+    /* Wait for the device to idle */
+    vkQueueWaitIdle(gpu->queues.queue_combined);
+
+    /* Get the buffer resource slot */
+    BufferSlot& data = buffers.get(buffer);
+
+    /* Size of the buffer in bytes */
+    const u64 size = stride == 0 ? count : count * stride;
+    data.size = size;
+
+    /* Destroy the existing buffer */
+    vmaDestroyBuffer(vma_allocator, data.buffer, data.alloc);
+
+    /* Buffer creation info */
+    VkBufferCreateInfo buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    buffer_ci.size = size;
+    buffer_ci.usage = translate::buffer_usage(data.usage);
+    buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffer_ci.queueFamilyIndexCount = 1u;
+    buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = 0x00u;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the buffer & allocate it using VMA */
+    if (vmaCreateBuffer(vma_allocator, &buffer_ci, &alloc_ci, &data.buffer, &data.alloc, nullptr) != VK_SUCCESS) { 
+        return Err("failed to create buffer.");
+    }
+
+    /* Insert only Storage Buffers in the bindless descriptor set */
+    if (has_flag(data.usage, BufferUsage::Storage)) {
+        /* Create the bindless descriptor write template */
+        VkDescriptorBufferInfo buffer_info {};
+        buffer_info.buffer = data.buffer;
+        buffer_info.offset = 0u;
+        buffer_info.range = size;
+
+        VkWriteDescriptorSet bindless_write { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        bindless_write.dstSet = bindless_set;
+        bindless_write.dstArrayElement = buffer.get_index() - 1u;
+        bindless_write.descriptorCount = 1u;
+        bindless_write.pBufferInfo = &buffer_info;
+        bindless_write.dstBinding = BINDLESS_BUFFER_SLOT;
+        bindless_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+        vkUpdateDescriptorSets(gpu->logical_device, 1u, &bindless_write, 0u, nullptr);
     }
 
     return Ok();
@@ -666,11 +719,11 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
 
     /* Staging buffer creation info */
     VkBufferCreateInfo staging_buffer_ci { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    staging_buffer_ci.size= size;
-    staging_buffer_ci.usage= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    staging_buffer_ci.sharingMode= VK_SHARING_MODE_EXCLUSIVE;
-    staging_buffer_ci.queueFamilyIndexCount= 1u;
-    staging_buffer_ci.pQueueFamilyIndices= &gpu->queue_families.queue_combined;
+    staging_buffer_ci.size = size;
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
 
     /* Staging memory allocation info */
     VmaAllocationCreateInfo alloc_ci {};
@@ -689,8 +742,8 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     vmaUnmapMemory(vma_allocator, alloc);
 
     VkBufferImageCopy copy {};
-    copy.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u};
-    copy.imageExtent = VkExtent3D{MAX(texture_slot.size.x, 1u), MAX(texture_slot.size.y, 1u), MAX(texture_slot.size.z, 1u)};
+    copy.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u };
+    copy.imageExtent = VkExtent3D { std::max(texture_slot.size.x, 1u), std::max(texture_slot.size.y, 1u), std::max(texture_slot.size.z, 1u) };
 
     /* Create an image layout transition barrier */
     VkImageMemoryBarrier2 image_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
@@ -701,7 +754,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     image_barrier.oldLayout = texture_slot.layout;
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
-    image_barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
+    image_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
     texture_slot.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     /* Render target dependency info */

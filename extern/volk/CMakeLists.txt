@@ -142,5 +142,4 @@ if(VOLK_INSTALL)
     ${CMAKE_CURRENT_BINARY_DIR}/volkConfigVersion.cmake
     DESTINATION ${INSTALL_CONFIGDIR}
   )
-
 endif()

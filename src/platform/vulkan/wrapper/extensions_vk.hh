@@ -18,6 +18,8 @@ const char* const device_ext[] = {
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
     /* Merging of copy commands */
     VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME,
+    /* Draw/Instance IDs in the shader (ex: SV_InstanceID) */
+    VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
 };
 const u32 device_ext_count = sizeof(device_ext) / sizeof(char*);
 
