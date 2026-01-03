@@ -66,6 +66,7 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
     if (vkCreateDescriptorSetLayout(gpu.logical_device, &layout_ci, nullptr, &layout) != VK_SUCCESS) {
         return Err("failed to create descriptor set layout for '%s' node.", node.label.data());
     }
+
     return Ok(layout);
 }
 

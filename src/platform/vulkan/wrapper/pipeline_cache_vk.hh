@@ -15,6 +15,8 @@ struct Pipeline {
     VkDescriptorSetLayout descriptors {};
     VkPipelineLayout layout {};
     VkPipeline pipeline {};
+
+    std::string name = "";
 };
 
 /* Vulkan shader pipeline cache. */

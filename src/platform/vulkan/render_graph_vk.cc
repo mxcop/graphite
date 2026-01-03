@@ -46,15 +46,25 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
     for (u32 i = 0u; i < max_graphs_in_flight; ++i) {
         if (vkAllocateCommandBuffers(gpu.logical_device, &cmd_ai, &graphs[i].cmd) != VK_SUCCESS)
             return Err("failed to allocate command buffer for graph.");
+        std::string cb_name = "Render Graph #" + std::to_string(i) + " Command Buffer";
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_COMMAND_BUFFER, (u64)graphs[i].cmd, cb_name.c_str());
+
         if (vkCreateFence(gpu.logical_device, &fence_ci, nullptr, &graphs[i].flight_fence) != VK_SUCCESS)
             return Err("failed to create in-flight fence for graph.");
+        std::string fence_name = "Render Graph #" + std::to_string(i) + " In-Flight Fence";
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)graphs[i].flight_fence, fence_name.c_str());
+
         if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
             return Err("failed to create start semaphore for graph.");
-        
+        std::string sema_name = "Render Graph # " + std::to_string(i) + " Start Semaphore";
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)graphs[i].flight_fence, sema_name.c_str());
+
         /* Create the graph staging buffer & allocate it using VMA */
         if (vmaCreateBuffer(gpu.get_vram_bank().vma_allocator, &staging_buffer_ci, &alloc_ci, &graphs[i].staging_buffer, &graphs[i].staging_alloc, nullptr) != VK_SUCCESS) { 
             return Err("failed to create staging buffer for graph.");
         }
+        std::string sb_name = "Render Graph # " + std::to_string(i) + " Staging Buffer";
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)graphs[i].staging_buffer, sb_name.c_str());
     }
 
     /* Initialize the pipeline cache */
