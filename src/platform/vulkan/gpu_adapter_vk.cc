@@ -214,7 +214,6 @@ Result<void> GPUAdapter::deinit() {
 
 void GPUAdapter::set_object_name(VkObjectType type, u64 handle, const char* name) { 
     if (!validation) {
-        log(DebugSeverity::Warning, "Cannot set vulkan object name. Debug utils extension is not enabled.");
         return;
     }
     
