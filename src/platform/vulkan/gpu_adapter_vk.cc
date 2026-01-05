@@ -69,7 +69,7 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation) {
         layer_settings_ci.settingCount = static_cast<uint32_t>(std::size(settings));
         layer_settings_ci.pSettings = settings;
 
-        debug_utils.pNext = &layer_settings_ci;
+        debug_utils.pNext = sync_validation ? &layer_settings_ci : nullptr;
 
         instance_ci.pNext = &debug_utils;
         instance_ci.enabledLayerCount = instance_layers_count;
