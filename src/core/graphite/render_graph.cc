@@ -43,12 +43,18 @@ Result<void> AgnRenderGraph::new_graph(u32 node_count) {
     return Ok();
 }
 
+struct Source {
+    u32 node {}, dep {};
+    Source(u32 node, u32 dep) : node(node), dep(dep) {};
+    Source() = default;
+};
+
 /* Collection of metadata for a graph node. (used during graph compilation) */
 struct NodeMeta {
     /* List of versions, one for each dependency. */
     std::vector<u32> versions {};
     /* List of sources (node indices), one for each dependency. */
-    std::vector<u32> sources {};
+    std::vector<Source> sources {};
     /* Number of input & output nodes. */
     u32 input_nodes = 0u, output_nodes = 0u;
 };
@@ -62,7 +68,7 @@ Result<void> AgnRenderGraph::end_graph() {
     /* Resource version hashmap (key: handle, value: version) */
     std::unordered_map<u32, u32> version_map {};
     /* Resource source hashmap (key: handle, value: source_node_index) */
-    std::unordered_map<u32, u32> source_map {};
+    std::unordered_map<u32, Source> source_map {};
 
     /* Reset the current render target to NULL */
     VRAMBank& bank = gpu->get_vram_bank();
@@ -94,7 +100,7 @@ Result<void> AgnRenderGraph::end_graph() {
     std::vector<NodeMeta> node_meta(nodes.size());
     for (u32 i = 0u; i < nodes.size(); ++i) {
         /* Get the node and its metadata */
-        const Node* node = nodes[i];
+        Node* node = nodes[i];
         NodeMeta& meta = node_meta[i];
 
         /* Initialize the node metadata */
@@ -103,7 +109,7 @@ Result<void> AgnRenderGraph::end_graph() {
 
         for (u32 j = 0u; j < node->dependencies.size(); ++j) {
             /* Get the dependency and its version */
-            const Dependency& dep = node->dependencies[j];
+            Dependency& dep = node->dependencies[j];
             const u32 key = dependency_key(dep);
             u32& dep_version = meta.versions[j];
 
@@ -112,17 +118,21 @@ Result<void> AgnRenderGraph::end_graph() {
             
             /* Record which pass this dependency comes from, UINT32_MAX if first time used */
             if (dep_version == 0u) {
-                meta.sources[j] = UINT32_MAX;
+                meta.sources[j] = Source(UINT32_MAX, UINT32_MAX);
+                dep.source_node = UINT32_MAX;
+                dep.source_index = UINT32_MAX;
             } else {
                 meta.sources[j] = source_map[key];
-                node_meta[meta.sources[j]].output_nodes += 1u;
+                dep.source_node = meta.sources[j].node;
+                dep.source_index = meta.sources[j].dep;
+                node_meta[meta.sources[j].node].output_nodes += 1u;
                 meta.input_nodes += 1u; /* <- increment input node count */
             }
 
             /* Update the version and source hashmaps in case this resource is written to */
-            if (has_flag(dep.flags, DependencyFlags::Readonly) == false) {
+            if (dep.is_readonly() == false) {
                 version_map[key] += 1u; /* <- increment version */
-                source_map[key] = i; /* <- store source node index */
+                source_map[key] = Source(i, j); /* <- store source node index */
 
                 /* Save this resource if it is a render target */
                 if (dep.resource.get_type() == ResourceType::RenderTarget) {
@@ -215,7 +225,7 @@ Result<void> AgnRenderGraph::end_graph() {
             for (u32 i = 0u; i < node->dependencies.size(); ++i) {
                 const Dependency& dep = node->dependencies[i];
 
-                if (has_flag(dep.flags, DependencyFlags::Readonly) == false) { 
+                if (dep.is_readonly() == false) { 
                     version_map[dependency_key(dep)] += 1;
                 }
             }

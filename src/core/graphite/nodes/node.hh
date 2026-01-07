@@ -8,15 +8,6 @@
 #include "graphite/utils/enum_flags.hh"
 #include "graphite/utils/types.hh"
 
-/* Render Graph resource dependency flags. */
-enum class DependencyFlags : u32 {
-    None = 0u,
-    Readonly = 1u << 0u,   /* The dependency is read only. */
-    Attachment = 1u << 1u, /* The dependency is used as an attachment. */
-    Unbound = 1u << 2u,    /* The dependency is unbound (ex: Vertex Buffer). */
-};
-ENUM_CLASS_FLAGS(DependencyFlags);
-
 /* Render Graph resource dependency stages. */
 enum class DependencyStages : u32 {
     None = 0u,
@@ -27,13 +18,32 @@ enum class DependencyStages : u32 {
 ENUM_CLASS_FLAGS(DependencyStages);
 using ShaderStages = DependencyStages;
 
+/* Render Graph resource dependency usage. */
+enum class DependencyUsage : u32 {
+    None = 0u,
+    /* Read-only */
+    VertexBuffer,
+    IndirectBuffer,
+    Readonly,
+    /* Read/Write */
+    ReadWrite,
+    ColorAttachment,
+};
+
 /* Render Graph resource dependency. */
 struct Dependency {
     BindHandle resource {};
-    DependencyFlags flags {};
+    DependencyUsage usage = DependencyUsage::None;
     DependencyStages stages {};
+    u32 source_node {};
+    u32 source_index {};
 
-    Dependency(BindHandle resource, DependencyFlags flags, DependencyStages stages);
+    /* Returns true if this dependency is read-only. */
+    bool is_readonly() const;
+    /* Returns true if this dependency should be unbound. */
+    bool is_unbound() const;
+
+    Dependency(BindHandle resource, DependencyUsage usage, DependencyStages stages);
 };
 
 /* Render Graph node type. */

@@ -17,7 +17,7 @@ const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
 /* Custom vulkan debug msg callback */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
 
-Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation) {
+Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_validation) {
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
@@ -58,10 +58,14 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation) {
     /* Vulkan instance creation info */
     VkInstanceCreateInfo instance_ci { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     if (validation) {
+        const VkBool32 setting_validate_core = gpu_validation ? VK_FALSE : VK_TRUE;
         const VkBool32 setting_validate_sync = sync_validation ? VK_TRUE : VK_FALSE;
+        const VkBool32 setting_validate_gpu = gpu_validation ? VK_TRUE : VK_FALSE;
         
         const VkLayerSettingEXT settings[] = {
-            {VALIDATION_LAYER, "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_sync}
+            {VALIDATION_LAYER, "validate_core", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_core},
+            {VALIDATION_LAYER, "validate_sync", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_sync},
+            {VALIDATION_LAYER, "gpuav_enable", VK_LAYER_SETTING_TYPE_BOOL32_EXT, 1, &setting_validate_gpu},
         };
 
         VkLayerSettingsCreateInfoEXT layer_settings_ci = { VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT };
@@ -69,7 +73,7 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation) {
         layer_settings_ci.settingCount = static_cast<uint32_t>(std::size(settings));
         layer_settings_ci.pSettings = settings;
 
-        debug_utils.pNext = sync_validation ? &layer_settings_ci : nullptr;
+        debug_utils.pNext = (sync_validation || gpu_validation) ? &layer_settings_ci : nullptr;
 
         instance_ci.pNext = &debug_utils;
         instance_ci.enabledLayerCount = instance_layers_count;

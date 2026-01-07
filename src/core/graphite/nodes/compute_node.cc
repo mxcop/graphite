@@ -4,12 +4,19 @@ ComputeNode::ComputeNode(std::string_view label, std::string_view shader_path) :
 
 ComputeNode& ComputeNode::write(BindHandle resource) {
     /* Insert the write dependency */
-    dependencies.emplace_back(resource, DependencyFlags::None, DependencyStages::Compute);
+    dependencies.emplace_back(resource, DependencyUsage::ReadWrite, DependencyStages::Compute);
     return *this;
 }
 
 ComputeNode& ComputeNode::read(BindHandle resource) {
     /* Insert the read dependency */
-    dependencies.emplace_back(resource, DependencyFlags::Readonly, DependencyStages::Compute);
+    dependencies.emplace_back(resource, DependencyUsage::Readonly, DependencyStages::Compute);
+    return *this;
+}
+
+ComputeNode& ComputeNode::indirect_size(Buffer buffer, u32 offset) {
+    /* Insert the read dependency */
+    dependencies.emplace_back(buffer, DependencyUsage::IndirectBuffer, DependencyStages::Compute);
+    indirect_buffer = buffer;
     return *this;
 }

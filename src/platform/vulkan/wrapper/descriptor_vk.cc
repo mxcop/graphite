@@ -30,7 +30,7 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
         const u32 slot = (u32)bindings.size();
 
         /* Skip resources that don't need to be in the descriptor layout (ex: Vertex Buffers) */
-        if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
+        if (dep.is_unbound()) continue;
 
         switch (rtype) {
             case ResourceType::RenderTarget:
@@ -94,7 +94,7 @@ VkDescriptorSetLayoutBinding buffer_layout(u32 slot, const Dependency& dep, cons
 VkDescriptorSetLayoutBinding image_layout(u32 slot, const Dependency& dep, const TextureUsage& texture_usage) {
     VkDescriptorSetLayoutBinding binding {};
     binding.binding = slot;
-    binding.descriptorType = translate::image_descriptor_type(texture_usage, dep.flags);
+    binding.descriptorType = translate::image_descriptor_type(dep, texture_usage);
     binding.descriptorCount = 1u;
     binding.stageFlags = translate::stage_flags(dep.stages);
     return binding;
@@ -129,7 +129,7 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
         const ResourceType rtype = dep.resource.get_type();
 
         /* Skip resources that don't need to be in the descriptor layout (ex: Vertex Buffers) */
-        if (has_flag(dep.flags, DependencyFlags::Unbound)) continue;
+        if (dep.is_unbound()) continue;
 
         /* Create the write command */
         VkWriteDescriptorSet& write = writes[bindings];
@@ -141,9 +141,9 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
             case ResourceType::RenderTarget: {
                 RenderTargetSlot& rt = bank.render_targets.get(rg.target);
                 texture_info[bindings].sampler = VK_NULL_HANDLE;
-                texture_info[bindings].imageLayout = translate::desired_image_layout(TextureUsage::Storage | TextureUsage::Sampled, dep.flags);
+                texture_info[bindings].imageLayout = translate::desired_image_layout(dep, TextureUsage::Storage | TextureUsage::Sampled);
                 texture_info[bindings].imageView = rt.view();
-                write.descriptorType = translate::desired_image_type(dep.flags);
+                write.descriptorType = translate::desired_image_type(dep);
                 write.pImageInfo = &texture_info[bindings];
                 break;
             }
@@ -160,9 +160,9 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
                 const ImageSlot& image = bank.images.get(dep.resource);
                 const TextureSlot& texture = bank.textures.get(image.texture);
                 texture_info[bindings].sampler = VK_NULL_HANDLE;
-                texture_info[bindings].imageLayout = translate::desired_image_layout(texture.usage, dep.flags);
+                texture_info[bindings].imageLayout = translate::desired_image_layout(dep, texture.usage);
                 texture_info[bindings].imageView = image.view;
-                write.descriptorType = translate::image_descriptor_type(texture.usage, dep.flags);
+                write.descriptorType = translate::image_descriptor_type(dep, texture.usage);
                 write.pImageInfo = &texture_info[bindings];
                 break;
             }
@@ -188,6 +188,41 @@ Result<void> node_push_descriptors(const RenderGraph& rg, const Pipeline& pipeli
     return Ok();
 }
 
+VkAccessFlagBits2 buffer_access_flags(const Dependency& dep, const BufferUsage usage) {
+    switch (dep.usage) {
+        case DependencyUsage::VertexBuffer:
+            return VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
+        case DependencyUsage::IndirectBuffer:
+            return VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+        case DependencyUsage::Readonly:
+            if (has_flag(usage, BufferUsage::Constant)) {
+                return VK_ACCESS_2_UNIFORM_READ_BIT;
+            } else if (has_flag(usage, BufferUsage::Storage)) {
+                return VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+            } else return VK_ACCESS_2_NONE; /* Unreachable */
+        case DependencyUsage::ReadWrite:
+            return VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+        default:
+            return VK_ACCESS_2_NONE; /* Unreachable */
+    }
+}
+
+VkAccessFlagBits2 image_access_flags(const Dependency& dep, const TextureUsage usage) {
+    switch (dep.usage) {
+        case DependencyUsage::Readonly:
+            if (has_flag(usage, TextureUsage::Storage)) {
+                return VK_ACCESS_2_SHADER_STORAGE_READ_BIT; /* VK_IMAGE_LAYOUT_GENERAL */
+            }
+            return VK_ACCESS_2_SHADER_SAMPLED_READ_BIT; /* VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL */
+        case DependencyUsage::ReadWrite:
+            return VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT; /* VK_IMAGE_LAYOUT_GENERAL */
+        case DependencyUsage::ColorAttachment:
+            return VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */
+        default:
+            return VK_ACCESS_2_NONE; /* Unreachable */
+    }
+}
+
 /* Synchronize all descriptors for a render graph wave. */
 Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
     /* Memory barriers */
@@ -199,49 +234,87 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
 
     /* Gather barrier information */
     for (u32 i = start; i < end; ++i) {
-        const Node& node = *rg.nodes[rg.waves[i].lane];
+        const Node& dst_node = *rg.nodes[rg.waves[i].lane];
 
         /* Add resource barriers for this execution wave */
-        for (const Dependency& dep : node.dependencies) {
-            const ResourceType rtype = dep.resource.get_type();
+        for (const Dependency& dst_dep : dst_node.dependencies) {
+            /* Get the source dependency */
+            const Node* src_node = dst_dep.source_node == UINT_MAX ? nullptr : rg.nodes[dst_dep.source_node];
+            const Dependency* src_dep = src_node ? &src_node->dependencies[dst_dep.source_index] : nullptr;
+            
+            /* Get the source and destination resource types */
+            const ResourceType src_rtype = src_dep ? src_dep->resource.get_type() : ResourceType::Invalid;
+            const ResourceType dst_rtype = dst_dep.resource.get_type();
+            
+            /* Get the pipeline stage flags for the source and destination */
+            const VkPipelineStageFlags2 src_stage = src_node ? translate::stage_mask(src_dep->usage, src_dep->stages, src_node->type) : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+            const VkPipelineStageFlags2 dst_stage = translate::stage_mask(dst_dep.usage, dst_dep.stages, dst_node.type);
 
-            switch (rtype) {
+            VkAccessFlagBits2 src_access {};
+            if (src_dep) {
+                switch (src_rtype) {
+                    case ResourceType::RenderTarget:
+                        src_access = image_access_flags(*src_dep, TextureUsage::Storage | TextureUsage::Sampled);
+                        break;
+                    case ResourceType::Buffer:
+                        src_access = buffer_access_flags(*src_dep, bank.buffers.get(src_dep->resource).usage);
+                        break;
+                    case ResourceType::Image:
+                        src_access = image_access_flags(*src_dep, bank.textures.get(bank.images.get(src_dep->resource).texture).usage);
+                        break;
+                }
+            }
+
+            VkAccessFlagBits2 dst_access {};
+            switch (dst_rtype) {
+                case ResourceType::RenderTarget:
+                    dst_access = image_access_flags(dst_dep, TextureUsage::Storage | TextureUsage::Sampled);
+                    break;
+                case ResourceType::Buffer:
+                    dst_access = buffer_access_flags(dst_dep, bank.buffers.get(dst_dep.resource).usage);
+                    break;
+                case ResourceType::Image:
+                    dst_access = image_access_flags(dst_dep, bank.textures.get(bank.images.get(dst_dep.resource).texture).usage);
+                    break;
+            }
+
+            switch (dst_rtype) {
                 case ResourceType::RenderTarget: {
                     RenderTargetSlot& rt = bank.render_targets.get(rg.target);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
-                    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-                    barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
-                    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+                    barrier.srcStageMask = src_stage;
+                    barrier.srcAccessMask = src_access;
+                    barrier.dstStageMask = dst_stage;
+                    barrier.dstAccessMask = dst_access;
                     barrier.oldLayout = rt.old_layout();
-                    barrier.newLayout = translate::desired_image_layout(TextureUsage::Storage | TextureUsage::Sampled, dep.flags);
+                    barrier.newLayout = translate::desired_image_layout(dst_dep, TextureUsage::Storage | TextureUsage::Sampled | TextureUsage::ColorAttachment);
                     rt.old_layout() = barrier.newLayout;
                     barrier.image = rt.image();
                     barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
                     break;
                 }
                 case ResourceType::Buffer: {
-                    const BufferSlot& buffer = bank.buffers.get(dep.resource);
+                    const BufferSlot& buffer = bank.buffers.get(dst_dep.resource);
                     VkBufferMemoryBarrier2& barrier = buf_barriers.emplace_back(VkBufferMemoryBarrier2 { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 });
-                    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-                    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-                    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+                    barrier.srcStageMask = src_stage;
+                    barrier.srcAccessMask = src_access;
+                    barrier.dstStageMask = dst_stage;
+                    barrier.dstAccessMask = dst_access;
                     barrier.buffer = buffer.buffer;
                     barrier.offset = 0u;
                     barrier.size = buffer.size;
                     break;
                 }
                 case ResourceType::Image: {
-                    const ImageSlot& image = bank.images.get(dep.resource);
+                    const ImageSlot& image = bank.images.get(dst_dep.resource);
                     TextureSlot& texture = bank.textures.get(image.texture);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
-                    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-                    barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
-                    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-                    barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+                    barrier.srcStageMask = src_stage;
+                    barrier.srcAccessMask = src_access;
+                    barrier.dstStageMask = dst_stage;
+                    barrier.dstAccessMask = dst_access;
                     barrier.oldLayout = texture.layout;
-                    barrier.newLayout = translate::desired_image_layout(texture.usage, dep.flags);
+                    barrier.newLayout = translate::desired_image_layout(dst_dep, texture.usage);
                     texture.layout = barrier.newLayout;
                     barrier.image = texture.image;
                     barrier.subresourceRange = image.sub_range;

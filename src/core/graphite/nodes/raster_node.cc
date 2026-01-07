@@ -5,18 +5,18 @@ RasterNode::RasterNode(std::string_view label, std::string_view vx_path, std::st
 
 RasterNode& RasterNode::write(BindHandle resource, ShaderStages stages) {
     /* Insert the write dependency */
-    dependencies.emplace_back(resource, DependencyFlags::None, stages);
+    dependencies.emplace_back(resource, DependencyUsage::ReadWrite, stages);
     return *this;
 }
 
 RasterNode& RasterNode::read(BindHandle resource, ShaderStages stages) {
     /* Insert the read dependency */
-    dependencies.emplace_back(resource, DependencyFlags::Readonly, stages);
+    dependencies.emplace_back(resource, DependencyUsage::Readonly, stages);
     return *this;
 }
 
 RasterNode& RasterNode::attach(BindHandle resource) {
-    dependencies.emplace_back(resource, DependencyFlags::Attachment | DependencyFlags::Unbound, DependencyStages::Pixel);
+    dependencies.emplace_back(resource, DependencyUsage::ColorAttachment, DependencyStages::Pixel);
     return *this;
 }
 
@@ -75,13 +75,13 @@ DrawCall::DrawCall(
       instance_count(instance_count),
       instance_offset(instance_offset) {
     parent_pass.dependencies.emplace_back(
-        vertex_buffer, DependencyFlags::Readonly | DependencyFlags::Unbound, DependencyStages::Vertex
+        vertex_buffer, DependencyUsage::VertexBuffer, DependencyStages::Vertex
     );
 }
 
 DrawCall::DrawCall(RasterNode& parent_pass, const Buffer vertex_buffer, const Buffer indirect_buffer)
     : parent_pass(parent_pass), vertex_buffer(vertex_buffer), indirect_buffer(indirect_buffer) {
     parent_pass.dependencies.emplace_back(
-        vertex_buffer, DependencyFlags::Readonly | DependencyFlags::Unbound, DependencyStages::Vertex
+        vertex_buffer, DependencyUsage::VertexBuffer, DependencyStages::Vertex
     );
 }

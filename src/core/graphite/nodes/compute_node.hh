@@ -41,7 +41,7 @@ public:
     inline ComputeNode& work_size(u32 x, u32 y = 1u, u32 z = 1u) { work_x = x; work_y = y; work_z = z; return *this; }
 
     /* Set the indirect_buffer which will be used to get the dispatch args buffer for the vkCmdDispatchIndirect call. */
-    inline ComputeNode& indirect_size(Buffer buffer) { indirect_buffer = buffer; return *this; }
+    ComputeNode& indirect_size(Buffer buffer, u32 offset = 0u);
 
     /* To access constructors */
     friend class AgnRenderGraph;

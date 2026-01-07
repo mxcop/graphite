@@ -27,7 +27,7 @@ class GPUAdapter : public AgnGPUAdapter {
 
 public:
     /* Initialize the GPU adapter. */
-    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false, bool sync_validation = false);
+    PLATFORM_SPECIFIC Result<void> init(bool debug_mode = false, bool sync_validation = false, bool gpu_validation = false);
 
     /* De-initialize the GPU adapter, free all its resources. */
     PLATFORM_SPECIFIC Result<void> deinit();
