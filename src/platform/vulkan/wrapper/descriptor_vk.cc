@@ -287,7 +287,7 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     barrier.dstStageMask = dst_stage;
                     barrier.dstAccessMask = dst_access;
                     barrier.oldLayout = rt.old_layout();
-                    barrier.newLayout = translate::desired_image_layout(dst_dep, TextureUsage::Storage | TextureUsage::Sampled);
+                    barrier.newLayout = translate::desired_image_layout(dst_dep, TextureUsage::Storage | TextureUsage::Sampled | TextureUsage::ColorAttachment);
                     rt.old_layout() = barrier.newLayout;
                     barrier.image = rt.image();
                     barrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u};
