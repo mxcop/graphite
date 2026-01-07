@@ -302,7 +302,7 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     return Ok(resource.handle);
 }
 
-Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride, std::string name) {
+Result<Buffer> VRAMBank::create_buffer(std::string name, BufferUsage usage, u64 count, u64 stride) {
     /* Make sure the buffer usage is valid */
     if (usage == BufferUsage::Invalid) return Err("invalid buffer usage.");
 
@@ -357,7 +357,7 @@ Result<Buffer> VRAMBank::create_buffer(BufferUsage usage, u64 count, u64 stride,
     return Ok(resource.handle);
 }
 
-Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta, std::string name) {
+Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta) {
     /* Make sure the texture usage is valid */
     if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
 
@@ -398,7 +398,7 @@ Result<Texture> VRAMBank::create_texture(TextureUsage usage, TextureFormat fmt, 
     return Ok(resource.handle);
 }
 
-Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer, std::string name) {
+Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip, u32 layer) {
     /* Make sure the texture is valid */
     if (texture.is_null()) return Err("cannot create image for texture which is null.");
 
@@ -454,7 +454,7 @@ Result<Image> VRAMBank::create_image(Texture texture, u32 mip, u32 layer, std::s
     return Ok(resource.handle);
 }
 
-Result<Sampler> VRAMBank::create_sampler(Filter filter, AddressMode mode, BorderColor border, std::string name) {
+Result<Sampler> VRAMBank::create_sampler(std::string name, Filter filter, AddressMode mode, BorderColor border) {
     /* Translate the filter, address mode, and border color */
     const VkFilter filter_mode = translate::sampler_filter(filter);
     const VkSamplerAddressMode address_mode = translate::sampler_address_mode(mode);
