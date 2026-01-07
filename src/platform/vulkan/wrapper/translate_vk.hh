@@ -15,14 +15,17 @@ namespace translate {
 /* Convert the platform-agnostic stage flags to Vulkan shader stage flags. */
 VkShaderStageFlags stage_flags(DependencyStages stages);
 
+/* Convert the platform-agnostic node type to Vulkan stage mask. */
+VkPipelineStageFlags2 stage_mask(DependencyUsage usage, DependencyStages stages, NodeType node_type);
+
 /* Convert the platform-agnostic texture usage to a desired image layout. */
-VkImageLayout desired_image_layout(TextureUsage usage, DependencyFlags flags);
+VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage);
 
 /* Convert the platform-agnostic texture usage to Vulkan image descriptor type. */
-VkDescriptorType image_descriptor_type(TextureUsage usage, DependencyFlags flags);
+VkDescriptorType image_descriptor_type(const Dependency& dep, TextureUsage usage);
 
 /* Convert the platform-agnostic dependency flags to a desired image descriptor type. */
-VkDescriptorType desired_image_type(DependencyFlags flags);
+VkDescriptorType desired_image_type(const Dependency& dep);
 
 /* Convert the platform-agnostic node type to Vulkan pipeline bind point. */
 VkPipelineBindPoint pipeline_bind_point(NodeType node_type);

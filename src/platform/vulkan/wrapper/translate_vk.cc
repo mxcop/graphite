@@ -11,36 +11,64 @@ VkShaderStageFlags stage_flags(DependencyStages stages) {
     return flags;
 }
 
+/* Convert the platform-agnostic node type to Vulkan stage mask. */
+VkPipelineStageFlags2 stage_mask(DependencyUsage usage, DependencyStages stages, NodeType node_type) {
+    switch (usage) {
+        case DependencyUsage::VertexBuffer:
+            return VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+        case DependencyUsage::IndirectBuffer:
+            return VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+        case DependencyUsage::ColorAttachment:
+            return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        default:
+            if (node_type == NodeType::Compute)
+                return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+
+            VkPipelineStageFlags2 result {};
+            if (has_flag(stages, DependencyStages::Vertex))
+                result |= VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+            if (has_flag(stages, DependencyStages::Pixel))
+                result |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            return result ? result : VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+    }
+}
+
 /* Convert the platform-agnostic dependency flags to a desired image layout. */
-VkImageLayout desired_image_layout(TextureUsage usage, DependencyFlags flags) {
-    if (has_flag(flags, DependencyFlags::Readonly)) {
-        /* If texture is used as readonly resource, Sampled gets priority. */
-        if (has_flag(usage, TextureUsage::Sampled)) return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
-        if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
-    } else {
-        /* If texture is used as write resource, only Storage will work. */
-        if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
-        if (has_flag(flags, DependencyFlags::Attachment)) return VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage) {
+    switch (dep.usage) {
+        case DependencyUsage::Readonly:
+            /* If texture is used as readonly resource, Sampled gets priority. */
+            if (has_flag(usage, TextureUsage::Sampled)) return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
+            break;
+        case DependencyUsage::ReadWrite:
+            if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;
+            break;
+        case DependencyUsage::ColorAttachment:
+            if (has_flag(usage, TextureUsage::ColorAttachment)) return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            break;
     }
     return VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 /* Convert the platform-agnostic buffer usage to Vulkan buffer descriptor type. */
-VkDescriptorType image_descriptor_type(TextureUsage usage, DependencyFlags flags) {
-    if (has_flag(flags, DependencyFlags::Readonly)) {
-        /* If texture is used as readonly resource, Sampled gets priority. */
-        if (has_flag(usage, TextureUsage::Sampled)) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    } else {
-        /* If texture is used as write resource, only Storage will work. */
-        if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+VkDescriptorType image_descriptor_type(const Dependency& dep, TextureUsage usage) {
+    switch (dep.usage) {
+        case DependencyUsage::Readonly:
+            /* If texture is used as readonly resource, Sampled gets priority. */
+            if (has_flag(usage, TextureUsage::Sampled)) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            break;
+        case DependencyUsage::ReadWrite:
+            if (has_flag(usage, TextureUsage::Storage)) return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            break;
     }
     return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 
 /* Convert the platform-agnostic dependency flags to a desired image descriptor type. */
-VkDescriptorType desired_image_type(DependencyFlags flags) {
-    if (has_flag(flags, DependencyFlags::Readonly)) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+VkDescriptorType desired_image_type(const Dependency& dep) {
+    if (dep.is_readonly()) return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 }
 

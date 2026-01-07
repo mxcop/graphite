@@ -168,17 +168,36 @@ Result<void> RenderGraph::dispatch() {
 
     /* Insert render target pipeline barrier at the end of the command buffer */
     if (has_target) {
-        VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        /* Imgui image sync barrier */
+        VkImageMemoryBarrier2 rt_barrier {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+        rt_barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        rt_barrier.srcAccessMask = VK_ACCESS_2_SHADER_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        rt_barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+        rt_barrier.dstAccessMask = VK_ACCESS_2_NONE;
         rt_barrier.oldLayout = rt->old_layout();
         rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        rt->old_layout() = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        rt->old_layout() = rt_barrier.newLayout;
         rt_barrier.image = rt->image();
         rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
-        vkCmdPipelineBarrier(graph.cmd, 
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            0u, 0u, nullptr, 0u, nullptr, 1u, &rt_barrier
-        );
+
+        /* Render target dependency info */
+        VkDependencyInfo rt_dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+        rt_dep_info.imageMemoryBarrierCount = 1u;
+        rt_dep_info.pImageMemoryBarriers = &rt_barrier;
+
+        vkCmdPipelineBarrier2KHR(graph.cmd, &rt_dep_info);
+
+        // VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        // rt_barrier.oldLayout = rt->old_layout();
+        // rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        // rt->old_layout() = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        // rt_barrier.image = rt->image();
+        // rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
+        // vkCmdPipelineBarrier(graph.cmd, 
+        //     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        //     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        //     0u, 0u, nullptr, 0u, nullptr, 1u, &rt_barrier
+        // );
     }
 
     /* Finish recording commands to the graphs command buffer */
@@ -337,7 +356,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     i32 min_raster_w = INT32_MAX, min_raster_h = INT32_MAX;
     for (const Dependency& dep : node.dependencies) {
         /* Find attachment dependencies */
-        if (has_flag(dep.flags, DependencyFlags::Attachment) == false) continue;
+        if (dep.usage != DependencyUsage::ColorAttachment) continue;
 
         /* Handle render target attachments */
         VkImageView attachment_view = VK_NULL_HANDLE;
@@ -477,6 +496,13 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     if (imgui == nullptr || target.is_null()) return;
     RenderTargetSlot& rt = gpu->get_vram_bank().render_targets.get(target);
 
+    if (gpu->validation) {
+        /* Start debug label for imgui */
+        VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        debug_label.pLabelName = "imgui";
+        vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
+    }
+
     /* Transition all imgui images */
     for (const auto& [raw, imgui_image] : imgui->image_map) {
         VRAMBank& bank = gpu->get_vram_bank();
@@ -484,14 +510,37 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
         const ImageSlot& image = bank.images.get((Image&)raw);
         TextureSlot& texture = bank.textures.get(image.texture);
 
+        VkPipelineStageFlags2 src_stage {};
+        VkAccessFlags2 src_access {};
+        
+        // Determine source based on current layout
+        switch (texture.layout) {
+            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+                src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+                src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_GENERAL:
+                src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+                break;
+            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+                src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+                src_access = VK_ACCESS_2_SHADER_READ_BIT;
+                break;
+            default:
+                src_stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                src_access = VK_ACCESS_2_MEMORY_WRITE_BIT;
+                break;
+        }
+
         /* Imgui image sync barrier */
-        VkImageMemoryBarrier2 barrier {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-        barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
-        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT | VK_ACCESS_2_SHADER_WRITE_BIT;
+        VkImageMemoryBarrier2 barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+        barrier.srcStageMask = src_stage;
+        barrier.srcAccessMask = src_access;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
         barrier.oldLayout = texture.layout;
-        barrier.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         texture.layout = barrier.newLayout;
         barrier.image = texture.image;
         barrier.subresourceRange = image.sub_range;
@@ -500,13 +549,6 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
         VkDependencyInfo viewport_dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
         viewport_dep_info.imageMemoryBarrierCount = 1u;
         viewport_dep_info.pImageMemoryBarriers = &barrier;
-
-        if (gpu->validation) {
-            /* Start debug label for imgui */
-            VkDebugUtilsLabelEXT debug_label {VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
-            debug_label.pLabelName = "transition imgui images";
-            vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
-        }
 
         /* Insert a pipeline barrier for the image */
         vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
@@ -529,15 +571,25 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     viewport_dep_info.imageMemoryBarrierCount = 1u;
     viewport_dep_info.pImageMemoryBarriers = &viewport_barrier;
 
-    if (gpu->validation) {
-        /* Start debug label for imgui */
-        VkDebugUtilsLabelEXT debug_label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
-        debug_label.pLabelName = "imgui";
-        vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
-    }
-
     /* Insert a pipeline barrier before rendering the overlay */
     vkCmdPipelineBarrier2KHR(graph.cmd, &viewport_dep_info);
+
+    /* Transition render target to color attachment for imgui rendering */
+    VkImageMemoryBarrier2 rt_to_attachment { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+    rt_to_attachment.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+    rt_to_attachment.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+    rt_to_attachment.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+    rt_to_attachment.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+    rt_to_attachment.oldLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
+    rt_to_attachment.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    rt_to_attachment.image = rt.image();
+    rt_to_attachment.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    rt.old_layout() = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkDependencyInfo rt_dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    rt_dep_info.imageMemoryBarrierCount = 1;
+    rt_dep_info.pImageMemoryBarriers = &rt_to_attachment;
+    vkCmdPipelineBarrier2KHR(graph.cmd, &rt_dep_info);
 
     /* Define the render target attachment */
     VkRenderingAttachmentInfoKHR attachment_info { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };

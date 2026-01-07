@@ -209,7 +209,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     std::vector<VkPipelineColorBlendAttachmentState> blend_attachments {};
     for (const Dependency& dep : node.dependencies) {
         /* Find attachment dependencies */
-        if (has_flag(dep.flags, DependencyFlags::Attachment) == false) continue;
+        if (dep.usage != DependencyUsage::ColorAttachment) continue;
 
         VkFormat format {}; /* Get the image format for render target or texture */
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
