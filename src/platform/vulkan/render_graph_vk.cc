@@ -448,8 +448,10 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
     /* Compile the staging copy commands */
     std::vector<VkBufferCopy2> regions {};
     std::vector<VkCopyBufferInfo2> copies {};
+    std::vector<VkBufferMemoryBarrier2> barriers {};
     regions.reserve(graph.staging_commands.size());
     copies.reserve(graph.staging_commands.size());
+    barriers.reserve(graph.staging_commands.size());
 
     VRAMBank& bank = gpu->get_vram_bank();
     for (const StagingCommand& cmd : graph.staging_commands) {
@@ -472,6 +474,17 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
         copy.dstBuffer = bank.buffers.get(cmd.dst_resource).buffer;
         copy.pRegions = &region;
         copy.regionCount = 1u;
+
+        /* Create buffer copy barrier */
+        const BufferSlot& buffer = bank.buffers.get(cmd.dst_resource);
+        VkBufferMemoryBarrier2& barrier = barriers.emplace_back(VkBufferMemoryBarrier2 { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 });
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        barrier.buffer = buffer.buffer;
+        barrier.offset = 0u;
+        barrier.size = buffer.size;
     }
 
     if (gpu->validation) {
@@ -481,10 +494,18 @@ void RenderGraph::queue_staging(const GraphExecution& graph) {
         vkCmdBeginDebugUtilsLabelEXT(graph.cmd, &debug_label);
     }
 
+    /* Copy dependency info */
+    VkDependencyInfo copy_dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+    copy_dep_info.bufferMemoryBarrierCount = barriers.size();
+    copy_dep_info.pBufferMemoryBarriers = barriers.data();
+    
     /* Queue copy commands */
     for (const VkCopyBufferInfo2& copy : copies) {
         vkCmdCopyBuffer2KHR(graph.cmd, &copy);
     }
+
+    /* Insert the copy barriers */
+    vkCmdPipelineBarrier2KHR(graph.cmd, &copy_dep_info);
 
     /* End debug label for this node */
     if (gpu->validation) vkCmdEndDebugUtilsLabelEXT(graph.cmd);
