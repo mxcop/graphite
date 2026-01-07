@@ -57,14 +57,14 @@ Result<void> RenderGraph::init(GPUAdapter& gpu) {
         if (vkCreateSemaphore(gpu.logical_device, &sema_ci, nullptr, &graphs[i].start_semaphore) != VK_SUCCESS)
             return Err("failed to create start semaphore for graph.");
         std::string sema_name = "Render Graph # " + std::to_string(i) + " Start Semaphore";
-        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)graphs[i].flight_fence, sema_name.c_str());
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_SEMAPHORE, (u64)graphs[i].start_semaphore, sema_name.c_str());
 
         /* Create the graph staging buffer & allocate it using VMA */
         if (vmaCreateBuffer(gpu.get_vram_bank().vma_allocator, &staging_buffer_ci, &alloc_ci, &graphs[i].staging_buffer, &graphs[i].staging_alloc, nullptr) != VK_SUCCESS) { 
             return Err("failed to create staging buffer for graph.");
         }
         std::string sb_name = "Render Graph # " + std::to_string(i) + " Staging Buffer";
-        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_FENCE, (u64)graphs[i].staging_buffer, sb_name.c_str());
+        gpu.set_object_name(VkObjectType::VK_OBJECT_TYPE_BUFFER, (u64)graphs[i].staging_buffer, sb_name.c_str());
     }
 
     /* Initialize the pipeline cache */
