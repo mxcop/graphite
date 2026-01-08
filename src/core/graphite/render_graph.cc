@@ -26,6 +26,13 @@ Result<void> AgnRenderGraph::new_graph(u32 node_count) {
     VRAMBank& bank = gpu->get_vram_bank();
     if (Result r = wait_until_safe(); r.is_err()) return r;
 
+    /* Flush the deletion list for this graph execution */
+    GraphExecution& graph = active_graph();
+    for (OpaqueHandle resource : graph.deletion_list) {
+        gpu->get_vram_bank().destroy(resource);
+    }
+    graph.deletion_list.clear();
+
     /* Decrement reference counters for all resources used in the graph */
     for (Node* old_node : nodes) {
         delete old_node;
