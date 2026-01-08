@@ -67,7 +67,7 @@ public:
     PLATFORM_SPECIFIC void upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
 
     /* Destroy a resource which is used through bindless access. (this ensures it will be kept alive for any frames in flight) */
-    PLATFORM_SPECIFIC void destroy_bindless(OpaqueHandle& resource);
+    PLATFORM_SPECIFIC void defer_destroy(OpaqueHandle& resource);
 
     /* Dispatch all the GPU work for the graph, should be called after `end_graph()`. */
     PLATFORM_SPECIFIC Result<void> dispatch();

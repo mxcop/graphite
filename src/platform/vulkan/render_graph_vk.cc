@@ -112,7 +112,7 @@ void RenderGraph::upload_buffer(Buffer& buffer, const void* data, u64 dst_offset
     cmd.dst_resource = buffer;
 }
 
-void RenderGraph::destroy_bindless(OpaqueHandle& resource) { 
+void RenderGraph::defer_destroy(OpaqueHandle& resource) { 
     /* Insert resource into deletion queue of the next graph execution */
     /* Once this queue is cleared, the resource will be destroyed */
     graphs[(active_graph_index + 1u) % max_graphs_in_flight].deletion_list.push_back(resource);
