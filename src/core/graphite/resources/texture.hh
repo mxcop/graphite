@@ -5,12 +5,13 @@
 
 /* Texture usage flags. */
 enum class TextureUsage : u32 {
-    Invalid = 0u,           /* Invalid texture usage. */
-    TransferDst = 1u << 1u, /* This texture can be a GPU transfer destination. */
-    TransferSrc = 1u << 2u, /* This texture can be a GPU transfer source. */
-    Sampled = 1u << 3u,     /* Texture can be sampled using hardware samplers. */
-    Storage = 1u << 4u,     /* GPU write-able texture. */
-    ColorAttachment = 1u << 5u, /* This texture can be bound to a graphics pass as a color attachment. */
+    Invalid = 0u,               /* Invalid texture usage. */
+    TransferDst = 1u << 1u,     /* This texture can be a GPU transfer destination. */
+    TransferSrc = 1u << 2u,     /* This texture can be a GPU transfer source. */
+    Sampled = 1u << 3u,         /* Texture can be sampled using hardware samplers. */
+    Storage = 1u << 4u,         /* GPU write-able texture. */
+    ColorAttachment = 1u << 5u, /* This texture can be bound to a raster pass as a color attachment. */
+    DepthStencil = 1u << 6u,    /* This texture can be bound to a raster pass as depth attachment. */
 };
 ENUM_CLASS_FLAGS(TextureUsage);
 
@@ -21,6 +22,7 @@ enum class TextureFormat : u32 {
     RG32Uint,      /* RG 32 bits per channel, unsigned integer. */
     RGBA16Sfloat,  /* RGBA 16 bits per channel, signed float. */
     RG11B10Ufloat, /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
+    D32Sfloat,     /* Depth 32 bits, signed float. */
     EnumLimit      /* Anything above or equal is invalid. */
 };
 

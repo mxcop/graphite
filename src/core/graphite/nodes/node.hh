@@ -28,6 +28,7 @@ enum class DependencyUsage : u32 {
     /* Read/Write */
     ReadWrite,
     ColorAttachment,
+    DepthStencil,
 };
 
 /* Render Graph resource dependency. */

@@ -57,6 +57,9 @@ class RasterNode : public Node {
     VertexInputRate vertex_input_rate = VertexInputRate::Vertex;
     bool alpha_blend = false;
 
+    /* Depth stencil image */
+    Image depth_stencil_image {};
+
     /* Extents */
     u32 raster_w = 0u, raster_h = 0u, raster_x = 0u, raster_y = 0u;
 
@@ -90,6 +93,9 @@ class RasterNode : public Node {
 
     /* Add a rendering attachment as an output for the pixel stage */
     RasterNode& attach(BindHandle resource);
+
+    /* Add a depth stencil attachment as an input/output */
+    RasterNode& depth_stencil(Image image);
 
     /* Set the raster extent of the raster pass. (the extent of the attachments to rasterize into) */
     RasterNode& raster_extent(const u32 w, const u32 h, const u32 x = 0u, const u32 y = 0u);

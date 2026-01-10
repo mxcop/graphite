@@ -20,6 +20,12 @@ RasterNode& RasterNode::attach(BindHandle resource) {
     return *this;
 }
 
+RasterNode& RasterNode::depth_stencil(Image image) {
+    dependencies.emplace_back(image, DependencyUsage::DepthStencil, DependencyStages::Vertex | DependencyStages::Pixel);
+    depth_stencil_image = image;
+    return *this;
+}
+
 RasterNode& RasterNode::raster_extent(const u32 w, const u32 h, const u32 x, const u32 y) {
     raster_w = w;
     raster_h = h;

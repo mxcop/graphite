@@ -218,6 +218,8 @@ VkAccessFlagBits2 image_access_flags(const Dependency& dep, const TextureUsage u
             return VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT; /* VK_IMAGE_LAYOUT_GENERAL */
         case DependencyUsage::ColorAttachment:
             return VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */
+        case DependencyUsage::DepthStencil:
+            return VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */
         default:
             return VK_ACCESS_2_NONE; /* Unreachable */
     }
@@ -247,10 +249,11 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
             const ResourceType dst_rtype = dst_dep.resource.get_type();
             
             /* Get the pipeline stage flags for the source and destination */
-            const VkPipelineStageFlags2 src_stage = src_node ? translate::stage_mask(src_dep->usage, src_dep->stages, src_node->type) : VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+            const VkPipelineStageFlags2 src_stage = src_node ? translate::stage_mask(src_dep->usage, src_dep->stages, src_node->type) : VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
             const VkPipelineStageFlags2 dst_stage = translate::stage_mask(dst_dep.usage, dst_dep.stages, dst_node.type);
 
             VkAccessFlagBits2 src_access {};
+            // src_access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
             if (src_dep) {
                 switch (src_rtype) {
                     case ResourceType::RenderTarget:
@@ -263,9 +266,19 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                         src_access = image_access_flags(*src_dep, bank.textures.get(bank.images.get(src_dep->resource).texture).usage);
                         break;
                 }
+            } else {
+                /* Special case for depth stencil images */
+                // if (dst_rtype == ResourceType::Image) {
+                //     const TextureUsage usage = bank.textures.get(bank.images.get(dst_dep.resource).texture).usage;
+                //     if (has_flag(usage, TextureUsage::DepthStencil)) {
+                //         src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                //     }
+                // }
+                src_access = VK_ACCESS_2_MEMORY_WRITE_BIT;
             }
 
             VkAccessFlagBits2 dst_access {};
+            // dst_access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
             switch (dst_rtype) {
                 case ResourceType::RenderTarget:
                     dst_access = image_access_flags(dst_dep, TextureUsage::Storage | TextureUsage::Sampled);

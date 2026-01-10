@@ -195,12 +195,6 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     VkPipelineMultisampleStateCreateInfo multisample_state { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
     multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    /* Pipeline depth stencil state */
-    VkPipelineDepthStencilStateCreateInfo depth_stencil_state { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-    depth_stencil_state.depthTestEnable = false;
-    depth_stencil_state.depthWriteEnable = false;
-    depth_stencil_state.depthCompareOp = VK_COMPARE_OP_LESS;
-
     /* Get the active VRAM bank */
     VRAMBank& bank = gpu->get_vram_bank();
 
@@ -233,6 +227,28 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
         blend_attachments.emplace_back(blend_state);
     }
 
+    /* Dynamic rendering info */
+    VkPipelineRenderingCreateInfoKHR dynamic_rendering { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
+    dynamic_rendering.colorAttachmentCount = (u32)color_attachments.size();
+    dynamic_rendering.pColorAttachmentFormats = color_attachments.data();
+
+    /* Pipeline depth stencil state */
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    depth_stencil_state.depthTestEnable = VK_FALSE;
+    depth_stencil_state.depthWriteEnable = VK_FALSE;
+    depth_stencil_state.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    /* Check for a depth stencil attachment */
+    if (node.depth_stencil_image.is_null() == false) {
+        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_stencil_image).texture);
+        depth_stencil_state.depthTestEnable = VK_TRUE;
+        depth_stencil_state.depthWriteEnable = VK_TRUE;
+        depth_stencil_state.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil_state.minDepthBounds = 0.0f;
+        depth_stencil_state.maxDepthBounds = 1.0f;
+        dynamic_rendering.depthAttachmentFormat = translate::texture_format(depth_texture.format);
+    }
+
     /* Pipeline color blend state */
     VkPipelineColorBlendStateCreateInfo color_blend_state { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     color_blend_state.attachmentCount = (u32)blend_attachments.size();
@@ -243,11 +259,6 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     VkPipelineDynamicStateCreateInfo dynamic_state { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamic_state.dynamicStateCount = sizeof(dynamic_states) / sizeof(VkDynamicState);
     dynamic_state.pDynamicStates = dynamic_states;
-
-    /* Dynamic rendering info */
-    VkPipelineRenderingCreateInfoKHR dynamic_rendering { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
-    dynamic_rendering.colorAttachmentCount = (u32)color_attachments.size();
-    dynamic_rendering.pColorAttachmentFormats = color_attachments.data();
 
     /* Pipeline creation info */
     VkGraphicsPipelineCreateInfo pipeline_ci { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };

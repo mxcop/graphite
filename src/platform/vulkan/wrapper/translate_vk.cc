@@ -20,6 +20,8 @@ VkPipelineStageFlags2 stage_mask(DependencyUsage usage, DependencyStages stages,
             return VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
         case DependencyUsage::ColorAttachment:
             return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        case DependencyUsage::DepthStencil:
+            return VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
         default:
             if (node_type == NodeType::Compute)
                 return VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
@@ -46,6 +48,9 @@ VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage) {
             break;
         case DependencyUsage::ColorAttachment:
             if (has_flag(usage, TextureUsage::ColorAttachment)) return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            break;
+        case DependencyUsage::DepthStencil:
+            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
             break;
     }
     return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -114,6 +119,8 @@ VkFormat texture_format(TextureFormat format) {
             return VK_FORMAT_R16G16B16A16_SFLOAT;
         case TextureFormat::RG11B10Ufloat:
             return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+        case TextureFormat::D32Sfloat:
+            return VK_FORMAT_D32_SFLOAT;
         default:
             return VK_FORMAT_UNDEFINED;
     }
@@ -127,6 +134,7 @@ VkImageUsageFlags texture_usage(TextureUsage usage) {
     if (has_flag(usage, TextureUsage::TransferDst)) flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (has_flag(usage, TextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     if (has_flag(usage, TextureUsage::ColorAttachment)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (has_flag(usage, TextureUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     return flags;
 }
 
