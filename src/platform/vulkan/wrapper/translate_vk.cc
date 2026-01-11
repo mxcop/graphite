@@ -121,6 +121,8 @@ VkFormat texture_format(TextureFormat format) {
             return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
         case TextureFormat::D32Sfloat:
             return VK_FORMAT_D32_SFLOAT;
+        case TextureFormat::R32Sfloat:
+            return VK_FORMAT_R32_SFLOAT;
         default:
             return VK_FORMAT_UNDEFINED;
     }

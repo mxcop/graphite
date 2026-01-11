@@ -241,11 +241,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     /* Check for a depth stencil attachment */
     if (node.depth_stencil_image.is_null() == false) {
         const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_stencil_image).texture);
-        depth_stencil_state.depthTestEnable = VK_TRUE;
-        depth_stencil_state.depthWriteEnable = VK_TRUE;
-        depth_stencil_state.depthBoundsTestEnable = VK_FALSE;
-        depth_stencil_state.minDepthBounds = 0.0f;
-        depth_stencil_state.maxDepthBounds = 1.0f;
+        depth_stencil_state.depthTestEnable = node.depth_test;
+        depth_stencil_state.depthWriteEnable = node.depth_write;
         dynamic_rendering.depthAttachmentFormat = translate::texture_format(depth_texture.format);
     }
 

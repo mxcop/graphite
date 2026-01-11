@@ -346,7 +346,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     VRAMBank& bank = gpu->get_vram_bank();
 
     /* Find all attachment resource dependencies to put in the rendering info. */
-    std::vector<VkRenderingAttachmentInfo> color_attachments {};
+    std::vector<VkRenderingAttachmentInfoKHR> color_attachments {};
     i32 min_raster_w = INT32_MAX, min_raster_h = INT32_MAX;
     for (const Dependency& dep : node.dependencies) {
         /* Find attachment dependencies */
@@ -369,7 +369,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         }
 
         /* Fill in the attachment info */
-        VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        VkRenderingAttachmentInfoKHR attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
         attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachment.loadOp = translate::load_operation(node.pixel_load_op);
@@ -378,14 +378,14 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     }
 
     /* Depth attachment */
-    VkRenderingAttachmentInfo depth_attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+    VkRenderingAttachmentInfoKHR depth_attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
     if (node.depth_stencil_image.is_null() == false) {
         const ImageSlot& image = bank.images.get(node.depth_stencil_image);
         depth_attachment.imageView = image.view;
         depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        depth_attachment.loadOp = translate::load_operation(node.depth_load_op);
         depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        // depth_attachment.clearValue.depthStencil.depth = 1e30f;
+        depth_attachment.clearValue.depthStencil = {1.0f, 0};
     }
 
     /* Get the render area */
@@ -397,7 +397,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     }
 
     /* Rendering info */
-    VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
+    VkRenderingInfoKHR rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
     rendering.renderArea = render_area;
     rendering.layerCount = 1u;
     rendering.colorAttachmentCount = (u32)color_attachments.size();
@@ -424,9 +424,11 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     /* Loop over all draw calls, bind vertex buffers, draw */
     for (const DrawCall& draw_call : node.draws) {
         /* Bind the vertex buffer for this draw call */
-        const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
-        const VkDeviceSize offset = 0u;
-        vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
+        if (draw_call.vertex_buffer.is_null() == false) {
+            const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
+            const VkDeviceSize offset = 0u;
+            vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
+        }
 
         /* Check for indirect draw */
         if (!draw_call.indirect_buffer.is_null()) {

@@ -59,6 +59,9 @@ class RasterNode : public Node {
 
     /* Depth stencil image */
     Image depth_stencil_image {};
+    LoadOp depth_load_op = LoadOp::Load;
+    bool depth_test = true;
+    bool depth_write = true;
 
     /* Extents */
     u32 raster_w = 0u, raster_h = 0u, raster_x = 0u, raster_y = 0u;
@@ -77,7 +80,10 @@ class RasterNode : public Node {
     RasterNode& topology(const Topology type);
 
     /* Set the pixel load operation of the pass. */
-    RasterNode& load_op(const LoadOp op);
+    RasterNode& load_op_color(const LoadOp op);
+
+    /* Set the depth load operation of the pass. */
+    RasterNode& load_op_depth(const LoadOp op);
 
     /* Set the vertex input rate of the pass. */
     RasterNode& input_rate(const VertexInputRate rate);
@@ -95,7 +101,7 @@ class RasterNode : public Node {
     RasterNode& attach(BindHandle resource);
 
     /* Add a depth stencil attachment as an input/output */
-    RasterNode& depth_stencil(Image image);
+    RasterNode& depth_stencil(Image image, bool test = true, bool write = true);
 
     /* Set the raster extent of the raster pass. (the extent of the attachments to rasterize into) */
     RasterNode& raster_extent(const u32 w, const u32 h, const u32 x = 0u, const u32 y = 0u);

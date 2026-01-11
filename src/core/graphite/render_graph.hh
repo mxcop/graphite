@@ -109,7 +109,7 @@ public:
      * @return The new compute node to be customized using the builder pattern.
      */
     RasterNode& add_raster_pass(std::string_view label, std::string_view vx_path, std::string_view px_path);
-    
+
     /* Add an immediate mode gui to this render graph. */
     void add_imgui(ImGUI& gui, RenderTarget rt) { imgui = &gui; target = rt; };
     

@@ -49,6 +49,10 @@ struct Texture : OpaqueHandle {}; /* Texture resource handle. (**cannot** be bou
 struct Image   : BindHandle   {}; /* Image (Texture View) resource handle. (can be bound) */
 struct Sampler : BindHandle   {}; /* Sampler resource handle. (can be bound) */
 
+/* Null resource handles. */
+constexpr Buffer NULL_BUFFER {};
+constexpr Buffer NULL_IMAGE {};
+
 /* Ensure that the handles are 32 bits in size. */
 static_assert(sizeof(OpaqueHandle) == 4u);
 static_assert(sizeof(BindHandle)   == 4u);

@@ -253,7 +253,6 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
             const VkPipelineStageFlags2 dst_stage = translate::stage_mask(dst_dep.usage, dst_dep.stages, dst_node.type);
 
             VkAccessFlagBits2 src_access {};
-            // src_access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
             if (src_dep) {
                 switch (src_rtype) {
                     case ResourceType::RenderTarget:
@@ -267,18 +266,10 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                         break;
                 }
             } else {
-                /* Special case for depth stencil images */
-                // if (dst_rtype == ResourceType::Image) {
-                //     const TextureUsage usage = bank.textures.get(bank.images.get(dst_dep.resource).texture).usage;
-                //     if (has_flag(usage, TextureUsage::DepthStencil)) {
-                //         src_access = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-                //     }
-                // }
                 src_access = VK_ACCESS_2_MEMORY_WRITE_BIT;
             }
 
             VkAccessFlagBits2 dst_access {};
-            // dst_access = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
             switch (dst_rtype) {
                 case ResourceType::RenderTarget:
                     dst_access = image_access_flags(dst_dep, TextureUsage::Storage | TextureUsage::Sampled);
