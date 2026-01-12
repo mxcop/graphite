@@ -410,7 +410,7 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip,
     
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
-    sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color hardcoded! (might want depth too) */
+    sub_range.aspectMask = texture_slot.format == TextureFormat::D32Sfloat ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     sub_range.baseMipLevel = mip;
     sub_range.levelCount = std::max(1u, texture_slot.meta.mips - mip);
     sub_range.baseArrayLayer = layer;

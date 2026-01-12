@@ -192,18 +192,6 @@ Result<void> RenderGraph::dispatch() {
         rt_dep_info.pImageMemoryBarriers = &rt_barrier;
 
         vkCmdPipelineBarrier2KHR(graph.cmd, &rt_dep_info);
-
-        // VkImageMemoryBarrier rt_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        // rt_barrier.oldLayout = rt->old_layout();
-        // rt_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        // rt->old_layout() = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        // rt_barrier.image = rt->image();
-        // rt_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
-        // vkCmdPipelineBarrier(graph.cmd, 
-        //     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        //     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        //     0u, 0u, nullptr, 0u, nullptr, 1u, &rt_barrier
-        // );
     }
 
     /* Finish recording commands to the graphs command buffer */
@@ -358,7 +346,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     VRAMBank& bank = gpu->get_vram_bank();
 
     /* Find all attachment resource dependencies to put in the rendering info. */
-    std::vector<VkRenderingAttachmentInfo> color_attachments {};
+    std::vector<VkRenderingAttachmentInfoKHR> color_attachments {};
     i32 min_raster_w = INT32_MAX, min_raster_h = INT32_MAX;
     for (const Dependency& dep : node.dependencies) {
         /* Find attachment dependencies */
@@ -381,12 +369,23 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         }
 
         /* Fill in the attachment info */
-        VkRenderingAttachmentInfo attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+        VkRenderingAttachmentInfoKHR attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         attachment.imageView = attachment_view;
         attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachment.loadOp = translate::load_operation(node.pixel_load_op);
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color_attachments.emplace_back(attachment);
+    }
+
+    /* Depth attachment */
+    VkRenderingAttachmentInfoKHR depth_attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+    if (node.depth_stencil_image.is_null() == false) {
+        const ImageSlot& image = bank.images.get(node.depth_stencil_image);
+        depth_attachment.imageView = image.view;
+        depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depth_attachment.loadOp = translate::load_operation(node.depth_load_op);
+        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        depth_attachment.clearValue.depthStencil = {1.0f, 0};
     }
 
     /* Get the render area */
@@ -398,11 +397,12 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     }
 
     /* Rendering info */
-    VkRenderingInfo rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
+    VkRenderingInfoKHR rendering { VK_STRUCTURE_TYPE_RENDERING_INFO };
     rendering.renderArea = render_area;
     rendering.layerCount = 1u;
     rendering.colorAttachmentCount = (u32)color_attachments.size();
     rendering.pColorAttachments = color_attachments.data();
+    if (node.depth_stencil_image.is_null() == false) rendering.pDepthAttachment = &depth_attachment;
 
     /* Begin rendering */
     vkCmdBeginRenderingKHR(graph.cmd, &rendering);
@@ -424,9 +424,11 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     /* Loop over all draw calls, bind vertex buffers, draw */
     for (const DrawCall& draw_call : node.draws) {
         /* Bind the vertex buffer for this draw call */
-        const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
-        const VkDeviceSize offset = 0u;
-        vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
+        if (draw_call.vertex_buffer.is_null() == false) {
+            const BufferSlot& vertex_buffer = bank.buffers.get(draw_call.vertex_buffer);
+            const VkDeviceSize offset = 0u;
+            vkCmdBindVertexBuffers(graph.cmd, 0u, 1u, &vertex_buffer.buffer, &offset);
+        }
 
         /* Check for indirect draw */
         if (!draw_call.indirect_buffer.is_null()) {
@@ -537,33 +539,10 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
         const ImageSlot& image = bank.images.get((Image&)raw);
         TextureSlot& texture = bank.textures.get(image.texture);
 
-        VkPipelineStageFlags2 src_stage {};
-        VkAccessFlags2 src_access {};
-        
-        // Determine source based on current layout
-        switch (texture.layout) {
-            case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-                src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-                src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-                break;
-            case VK_IMAGE_LAYOUT_GENERAL:
-                src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-                src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-                break;
-            case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-                src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-                src_access = VK_ACCESS_2_SHADER_READ_BIT;
-                break;
-            default:
-                src_stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-                src_access = VK_ACCESS_2_MEMORY_WRITE_BIT;
-                break;
-        }
-
         /* Imgui image sync barrier */
         VkImageMemoryBarrier2 barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-        barrier.srcStageMask = src_stage;
-        barrier.srcAccessMask = src_access;
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
         barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
         barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
         barrier.oldLayout = texture.layout;

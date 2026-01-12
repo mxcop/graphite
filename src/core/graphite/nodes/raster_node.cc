@@ -20,6 +20,14 @@ RasterNode& RasterNode::attach(BindHandle resource) {
     return *this;
 }
 
+RasterNode& RasterNode::depth_stencil(Image image, bool test, bool write) {
+    dependencies.emplace_back(image, DependencyUsage::DepthStencil, DependencyStages::Pixel);
+    depth_stencil_image = image;
+    depth_test = test;
+    depth_write = write;
+    return *this;
+}
+
 RasterNode& RasterNode::raster_extent(const u32 w, const u32 h, const u32 x, const u32 y) {
     raster_w = w;
     raster_h = h;
@@ -49,8 +57,13 @@ RasterNode& RasterNode::topology(const Topology type) {
     return *this;
 }
 
-RasterNode& RasterNode::load_op(const LoadOp op) {
+RasterNode& RasterNode::load_op_color(const LoadOp op) {
     pixel_load_op = op;
+    return *this;
+}
+
+RasterNode& RasterNode::load_op_depth(const LoadOp op) {
+    depth_load_op = op;
     return *this;
 }
 
@@ -74,6 +87,7 @@ DrawCall::DrawCall(
       vertex_offset(vertex_offset),
       instance_count(instance_count),
       instance_offset(instance_offset) {
+    if (vertex_buffer.is_null()) return;
     parent_pass.dependencies.emplace_back(
         vertex_buffer, DependencyUsage::VertexBuffer, DependencyStages::Vertex
     );
@@ -81,6 +95,7 @@ DrawCall::DrawCall(
 
 DrawCall::DrawCall(RasterNode& parent_pass, const Buffer vertex_buffer, const Buffer indirect_buffer)
     : parent_pass(parent_pass), vertex_buffer(vertex_buffer), indirect_buffer(indirect_buffer) {
+    if (vertex_buffer.is_null()) return;
     parent_pass.dependencies.emplace_back(
         vertex_buffer, DependencyUsage::VertexBuffer, DependencyStages::Vertex
     );
