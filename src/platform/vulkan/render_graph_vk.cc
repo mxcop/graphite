@@ -539,29 +539,6 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
         const ImageSlot& image = bank.images.get((Image&)raw);
         TextureSlot& texture = bank.textures.get(image.texture);
 
-        // VkPipelineStageFlags2 src_stage {};
-        // VkAccessFlags2 src_access {};
-        
-        // Determine source based on current layout
-        // switch (texture.layout) {
-        //     case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        //         src_stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-        //         src_access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-        //         break;
-        //     case VK_IMAGE_LAYOUT_GENERAL:
-        //         src_stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-        //         src_access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
-        //         break;
-        //     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-        //         src_stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
-        //         src_access = VK_ACCESS_2_SHADER_READ_BIT;
-        //         break;
-        //     default:
-        //         src_stage = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-        //         src_access = VK_ACCESS_2_MEMORY_WRITE_BIT;
-        //         break;
-        // }
-
         /* Imgui image sync barrier */
         VkImageMemoryBarrier2 barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
