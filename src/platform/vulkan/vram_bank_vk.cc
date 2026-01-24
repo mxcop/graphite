@@ -794,7 +794,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     dep_info.pImageMemoryBarriers = &image_barrier;
 
     if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
-    //vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
+    vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
     vkCmdCopyBufferToImage(upload_cmd, staging_buffer, texture_slot.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &copy);
     if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
 
