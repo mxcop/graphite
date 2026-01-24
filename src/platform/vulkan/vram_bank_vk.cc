@@ -778,10 +778,10 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
 
     /* Create an image layout transition barrier */
     VkImageMemoryBarrier2 image_barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-    image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+    image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     image_barrier.srcAccessMask = VK_ACCESS_2_NONE;
-    image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
-    image_barrier.dstAccessMask = VK_ACCESS_2_NONE;
+    image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    image_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
     image_barrier.oldLayout = texture_slot.layout;
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
@@ -794,7 +794,7 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     dep_info.pImageMemoryBarriers = &image_barrier;
 
     if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
-    vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
+    //vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
     vkCmdCopyBufferToImage(upload_cmd, staging_buffer, texture_slot.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1u, &copy);
     if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
 
