@@ -147,10 +147,15 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     vulkan_features.descriptorBindingStorageBufferUpdateAfterBind = true;
     vulkan_features.descriptorBindingPartiallyBound = true;
     vulkan_features.runtimeDescriptorArray = true;
+    vulkan_features.shaderStorageBufferArrayNonUniformIndexing = true;
+    vulkan_features.shaderSampledImageArrayNonUniformIndexing = true;
+    vulkan_features.descriptorIndexing = true;
 
     /* Enable modern device features */
     VkPhysicalDeviceFeatures device_features {};
     device_features.shaderInt64 = true; /* 64-bit integer support */
+    device_features.shaderStorageBufferArrayDynamicIndexing = true;
+    device_features.shaderSampledImageArrayDynamicIndexing = true;
 
     /* Vulkan device creation info */
     VkDeviceCreateInfo device_ci { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
