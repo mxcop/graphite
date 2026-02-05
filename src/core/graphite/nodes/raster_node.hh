@@ -44,6 +44,7 @@ class RasterNode : public Node {
     /* Can only be constructed by the RenderGraph */
     RasterNode() = default;
     RasterNode(std::string_view label, std::string_view vx_path, std::string_view fg_path);
+    ~RasterNode() override;
 
    public:
     /* Shader file paths */
@@ -62,6 +63,9 @@ class RasterNode : public Node {
     LoadOp depth_load_op = LoadOp::Load;
     bool depth_test = true;
     bool depth_write = true;
+
+    /* Push Constants */
+    ShaderStages pc_stages {};
 
     /* Extents */
     u32 raster_w = 0u, raster_h = 0u, raster_x = 0u, raster_y = 0u;
@@ -96,6 +100,9 @@ class RasterNode : public Node {
 
     /* Add a bindable resource as an input for this node. */
     RasterNode& read(BindHandle resource, ShaderStages stages);
+
+    /* Set push constants for this node. */
+    RasterNode& push_constants(void* data, u32 offset, u32 size, ShaderStages stages);
 
     /* Add a rendering attachment as an output for the pixel stage */
     RasterNode& attach(BindHandle resource);

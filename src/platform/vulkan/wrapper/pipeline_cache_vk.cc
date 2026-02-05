@@ -42,11 +42,23 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     if (r_layout.is_err()) return Err(r_layout.unwrap_err());
     pipeline.descriptors = r_layout.unwrap();
 
+    /* Push constants */
+    VkPushConstantRange pc_range = {};
+    if (node.range_size != 0u) {
+        pc_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+        pc_range.offset = node.range_offset;
+        pc_range.size = node.range_size;
+    }
+
     /* Pipeline layout creation info */
     const VkDescriptorSetLayout desc_layouts[] {pipeline.descriptors, gpu->get_vram_bank().bindless_layout};
     VkPipelineLayoutCreateInfo layout_ci {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
     layout_ci.setLayoutCount = sizeof(desc_layouts) / sizeof(VkDescriptorSetLayout);
     layout_ci.pSetLayouts = desc_layouts;
+    if (node.range_size != 0) {
+        layout_ci.pushConstantRangeCount = 1;
+        layout_ci.pPushConstantRanges = &pc_range;
+    }
 
     /* Create the pipeline layout */
     if (vkCreatePipelineLayout(gpu->logical_device, &layout_ci, nullptr, &pipeline.layout) != VK_SUCCESS) {
@@ -60,7 +72,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     stage_ci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     stage_ci.module = shader;
     stage_ci.pName = "main";
-    
+
     /* Pipeline creation info */
     VkComputePipelineCreateInfo pipeline_ci { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
     pipeline_ci.stage = stage_ci;

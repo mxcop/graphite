@@ -309,6 +309,11 @@ Result<void> RenderGraph::queue_compute_node(const GraphExecution& graph, const 
     if (push_result.is_err()) return push_result;
     vkCmdBindDescriptorSets(graph.cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 1u, 1u, &gpu->get_vram_bank().bindless_set, 0u, nullptr);
 
+    /* Upload Push Constants. */
+    if (node.range_size != 0u) {
+        vkCmdPushConstants(graph.cmd, pipeline.layout, VK_SHADER_STAGE_COMPUTE_BIT, node.range_offset, node.range_size, node.pc_data);
+    }
+
     /* Indirect Dispatch */
     if (!node.indirect_buffer.is_null())
     {
@@ -403,6 +408,11 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     rendering.colorAttachmentCount = (u32)color_attachments.size();
     rendering.pColorAttachments = color_attachments.data();
     if (node.depth_stencil_image.is_null() == false) rendering.pDepthAttachment = &depth_attachment;
+
+    /* Upload Push Constants. */
+    if (node.range_size != 0u) {
+        vkCmdPushConstants(graph.cmd, pipeline.layout, translate::stage_flags(node.pc_stages), node.range_offset, node.range_size, node.pc_data);
+    }
 
     /* Begin rendering */
     vkCmdBeginRenderingKHR(graph.cmd, &rendering);

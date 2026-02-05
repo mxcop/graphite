@@ -12,6 +12,7 @@ class ComputeNode : public Node {
     /* Can only be constructed by the RenderGraph */
     ComputeNode() = default;
     ComputeNode(std::string_view label, std::string_view shader_path);
+    ~ComputeNode();
 
 public:
     /* Compute shader file path */
@@ -33,6 +34,9 @@ public:
 
     /* Add a bindable resource as an input for this node. */
     ComputeNode& read(BindHandle resource);
+
+    /* Set push constants for this node. */
+    ComputeNode& push_constants(void* data, u32 offset, u32 size);
 
     /* Set the thread group size for this node. */
     inline ComputeNode& group_size(u32 x, u32 y = 1u, u32 z = 1u) { group_x = x; group_y = y; group_z = z; return *this; }

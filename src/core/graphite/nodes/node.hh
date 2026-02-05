@@ -66,6 +66,11 @@ public:
     /* Node type. */
     NodeType type = NodeType::Invalid;
 
+    /* Push Constants. */
+    u32* pc_data = nullptr;
+    u32 range_offset = 0u;
+    u32 range_size = 0u;
+
     /* List of node resource dependencies. */
     std::vector<Dependency> dependencies {};
 

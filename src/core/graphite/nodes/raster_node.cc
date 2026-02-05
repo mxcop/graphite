@@ -3,6 +3,10 @@
 RasterNode::RasterNode(std::string_view label, std::string_view vx_path, std::string_view px_path)
     : Node(label, NodeType::Raster), vertex_path(vx_path), pixel_path(px_path) {}
 
+RasterNode::~RasterNode() {
+    if (pc_data != nullptr) delete[] pc_data;
+}
+
 RasterNode& RasterNode::write(BindHandle resource, ShaderStages stages) {
     /* Insert the write dependency */
     dependencies.emplace_back(resource, DependencyUsage::ReadWrite, stages);
@@ -12,6 +16,15 @@ RasterNode& RasterNode::write(BindHandle resource, ShaderStages stages) {
 RasterNode& RasterNode::read(BindHandle resource, ShaderStages stages) {
     /* Insert the read dependency */
     dependencies.emplace_back(resource, DependencyUsage::Readonly, stages);
+    return *this;
+}
+
+RasterNode& RasterNode::push_constants(void* data, u32 offset, u32 size, ShaderStages stages) {
+    if (pc_data == nullptr) pc_data = new u32[size];
+    memcpy(pc_data, data, size);
+    range_offset = offset;
+    range_size = size;
+    pc_stages = stages;
     return *this;
 }
 

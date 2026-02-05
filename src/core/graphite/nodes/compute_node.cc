@@ -1,6 +1,11 @@
 #include "compute_node.hh"
 
-ComputeNode::ComputeNode(std::string_view label, std::string_view shader_path) : Node(label, NodeType::Compute), compute_path(shader_path) {}
+ComputeNode::ComputeNode(std::string_view label, std::string_view shader_path)
+    : Node(label, NodeType::Compute), compute_path(shader_path) {}
+
+ComputeNode::~ComputeNode() {
+    if (pc_data != nullptr) delete[] pc_data;
+}
 
 ComputeNode& ComputeNode::write(BindHandle resource) {
     /* Insert the write dependency */
@@ -11,6 +16,14 @@ ComputeNode& ComputeNode::write(BindHandle resource) {
 ComputeNode& ComputeNode::read(BindHandle resource) {
     /* Insert the read dependency */
     dependencies.emplace_back(resource, DependencyUsage::Readonly, DependencyStages::Compute);
+    return *this;
+}
+
+ComputeNode& ComputeNode::push_constants(void* data, u32 offset, u32 size) { 
+    if (pc_data == nullptr) pc_data = new u32[size];
+    memcpy(pc_data, data, size);
+    range_offset = offset;
+    range_size = size;
     return *this;
 }
 
