@@ -35,7 +35,11 @@ public:
     /* Add a bindable resource as an input for this node. */
     ComputeNode& read(BindHandle resource);
 
-    /* Set push constants for this node. */
+    /**
+     * @brief Set push constants for this node.
+     * @param offset Offset of the push constants in bytes.
+     * @param size Size of the push constants in bytes.
+     */
     ComputeNode& push_constants(void* data, u32 offset, u32 size);
 
     /* Set the thread group size for this node. */

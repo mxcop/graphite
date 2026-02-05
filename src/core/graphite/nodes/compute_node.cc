@@ -20,7 +20,7 @@ ComputeNode& ComputeNode::read(BindHandle resource) {
 }
 
 ComputeNode& ComputeNode::push_constants(void* data, u32 offset, u32 size) { 
-    if (pc_data == nullptr) pc_data = new u32[size];
+    if (pc_data == nullptr) pc_data = new u32[(size + 3u) / 4u];
     memcpy(pc_data, data, size);
     range_offset = offset;
     range_size = size;

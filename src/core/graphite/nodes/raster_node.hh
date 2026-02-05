@@ -101,7 +101,11 @@ class RasterNode : public Node {
     /* Add a bindable resource as an input for this node. */
     RasterNode& read(BindHandle resource, ShaderStages stages);
 
-    /* Set push constants for this node. */
+    /**
+     * @brief Set push constants for this node.
+     * @param offset Offset of the push constants in bytes.
+     * @param size Size of the push constants in bytes.
+     */
     RasterNode& push_constants(void* data, u32 offset, u32 size, ShaderStages stages);
 
     /* Add a rendering attachment as an output for the pixel stage */
