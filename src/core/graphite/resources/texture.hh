@@ -20,6 +20,7 @@ enum class TextureFormat : u32 {
     Invalid = 0u,  /* Invalid texture format. */
     RGBA8Unorm,    /* RGBA 8 bits per channel, unsigned normalized. */
     RG32Uint,      /* RG 32 bits per channel, unsigned integer. */
+    RG16Sfloat,    /* RG 16 bits per channel, signed float. */
     RGBA16Sfloat,  /* RGBA 16 bits per channel, signed float. */
     RGBA32Sfloat,  /* RGBA 16 bits per channel, signed float. */
     RG11B10Ufloat, /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
