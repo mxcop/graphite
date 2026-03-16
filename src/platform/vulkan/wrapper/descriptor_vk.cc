@@ -42,7 +42,8 @@ Result<VkDescriptorSetLayout> node_descriptor_layout(GPUAdapter& gpu, const Node
                 break;
             }
             case ResourceType::Image: {
-                const TextureSlot& texture = gpu.get_vram_bank().textures.get(dep.resource);
+                const ImageSlot& image = gpu.get_vram_bank().images.get(dep.resource);
+                const TextureSlot& texture = gpu.get_vram_bank().textures.get(image.texture);
                 bindings.push_back(image_layout(slot, dep, texture.usage));
                 break;
             }
