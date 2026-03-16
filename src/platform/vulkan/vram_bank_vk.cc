@@ -635,6 +635,13 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size, TextureMeta
     for (u32 i = 0; i < data.images.size(); i++) {
         ImageSlot& image = images.get(data.images[i]);
 
+        /* Clamp to new mip range */
+        if (image.sub_range.baseMipLevel >= data.meta.mips) {
+            image.sub_range.baseMipLevel = data.meta.mips - 1;
+        }
+        const u32 remaining = data.meta.mips - image.sub_range.baseMipLevel;
+        image.sub_range.levelCount = std::min(image.sub_range.levelCount, remaining);
+
         /* Image view creation info */
         VkImageViewCreateInfo view_ci {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
         view_ci.image = data.image;

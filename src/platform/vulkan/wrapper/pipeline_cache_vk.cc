@@ -221,7 +221,8 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
         if (dep.resource.get_type() == ResourceType::RenderTarget) {
             format = bank.render_targets.get(dep.resource).format;
         } else {
-            const TextureSlot& texture = bank.textures.get(dep.resource);
+            const ImageSlot& image = bank.images.get(dep.resource);
+            const TextureSlot& texture = bank.textures.get(image.texture);
             if (has_flag(texture.usage, TextureUsage::ColorAttachment) == false) continue;
             format = translate::texture_format(texture.format);
         }
