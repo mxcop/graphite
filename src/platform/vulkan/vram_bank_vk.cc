@@ -361,14 +361,27 @@ Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, T
     /* Make sure the texture usage is valid */
     if (usage == TextureUsage::Invalid) return Err("invalid texture usage.");
 
+    const VkFormat format = translate::texture_format(fmt);
+
+    /* Figure out min amount of mips */
+    u32 smallest_axis = std::min(size.x, size.y);
+    if (!size.is_2d()) smallest_axis = std::min(smallest_axis, size.z);
+
+    const u32 safe_mips = std::max(1u, (u32)log2f((float)smallest_axis));
+    if (meta.mips > safe_mips) {
+        gpu->log(
+            DebugSeverity::Warning,
+            "The set amount of mips for this texture is larger than possible. It has been clamped automatically"
+        );
+        meta.mips = std::min(meta.mips, safe_mips);
+    }
+
     /* Pop a new texture off the stock */
     StockPair resource = textures.pop();
     resource.data.usage = usage;
     resource.data.format = fmt;
     resource.data.size = size;
     resource.data.meta = meta;
-
-    const VkFormat format = translate::texture_format(fmt);
 
     /* Image creation info */
     VkImageCreateInfo texture_ci { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -553,7 +566,7 @@ Result<void> VRAMBank::resize_render_target(RenderTarget &render_target, u32 wid
     return Ok();
 }
 
-Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
+Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size, TextureMeta meta) {
     /* Wait for the device to idle */
     vkQueueWaitIdle(gpu->queues.queue_combined);
 
@@ -567,6 +580,20 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size) {
     TextureSlot& data = textures.get(texture);
     data.size = size;
     data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    data.meta = meta;
+
+    /* Figure out min amount of mips */
+    u32 smallest_axis = std::min(size.x, size.y);
+    if (!size.is_2d()) smallest_axis = std::min(smallest_axis, size.z);
+
+    const u32 safe_mips = (u32)log2f((float)smallest_axis);
+    if (data.meta.mips > safe_mips) {
+        gpu->log(
+            DebugSeverity::Warning,
+            "The set amount of mips (when resizing) for this texture is larger than possible. It has been clamped automatically"
+        );
+        data.meta.mips = safe_mips;
+    }
 
     /* Destroy All Image Views */
     for (u32 i = 0; i < data.images.size(); i++) {

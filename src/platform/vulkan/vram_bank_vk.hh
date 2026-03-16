@@ -80,7 +80,7 @@ public:
     /* Resize a render target resource. (aka, swapchain) */
     PLATFORM_SPECIFIC Result<void> resize_render_target(RenderTarget& render_target, u32 width, u32 height);
     /* Resize a texture resource. */
-    PLATFORM_SPECIFIC Result<void> resize_texture(Texture& texture, Size3D size);
+    PLATFORM_SPECIFIC Result<void> resize_texture(Texture& texture, Size3D size, TextureMeta meta = TextureMeta());
     /* Resize a buffer resource. */
     PLATFORM_SPECIFIC Result<void> resize_buffer(Buffer& buffer, u64 count, u64 stride = 0);
 
