@@ -86,7 +86,7 @@ public:
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size) = 0;
     /* Upload data to a GPU texture resource. */
-    PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size) = 0;
+    PLATFORM_SPECIFIC Result<void> upload_texture(Image& image, const void* data, const u64 size) = 0;
 
     /* Get the texture which an image was created from. */
     PLATFORM_SPECIFIC Texture get_texture(Image image) = 0;

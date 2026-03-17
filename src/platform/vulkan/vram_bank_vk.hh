@@ -87,7 +87,7 @@ public:
     /* Upload data to a GPU buffer resource. */
     PLATFORM_SPECIFIC Result<void> upload_buffer(Buffer& buffer, const void* data, u64 dst_offset, u64 size);
     /* Upload data to a GPU texture resource. */
-    PLATFORM_SPECIFIC Result<void> upload_texture(Texture& texture, const void* data, const u64 size);
+    PLATFORM_SPECIFIC Result<void> upload_texture(Image& image, const void* data, const u64 size);
 
     /* Get the texture which an image was created from. */
     PLATFORM_SPECIFIC Texture get_texture(Image image);
@@ -153,7 +153,7 @@ struct TextureSlot {
 
     /* Resource */
     VkImage image {};
-    VkImageLayout layout {};
+    //VkImageLayout layout {};
 
     /* Metadata */
     Size3D size {};
@@ -174,8 +174,10 @@ struct ImageSlot {
     /* Image view */
     VkImageView view {};
     VkImageSubresourceRange sub_range {};
+    VkImageLayout layout {};
 
     /* Metadata */
+    u32 requested_mip = 0u;
     std::string name = "";
 };
 

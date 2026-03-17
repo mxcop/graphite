@@ -546,8 +546,8 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
     for (const auto& [raw, imgui_image] : imgui->image_map) {
         VRAMBank& bank = gpu->get_vram_bank();
 
-        const ImageSlot& image = bank.images.get((Image&)raw);
-        TextureSlot& texture = bank.textures.get(image.texture);
+        ImageSlot& image = bank.images.get((Image&)raw);
+        const TextureSlot& texture = bank.textures.get(image.texture);
 
         /* Imgui image sync barrier */
         VkImageMemoryBarrier2 barrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
@@ -555,9 +555,9 @@ void RenderGraph::queue_imgui(const GraphExecution &graph) {
         barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
         barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
         barrier.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
-        barrier.oldLayout = texture.layout;
+        barrier.oldLayout = image.layout;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        texture.layout = barrier.newLayout;
+        image.layout = barrier.newLayout;
         barrier.image = texture.image;
         barrier.subresourceRange = image.sub_range;
 

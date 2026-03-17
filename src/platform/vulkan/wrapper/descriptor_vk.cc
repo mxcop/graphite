@@ -311,16 +311,16 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     break;
                 }
                 case ResourceType::Image: {
-                    const ImageSlot& image = bank.images.get(dst_dep.resource);
-                    TextureSlot& texture = bank.textures.get(image.texture);
+                    ImageSlot& image = bank.images.get(dst_dep.resource);
+                    const TextureSlot& texture = bank.textures.get(image.texture);
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = src_stage;
                     barrier.srcAccessMask = src_access;
                     barrier.dstStageMask = dst_stage;
                     barrier.dstAccessMask = dst_access;
-                    barrier.oldLayout = texture.layout;
+                    barrier.oldLayout = image.layout;
                     barrier.newLayout = translate::desired_image_layout(dst_dep, texture.usage);
-                    texture.layout = barrier.newLayout;
+                    image.layout = barrier.newLayout;
                     barrier.image = texture.image;
                     barrier.subresourceRange = image.sub_range;
                     break;

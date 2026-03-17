@@ -424,8 +424,9 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip,
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
     sub_range.aspectMask = texture_slot.format == TextureFormat::D32Sfloat ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    sub_range.baseMipLevel = mip;
-    sub_range.levelCount = std::max(1u, texture_slot.meta.mips - mip);
+    resource.data.requested_mip = mip;
+    sub_range.baseMipLevel = std::min(mip, texture_slot.meta.mips - 1);
+    sub_range.levelCount = 1;  // std::max(1u, texture_slot.meta.mips - mip);
     sub_range.baseArrayLayer = layer;
     sub_range.layerCount = std::max(1u, texture_slot.meta.arrays - layer);
     resource.data.sub_range = sub_range;
@@ -579,7 +580,6 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size, TextureMeta
 
     TextureSlot& data = textures.get(texture);
     data.size = size;
-    data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     data.meta = meta;
 
     /* Figure out min amount of mips */
@@ -635,12 +635,14 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size, TextureMeta
     for (u32 i = 0; i < data.images.size(); i++) {
         ImageSlot& image = images.get(data.images[i]);
 
-        /* Clamp to new mip range */
-        if (image.sub_range.baseMipLevel >= data.meta.mips) {
-            image.sub_range.baseMipLevel = data.meta.mips - 1;
-        }
-        const u32 remaining = data.meta.mips - image.sub_range.baseMipLevel;
-        image.sub_range.levelCount = std::min(image.sub_range.levelCount, remaining);
+        /* Initialize image layout */
+        image.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        const u32 base_mip = std::min(image.requested_mip, data.meta.mips - 1);
+        const u32 max_mips = data.meta.mips - base_mip;
+        const u32 mip_count = std::min(image.sub_range.levelCount, max_mips);
+        image.sub_range.baseMipLevel = base_mip;
+        image.sub_range.levelCount = mip_count;
 
         /* Image view creation info */
         VkImageViewCreateInfo view_ci {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
@@ -777,9 +779,10 @@ Result<void> VRAMBank::upload_buffer(Buffer& buffer, const void* data, u64 dst_o
     return Ok();
 }
 
-Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const u64 size) {
+Result<void> VRAMBank::upload_texture(Image& image, const void* data, const u64 size) {
     /* Make sure the texture can be transfered to */
-    TextureSlot& texture_slot = textures.get(texture);
+    ImageSlot& image_slot = images.get(image);
+    const TextureSlot& texture_slot = textures.get(image_slot.texture);
     if (has_flag(texture_slot.usage, TextureUsage::TransferDst) == false) return Err("the texture flags don't support transferring to.");
 
     /* Staging buffer creation info */
@@ -807,7 +810,10 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     vmaUnmapMemory(vma_allocator, alloc);
 
     VkBufferImageCopy copy {};
-    copy.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 0u, 1u };
+    copy.imageSubresource = {
+        image_slot.sub_range.aspectMask, image_slot.sub_range.baseMipLevel, image_slot.sub_range.baseArrayLayer,
+        image_slot.sub_range.layerCount
+    };
     copy.imageExtent = VkExtent3D { std::max(texture_slot.size.x, 1u), std::max(texture_slot.size.y, 1u), std::max(texture_slot.size.z, 1u) };
 
     /* Create an image layout transition barrier */
@@ -816,11 +822,11 @@ Result<void> VRAMBank::upload_texture(Texture& texture, const void* data, const 
     image_barrier.srcAccessMask = VK_ACCESS_2_NONE;
     image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
     image_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-    image_barrier.oldLayout = texture_slot.layout;
+    image_barrier.oldLayout = image_slot.layout;
     image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     image_barrier.image = texture_slot.image;
-    image_barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0u, 1u, 0u, 1u };
-    texture_slot.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    image_barrier.subresourceRange = image_slot.sub_range;
+    image_slot.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
     /* Render target dependency info */
     VkDependencyInfo dep_info { VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
