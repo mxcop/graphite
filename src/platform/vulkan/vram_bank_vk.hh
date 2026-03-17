@@ -153,7 +153,6 @@ struct TextureSlot {
 
     /* Resource */
     VkImage image {};
-    //VkImageLayout layout {};
 
     /* Metadata */
     Size3D size {};
