@@ -430,6 +430,7 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip,
     sub_range.baseArrayLayer = layer;
     sub_range.layerCount = std::max(1u, texture_slot.meta.arrays - layer);
     resource.data.sub_range = sub_range;
+    resource.data.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     /* Image view creation info */
     VkImageViewCreateInfo view_ci { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
