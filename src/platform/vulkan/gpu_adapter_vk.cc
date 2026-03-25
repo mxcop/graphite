@@ -1,5 +1,7 @@
 #include "gpu_adapter_vk.hh"
 
+#include <filesystem>
+
 #include "graphite/vram_bank.hh"
 #include "wrapper/extensions_vk.hh"
 #include "wrapper/device_selection_vk.hh"
@@ -13,9 +15,18 @@ const char* WINDOWING_EXTENSION = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 
 /* Validation layer to use for debugging */
 const char* VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
+/* GPU Crash Diagnostics layer to use for crash debugging */
+const char* GPU_DIAGNOSTICS_LAYER = "VK_LAYER_LUNARG_crash_diagnostic";
 
 /* Custom vulkan debug msg callback */
 VkBool32 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* cb_data, void* data);
+
+/* Get executable directory */
+std::filesystem::path get_executable_directory() {
+    char path[MAX_PATH];
+    GetModuleFileNameA(nullptr, path, MAX_PATH);
+    return std::filesystem::path(path).parent_path();
+}
 
 Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_validation) {
     /* Load Vulkan API functions */
@@ -47,8 +58,13 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     const char* const instance_ext[3] = {
         VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME
     };
-    const u32 instance_layers_count = validation ? 1u : 0u;
-    const char* const instance_layers[1] = {VALIDATION_LAYER};
+    const u32 instance_layers_count = validation ? 2u : 0u;
+    const char* const instance_layers[2] = {VALIDATION_LAYER, GPU_DIAGNOSTICS_LAYER};
+
+    /* Set up gpu crash diagnostics output path */
+    const std::filesystem::path exe_dir = get_executable_directory();
+    const std::string crash_dir = (exe_dir / "crash_dumps").string();
+    _putenv_s("VK_LUNARG_CRASH_DIAGNOSTIC_OUTPUT_PATH", crash_dir.c_str());
 
     /* Check if all required instance extensions are supported */
     if (const Result r = query_instance_support(instance_ext, instance_ext_count); r.is_err()) {
