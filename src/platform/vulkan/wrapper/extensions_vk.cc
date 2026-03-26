@@ -49,13 +49,13 @@ Result<void> query_instance_support(const char* const* extensions, const u32 cou
 }
 
 /* Query whether the instance supports validation layers. */
-bool query_validation_support(const char* layer_name) {
-    u32 n = 0; /* Query all supported extensions */
+bool query_layer_support(const char* layer_name) {
+    u32 n = 0; /* Query all supported layers */
     vkEnumerateInstanceLayerProperties(&n, nullptr);
     VkLayerProperties* layers = new VkLayerProperties[n] {};
     vkEnumerateInstanceLayerProperties(&n, layers);
 
-    /* Check if the driver supports the khronos validation layer */
+    /* Check if the driver supports the given layer */
     bool supported = false;
     for (u32 i = 0u; i < n; ++i) {
         if (strcmp(layer_name, layers[i].layerName) == 0) { 

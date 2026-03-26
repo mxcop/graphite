@@ -33,9 +33,14 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
     /* Check if debugging & validation is supported */
-    validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_validation_support(VALIDATION_LAYER);
+    validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_layer_support(VALIDATION_LAYER);
+    bool gpu_diagnostics = query_layer_support(GPU_DIAGNOSTICS_LAYER);
     if (debug_mode && validation == false) {
         this->log(DebugSeverity::Warning, "validation layers were requested, but are not supported.");
+    }
+
+    if (!gpu_diagnostics) {
+        this->log(DebugSeverity::Warning, "gpu crash diagnostics layer was requested, but is not supported.");
     }
 
     /* Vulkan app creation info */

@@ -30,7 +30,7 @@ bool query_debug_support(const char* layer_name);
 Result<void> query_instance_support(const char* const* extensions, const u32 count);
 
 /* Query whether the instance supports validation layers. */
-bool query_validation_support(const char* layer_name);
+bool query_layer_support(const char* layer_name);
 
 /* Query whether a physical device supports all required extensions. */
 Result<void> query_extension_support(const VkPhysicalDevice device, const char* const* extensions, const u32 count);
