@@ -62,8 +62,10 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     debug_utils.pUserData = (void*)&logger;
     debug_utils.pfnUserCallback = vk_debug_callback;
 
+    const bool any_debug = validation || cdl;
+
     /* Vulkan instance extensions & layers */
-    const u32 instance_ext_count = validation ? 3u : 2u;
+    const u32 instance_ext_count = any_debug ? 3u : 2u;
     const char* const instance_ext[3] = {
         VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME
     };
@@ -100,6 +102,8 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
 
         debug_utils.pNext = (sync_validation || gpu_validation) ? &layer_settings_ci : nullptr;
 
+    }
+    if (any_debug) {
         instance_ci.pNext = &debug_utils;
         instance_ci.enabledLayerCount = (uint32_t)instance_layers.size();
         instance_ci.ppEnabledLayerNames = instance_layers.data();
@@ -119,7 +123,7 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     volkLoadInstanceOnly(instance);
 
     /* Create a debug messenger if debug mode is turned on */
-    if (validation) {
+    if (any_debug) {
         vkCreateDebugUtilsMessengerEXT(instance, &debug_utils, nullptr, &debug_messenger);
     }
 
