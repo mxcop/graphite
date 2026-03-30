@@ -32,10 +32,19 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     /* Load Vulkan API functions */
     if (volkInitialize() != VK_SUCCESS) return Err("failed to initialize volk. (vulkan meta loader)");
 
+    /* Point loader at bundled layers (so CDL works without the Vulkan SDK) */
+    const std::filesystem::path exe_dir = get_executable_directory();
+    const std::string layer_dir = (exe_dir / "layers").string();
+    _putenv_s("VK_ADD_LAYER_PATH", layer_dir.c_str());
+
     /* Check if debugging & validation is supported */
-    validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_layer_support(VALIDATION_LAYER) && query_layer_support(GPU_DIAGNOSTICS_LAYER);
+    validation = debug_mode && query_debug_support(VALIDATION_LAYER) && query_layer_support(VALIDATION_LAYER);
+    const bool cdl = debug_mode && query_layer_support(GPU_DIAGNOSTICS_LAYER);
     if (debug_mode && validation == false) {
         this->log(DebugSeverity::Warning, "validation layers were requested, but are not supported.");
+    }
+    if (debug_mode && cdl == false) {
+        this->log(DebugSeverity::Warning, "crash diagnostic layer was requested, but is not supported.");
     }
 
     /* Vulkan app creation info */
@@ -58,11 +67,11 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     const char* const instance_ext[3] = {
         VK_KHR_SURFACE_EXTENSION_NAME, WINDOWING_EXTENSION, VK_EXT_DEBUG_UTILS_EXTENSION_NAME
     };
-    const u32 instance_layers_count = validation ? 2u : 0u;
-    const char* const instance_layers[2] = {VALIDATION_LAYER, GPU_DIAGNOSTICS_LAYER};
+    std::vector<const char*> instance_layers {};
+    if (validation) instance_layers.push_back(VALIDATION_LAYER);
+    if (cdl) instance_layers.push_back(GPU_DIAGNOSTICS_LAYER);
 
     /* Set up gpu crash diagnostics output path */
-    const std::filesystem::path exe_dir = get_executable_directory();
     const std::string crash_dir = (exe_dir / "crash_dumps").string();
     _putenv_s("VK_LUNARG_CRASH_DIAGNOSTIC_OUTPUT_PATH", crash_dir.c_str());
 
@@ -92,8 +101,8 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
         debug_utils.pNext = (sync_validation || gpu_validation) ? &layer_settings_ci : nullptr;
 
         instance_ci.pNext = &debug_utils;
-        instance_ci.enabledLayerCount = instance_layers_count;
-        instance_ci.ppEnabledLayerNames = instance_layers;
+        instance_ci.enabledLayerCount = (uint32_t)instance_layers.size();
+        instance_ci.ppEnabledLayerNames = instance_layers.data();
     }
     instance_ci.enabledExtensionCount = instance_ext_count;
     instance_ci.ppEnabledExtensionNames = instance_ext;
@@ -178,8 +187,8 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     device_ci.pNext = &vulkan_features;
     device_ci.queueCreateInfoCount = 3u;
     device_ci.pQueueCreateInfos = device_queues_ci;
-    device_ci.enabledLayerCount = instance_layers_count;
-    device_ci.ppEnabledLayerNames = instance_layers;
+    device_ci.enabledLayerCount = (uint32_t)instance_layers.size();
+    device_ci.ppEnabledLayerNames = instance_layers.data();
     device_ci.enabledExtensionCount = device_ext_count;
     device_ci.ppEnabledExtensionNames = device_ext;
     device_ci.pEnabledFeatures = &device_features;

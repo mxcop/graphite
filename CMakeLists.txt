@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
 
 # Options
 option(GRAPHITE_SAMPLES "Include Graphite samples directory." ON)
-set(GRAPHITE_PLATFORM "Vulkan")
+set(GRAPHITE_PLATFORM "Vulkan" CACHE STRING "Graphite rendering platform")
 
 # Library target
 add_library(graphite)
@@ -95,3 +95,30 @@ endif()
 
 # External dependencies
 add_subdirectory("extern")
+
+# Bundle vulkan crash diagnostics layer
+function(graphite_bundle_crash_diagnostics OUTPUT_DIR)
+    if(GRAPHITE_PLATFORM STREQUAL "Vulkan" AND DEFINED ENV{VULKAN_SDK})
+        set(CDL_DLL "$ENV{VULKAN_SDK}/Bin/VkLayer_crash_diagnostic.dll")
+        set(CDL_JSON "$ENV{VULKAN_SDK}/Bin/VkLayer_crash_diagnostic.json")
+
+        message(STATUS "CDL: Looking for DLL at ${CDL_DLL}")
+        message(STATUS "CDL: Looking for JSON at ${CDL_JSON}")
+        message(STATUS "CDL: Output directory: ${OUTPUT_DIR}/layers")
+
+        if(EXISTS "${CDL_DLL}" AND EXISTS "${CDL_JSON}")
+            file(COPY "${CDL_DLL}" "${CDL_JSON}"
+                DESTINATION "${OUTPUT_DIR}/layers"
+            )
+            message(STATUS "CDL: Successfully copied crash diagnostic layer files")
+        else()
+            message(WARNING "CDL not found in Vulkan SDK - crash diagnostics won't be bundled")
+        endif()
+    else()
+        if(NOT DEFINED ENV{VULKAN_SDK})
+            message(WARNING "VULKAN_SDK environment variable not set - crash diagnostics won't be bundled")
+        elseif(NOT GRAPHITE_PLATFORM STREQUAL "Vulkan")
+            message(WARNING "Crash diagnostics only supported on Vulkan platform")
+        endif()
+    endif()
+endfunction()
