@@ -68,10 +68,9 @@ struct StencilState {
     StencilOp depth_fail_op = StencilOp::Replace;
 
     CompareOp compare_op = CompareOp::Always;
-    uint32_t compare_mask = 0xFF;  /* comparison mask */
-    uint32_t write_mask = 0xFF;    /* write mask */
-    uint32_t reference_value = 1u; /* value to write/compare against */
-
+    uint32_t compare_mask = 0x00;  /* comparison mask */
+    uint32_t write_mask = 0x00;    /* write mask */
+    uint32_t reference_value = 0u; /* value to write/compare against */
 };
 
 /**
@@ -97,12 +96,11 @@ class RasterNode : public Node {
     bool alpha_blend = false;
 
     /* Depth image */
-    Image depth_image {};
+    Image depth_stencil_image {};
     LoadOp depth_load_op = LoadOp::Load;
     bool depth_test = true;
     bool depth_write = true;
     /* Stencil image */
-    Image stencil_image {};
     LoadOp stencil_load_op = LoadOp::Load;
     bool stencil_test = true;
     StencilState stencil_state {};
@@ -154,11 +152,11 @@ class RasterNode : public Node {
     /* Add a rendering attachment as an output for the pixel stage */
     RasterNode& attach(BindHandle resource);
 
-    /* Add a depth attachment as an input/output */
-    RasterNode& depth(Image image, bool test = true, bool write = true);
+    /* Add a depth/stencil attachment as an input/output */
+    RasterNode& depth_stencil(Image image, bool test = true, bool write = true);
 
-    /* Add a stencil attachment as an input/output */
-    RasterNode& stencil(Image image, StencilState state, bool test = true, LoadOp load_op = LoadOp::Clear);
+    /* Configure stencil state */
+    RasterNode& stencil(StencilState state, bool test = true, LoadOp load_op = LoadOp::Clear);
 
     /* Set the raster extent of the raster pass. (the extent of the attachments to rasterize into) */
     RasterNode& raster_extent(const u32 w, const u32 h, const u32 x = 0u, const u32 y = 0u);

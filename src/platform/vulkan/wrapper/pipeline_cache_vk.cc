@@ -254,21 +254,20 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     depth_stencil_state.depthCompareOp = VK_COMPARE_OP_LESS;
 
     /* Check for a depth attachment */
-    if (node.depth_image.is_null() == false) {
-        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_image).texture);
+    if (node.depth_stencil_image.is_null() == false) {
+        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_stencil_image).texture);
         depth_stencil_state.depthTestEnable = node.depth_test;
         depth_stencil_state.depthWriteEnable = node.depth_write;
         dynamic_rendering.depthAttachmentFormat = translate::texture_format(depth_texture.format);
-    }
 
-    /* Check for a stencil attachment */
-    if (node.stencil_image.is_null() == false) {
-        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.stencil_image).texture);
-        depth_stencil_state.stencilTestEnable = node.stencil_test;
-        dynamic_rendering.stencilAttachmentFormat = translate::texture_format(depth_texture.format);
+        /* Check for a stencil attachment */
+        if (depth_texture.format == TextureFormat::D24UnormS8Uint) {
+            depth_stencil_state.stencilTestEnable = node.stencil_test;
+            dynamic_rendering.stencilAttachmentFormat = translate::texture_format(depth_texture.format);
 
-        depth_stencil_state.front = translate::stencil_op_state(node.stencil_state);
-        depth_stencil_state.back = depth_stencil_state.front; /* support only front face stencil op */
+            depth_stencil_state.front = translate::stencil_op_state(node.stencil_state);
+            depth_stencil_state.back = depth_stencil_state.front; /* support only front face stencil op */
+        }
     }
 
     /* Pipeline color blend state */

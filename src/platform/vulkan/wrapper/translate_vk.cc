@@ -52,10 +52,10 @@ VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage) {
             if (has_flag(usage, TextureUsage::ColorAttachment)) return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             break;
         case DependencyUsage::Depth:
-            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             break;
         case DependencyUsage::Stencil:
-            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
             break;
     }
     return VK_IMAGE_LAYOUT_UNDEFINED;

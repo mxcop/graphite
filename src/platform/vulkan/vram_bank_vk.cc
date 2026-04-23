@@ -411,10 +411,9 @@ Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, T
     return Ok(resource.handle);
 }
 
-Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_stencil, u32 mip, u32 layer) {
+Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_depth, bool is_stencil, u32 mip, u32 layer) {
     /* Make sure the texture is valid */
     if (texture.is_null()) return Err("cannot create image for texture which is null.");
-
 
     /* Pop a new image off the stock */
     StockPair resource = images.pop();
@@ -425,10 +424,27 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_
     if (is_stencil && texture_slot.format != TextureFormat::D24UnormS8Uint)
         return Err("cannot create stencil image for texture without stencil format.");
 
+    if (is_depth && !translate::is_depth_format(texture_slot.format))
+        return Err("cannot create depth image for texture without depth format.");
+
+    if (is_depth && is_stencil)
+        return Err("invalid parameters set. If you want a DepthStencil image view, set is_depth and is_stencil both to false.");
+
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
-    sub_range.aspectMask = translate::is_depth_format(texture_slot.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    sub_range.aspectMask = translate::is_depth_format(texture_slot.format) && is_stencil ? VK_IMAGE_ASPECT_STENCIL_BIT : sub_range.aspectMask;
+    if (!translate::is_depth_format(texture_slot.format))
+        sub_range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; /* Color Image View */
+    else
+        sub_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; /* Depth Write Image View*/
+
+    if (texture_slot.format == TextureFormat::D24UnormS8Uint) /* if DepthStencil texture, make the Depth Write Image View a DepthStencil image View */
+        sub_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+    if (is_stencil) sub_range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT; /* Stencil Only Image View */
+
+    if (is_depth) sub_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; /* Depth Only Image View */
+
+
     resource.data.requested_mip = mip;
     sub_range.baseMipLevel = std::min(mip, texture_slot.meta.mips - 1);
     sub_range.levelCount = 1;  // std::max(1u, texture_slot.meta.mips - mip);
@@ -452,8 +468,8 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)resource.data.view, name.c_str());
     resource.data.name = name;
 
-    /* Insert readonly images into the bindless descriptor set */
-    if (has_flag(texture_slot.usage, TextureUsage::Sampled)) { 
+    /* Insert readonly (not depth/stencil) images into the bindless descriptor set */
+    if (has_flag(texture_slot.usage, TextureUsage::Sampled) && !(!is_depth && !is_stencil && translate::is_depth_format(texture_slot.format))) { 
         /* Create the bindless descriptor write template */
         VkDescriptorImageInfo image_info {};
         image_info.sampler = VK_NULL_HANDLE;
@@ -664,7 +680,11 @@ Result<void> VRAMBank::resize_texture(Texture& texture, Size3D size, TextureMeta
         gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_IMAGE_VIEW, (u64)image.view, image.name.c_str());
 
         /* Insert readonly images into the bindless descriptor set */
-        if (has_flag(data.usage, TextureUsage::Sampled)) {
+        const bool is_combined_depth_stencil = (image.sub_range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                                         (image.sub_range.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT);
+
+        /* Insert readonly images into the bindless descriptor set */
+        if (has_flag(data.usage, TextureUsage::Sampled) && !is_combined_depth_stencil) {
             /* Create the bindless descriptor write template */
             VkDescriptorImageInfo image_info {};
             image_info.sampler = VK_NULL_HANDLE;

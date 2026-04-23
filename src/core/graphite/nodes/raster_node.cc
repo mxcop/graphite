@@ -33,17 +33,15 @@ RasterNode& RasterNode::attach(BindHandle resource) {
     return *this;
 }
 
-RasterNode& RasterNode::depth(Image image, bool test, bool write) {
+RasterNode& RasterNode::depth_stencil(Image image, bool test, bool write) {
     dependencies.emplace_back(image, DependencyUsage::Depth, DependencyStages::Pixel);
-    depth_image = image;
+    depth_stencil_image = image;
     depth_test = test;
     depth_write = write;
     return *this;
 }
 
-RasterNode& RasterNode::stencil(Image image, StencilState state, bool test, LoadOp load_op) {
-    dependencies.emplace_back(image, DependencyUsage::Stencil, DependencyStages::Pixel);
-    stencil_image = image;
+RasterNode& RasterNode::stencil(StencilState state, bool test, LoadOp load_op) {
     stencil_test = test;
     stencil_load_op = load_op;
     stencil_state = state;
