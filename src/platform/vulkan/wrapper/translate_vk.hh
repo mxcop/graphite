@@ -39,6 +39,18 @@ VkDescriptorType buffer_descriptor_type(BufferUsage usage);
 /* Convert the platform-agnostic texture format to Vulkan texture format. */
 VkFormat texture_format(TextureFormat format);
 
+/* Convert the platform-agnostic stencil op to Vulkan stencil op. */
+VkStencilOp stencil_op(StencilOp op);
+
+/* Convert the platform-agnsotic compare operttion to Vulkan compare operation */
+VkCompareOp compare_op(CompareOp op);
+
+/* Convert the platform-agnostic stencil state to Vulkan stencil op state. */
+VkStencilOpState stencil_op_state(StencilState state);
+
+/* Check if the platform-agnostic format is a depth format. */
+bool is_depth_format(TextureFormat format);
+
 /* Convert the platform-agnostic texture usage to texture usage flags. */
 VkImageUsageFlags texture_usage(TextureUsage usage);
 

@@ -179,6 +179,7 @@ Result<void> GPUAdapter::init(bool debug_mode, bool sync_validation, bool gpu_va
     vulkan_features.shaderStorageBufferArrayNonUniformIndexing = true;
     vulkan_features.shaderSampledImageArrayNonUniformIndexing = true;
     vulkan_features.descriptorIndexing = true;
+    vulkan_features.separateDepthStencilLayouts = true;
 
     /* Enable modern device features */
     VkPhysicalDeviceFeatures device_features {};

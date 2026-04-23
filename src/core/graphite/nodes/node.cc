@@ -19,7 +19,8 @@ bool Dependency::is_readonly() const {
     /* Read/Write */
     case DependencyUsage::ReadWrite:
     case DependencyUsage::ColorAttachment:
-    case DependencyUsage::DepthStencil:
+    case DependencyUsage::Depth:
+    case DependencyUsage::Stencil:
         return false;
     }
     return false;
@@ -31,7 +32,8 @@ bool Dependency::is_unbound() const {
     case DependencyUsage::VertexBuffer:
     case DependencyUsage::IndirectBuffer:
     case DependencyUsage::ColorAttachment:
-    case DependencyUsage::DepthStencil:
+    case DependencyUsage::Depth:
+    case DependencyUsage::Stencil:
         return true;
 
     /* Bound */

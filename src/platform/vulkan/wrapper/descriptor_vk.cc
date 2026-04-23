@@ -219,7 +219,9 @@ VkAccessFlagBits2 image_access_flags(const Dependency& dep, const TextureUsage u
             return VK_ACCESS_2_SHADER_STORAGE_READ_BIT | VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT; /* VK_IMAGE_LAYOUT_GENERAL */
         case DependencyUsage::ColorAttachment:
             return VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL */
-        case DependencyUsage::DepthStencil:
+        case DependencyUsage::Depth:
+            return VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */
+        case DependencyUsage::Stencil:
             return VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; /* VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */
         default:
             return VK_ACCESS_2_NONE; /* Unreachable */

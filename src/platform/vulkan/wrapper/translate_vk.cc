@@ -20,7 +20,9 @@ VkPipelineStageFlags2 stage_mask(DependencyUsage usage, DependencyStages stages,
             return VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
         case DependencyUsage::ColorAttachment:
             return VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-        case DependencyUsage::DepthStencil:
+        case DependencyUsage::Depth:
+            return VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        case DependencyUsage::Stencil:
             return VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
         default:
             if (node_type == NodeType::Compute)
@@ -49,8 +51,11 @@ VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage) {
         case DependencyUsage::ColorAttachment:
             if (has_flag(usage, TextureUsage::ColorAttachment)) return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             break;
-        case DependencyUsage::DepthStencil:
+        case DependencyUsage::Depth:
             if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            break;
+        case DependencyUsage::Stencil:
+            if (has_flag(usage, TextureUsage::DepthStencil)) return VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
             break;
     }
     return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -125,10 +130,85 @@ VkFormat texture_format(TextureFormat format) {
             return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
         case TextureFormat::D32Sfloat:
             return VK_FORMAT_D32_SFLOAT;
+        case TextureFormat::D24UnormS8Uint:
+            return VK_FORMAT_D24_UNORM_S8_UINT;
         case TextureFormat::R32Sfloat:
             return VK_FORMAT_R32_SFLOAT;
         default:
             return VK_FORMAT_UNDEFINED;
+    }
+}
+
+/* Convert the platform-agnostic stencil op to Vulkan stencil op. */
+VkStencilOp stencil_op(StencilOp op) { 
+    switch (op) {
+        case StencilOp::Keep:
+            return VK_STENCIL_OP_KEEP;
+        case StencilOp::Zero:
+            return VK_STENCIL_OP_ZERO;
+        case StencilOp::Replace:
+            return VK_STENCIL_OP_REPLACE;
+        case StencilOp::IncrementClamp:
+            return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+        case StencilOp::DecrementClamp:
+            return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+        case StencilOp::Invert:
+            return VK_STENCIL_OP_INVERT;
+        case StencilOp::IncrementWrap:
+            return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+        case StencilOp::DecrementWrap:
+            return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+        default:
+            return VK_STENCIL_OP_MAX_ENUM;
+    }
+}
+
+VkCompareOp compare_op(CompareOp op) { 
+    switch (op) {
+        case CompareOp::Never:
+            return VK_COMPARE_OP_NEVER;
+        case CompareOp::Less:
+            return VK_COMPARE_OP_LESS;
+        case CompareOp::Equal:
+            return VK_COMPARE_OP_EQUAL;
+        case CompareOp::LessEqual:
+            return VK_COMPARE_OP_LESS_OR_EQUAL;
+        case CompareOp::Greater:
+            return VK_COMPARE_OP_GREATER;
+        case CompareOp::NotEqual:
+            return VK_COMPARE_OP_NOT_EQUAL;
+        case CompareOp::GreaterEqual:
+            return VK_COMPARE_OP_GREATER_OR_EQUAL;
+        case CompareOp::Always:
+            return VK_COMPARE_OP_ALWAYS;
+        default:
+            return VK_COMPARE_OP_MAX_ENUM;
+    }
+}
+
+/* Convert the platform-agnostic stencil state to Vulkan stencil op state. */
+VkStencilOpState stencil_op_state(StencilState state) {
+    /* Configure what happens on stencil / depth pass / fail */
+    VkStencilOpState stencil_op_state {};
+    stencil_op_state.failOp = stencil_op(state.fail_op);            /* operation on stencil test fail */
+    stencil_op_state.passOp = stencil_op(state.pass_op);            /* operation on stencil test pass */
+    stencil_op_state.depthFailOp = stencil_op(state.depth_fail_op); /* operation on depth test fail */
+    stencil_op_state.compareOp = compare_op(state.compare_op);      /* comparison operation */
+    stencil_op_state.compareMask = state.compare_mask;              /* comparison mask */
+    stencil_op_state.writeMask = state.write_mask;                  /* write mask */
+    stencil_op_state.reference = state.reference_value;             /* value to write/compare against */
+
+    return stencil_op_state;
+}
+
+/* Check if the platform-agnostic format is a depth format. */
+bool is_depth_format(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::D32Sfloat:
+        case TextureFormat::D24UnormS8Uint:
+            return true;
+        default:
+            return false;
     }
 }
 

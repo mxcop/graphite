@@ -71,7 +71,7 @@ public:
     /* Create a new texture resource. */
     PLATFORM_SPECIFIC Result<Texture> create_texture(std::string name, TextureUsage usage, TextureFormat fmt, Size3D size, TextureMeta meta = TextureMeta()) = 0;
     /* Create a new image resource. */
-    PLATFORM_SPECIFIC Result<Image> create_image(std::string name, Texture texture, u32 mip = 0u, u32 layer = 0u) = 0;
+    PLATFORM_SPECIFIC Result<Image> create_image(std::string name, Texture texture, bool is_stencil = false, u32 mip = 0u, u32 layer = 0u) = 0;
     /* Create a new sampler resource. */
     PLATFORM_SPECIFIC Result<Sampler> create_sampler(std::string name, Filter filter = Filter::Linear, AddressMode mode = AddressMode::Repeat,
         BorderColor border = BorderColor::RGB0A0_Float) = 0;

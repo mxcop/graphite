@@ -411,9 +411,10 @@ Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, T
     return Ok(resource.handle);
 }
 
-Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip, u32 layer) {
+Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_stencil, u32 mip, u32 layer) {
     /* Make sure the texture is valid */
     if (texture.is_null()) return Err("cannot create image for texture which is null.");
+
 
     /* Pop a new image off the stock */
     StockPair resource = images.pop();
@@ -421,9 +422,13 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, u32 mip,
     TextureSlot& texture_slot = textures.get(texture);
     texture_slot.images.push_back(resource.handle);
     
+    if (is_stencil && texture_slot.format != TextureFormat::D24UnormS8Uint)
+        return Err("cannot create stencil image for texture without stencil format.");
+
     /* Image access sub resource range */
     VkImageSubresourceRange sub_range {};
-    sub_range.aspectMask = texture_slot.format == TextureFormat::D32Sfloat ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    sub_range.aspectMask = translate::is_depth_format(texture_slot.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    sub_range.aspectMask = translate::is_depth_format(texture_slot.format) && is_stencil ? VK_IMAGE_ASPECT_STENCIL_BIT : sub_range.aspectMask;
     resource.data.requested_mip = mip;
     sub_range.baseMipLevel = std::min(mip, texture_slot.meta.mips - 1);
     sub_range.levelCount = 1;  // std::max(1u, texture_slot.meta.mips - mip);

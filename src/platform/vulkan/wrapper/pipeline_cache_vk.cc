@@ -68,18 +68,19 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     gpu->set_object_name(VkObjectType::VK_OBJECT_TYPE_PIPELINE_LAYOUT, (u64)pipeline.layout, pipeline_layout_name.c_str());
 
     /* Pipeline stage creation info */
-    VkPipelineShaderStageCreateInfo stage_ci { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+    VkPipelineShaderStageCreateInfo stage_ci {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
     stage_ci.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     stage_ci.module = shader;
     stage_ci.pName = "main";
 
     /* Pipeline creation info */
-    VkComputePipelineCreateInfo pipeline_ci { VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+    VkComputePipelineCreateInfo pipeline_ci {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipeline_ci.stage = stage_ci;
     pipeline_ci.layout = pipeline.layout;
 
     /* Create compute pipeline */
-    if (vkCreateComputePipelines(gpu->logical_device, VK_NULL_HANDLE, 1u, &pipeline_ci, nullptr, &pipeline.pipeline) != VK_SUCCESS) {
+    if (vkCreateComputePipelines(gpu->logical_device, VK_NULL_HANDLE, 1u, &pipeline_ci, nullptr, &pipeline.pipeline) !=
+        VK_SUCCESS) {
         return Err("failed to create pipeline for '%s' node.", node.label.data());
     }
     const std::string pipeline_name = "Compute Pipeline (" + pipeline.name + ")";
@@ -173,38 +174,38 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
     vertex_binding.inputRate = translate::vertex_input_rate(node.vertex_input_rate);
 
     /* Pipeline vertex input state */
-    VkPipelineVertexInputStateCreateInfo vertex_input { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    VkPipelineVertexInputStateCreateInfo vertex_input {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
     vertex_input.vertexBindingDescriptionCount = 1u;
     vertex_input.pVertexBindingDescriptions = &vertex_binding;
     vertex_input.vertexAttributeDescriptionCount = (u32)vertex_attributes.size();
     vertex_input.pVertexAttributeDescriptions = vertex_attributes.data();
 
     /* Pipeline input assembly state */
-    VkPipelineInputAssemblyStateCreateInfo assembly_input { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+    VkPipelineInputAssemblyStateCreateInfo assembly_input {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
     assembly_input.topology = translate::primitive_topology(node.prim_topology);
 
     /* (placeholder) Pipeline tessellation state */
-    VkPipelineTessellationStateCreateInfo tessellation_state { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO };
+    VkPipelineTessellationStateCreateInfo tessellation_state {VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO};
 
     const VkViewport viewport {};
     const VkRect2D scissor {};
 
     /* Pipeline viewport state */
-    VkPipelineViewportStateCreateInfo viewport_state { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
+    VkPipelineViewportStateCreateInfo viewport_state {VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
     viewport_state.viewportCount = 1u;
     viewport_state.pViewports = &viewport;
     viewport_state.scissorCount = 1u;
     viewport_state.pScissors = &scissor;
 
     /* Pipeline rasterizer state */
-    VkPipelineRasterizationStateCreateInfo raster_state { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+    VkPipelineRasterizationStateCreateInfo raster_state {VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
     raster_state.polygonMode = VK_POLYGON_MODE_FILL;
     raster_state.cullMode = VK_CULL_MODE_NONE;
     raster_state.frontFace = VK_FRONT_FACE_CLOCKWISE;
     raster_state.lineWidth = 1.0f;
 
     /* Pipeline multisample state */
-    VkPipelineMultisampleStateCreateInfo multisample_state { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    VkPipelineMultisampleStateCreateInfo multisample_state {VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
     multisample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     /* Get the active VRAM bank */
@@ -236,42 +237,53 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
         blend_state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         blend_state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         blend_state.alphaBlendOp = VK_BLEND_OP_ADD;
-        blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | (node.alpha_blend ? 0u : VK_COLOR_COMPONENT_A_BIT);
+        blend_state.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+                                     (node.alpha_blend ? 0u : VK_COLOR_COMPONENT_A_BIT);
         blend_attachments.emplace_back(blend_state);
     }
 
     /* Dynamic rendering info */
-    VkPipelineRenderingCreateInfoKHR dynamic_rendering { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
+    VkPipelineRenderingCreateInfoKHR dynamic_rendering {VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR};
     dynamic_rendering.colorAttachmentCount = (u32)color_attachments.size();
     dynamic_rendering.pColorAttachmentFormats = color_attachments.data();
 
     /* Pipeline depth stencil state */
-    VkPipelineDepthStencilStateCreateInfo depth_stencil_state { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+    VkPipelineDepthStencilStateCreateInfo depth_stencil_state {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
     depth_stencil_state.depthTestEnable = VK_FALSE;
     depth_stencil_state.depthWriteEnable = VK_FALSE;
     depth_stencil_state.depthCompareOp = VK_COMPARE_OP_LESS;
 
-    /* Check for a depth stencil attachment */
-    if (node.depth_stencil_image.is_null() == false) {
-        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_stencil_image).texture);
+    /* Check for a depth attachment */
+    if (node.depth_image.is_null() == false) {
+        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.depth_image).texture);
         depth_stencil_state.depthTestEnable = node.depth_test;
         depth_stencil_state.depthWriteEnable = node.depth_write;
         dynamic_rendering.depthAttachmentFormat = translate::texture_format(depth_texture.format);
     }
 
+    /* Check for a stencil attachment */
+    if (node.stencil_image.is_null() == false) {
+        const TextureSlot& depth_texture = bank.textures.get(bank.images.get(node.stencil_image).texture);
+        depth_stencil_state.stencilTestEnable = node.stencil_test;
+        dynamic_rendering.stencilAttachmentFormat = translate::texture_format(depth_texture.format);
+
+        depth_stencil_state.front = translate::stencil_op_state(node.stencil_state);
+        depth_stencil_state.back = depth_stencil_state.front; /* support only front face stencil op */
+    }
+
     /* Pipeline color blend state */
-    VkPipelineColorBlendStateCreateInfo color_blend_state { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
+    VkPipelineColorBlendStateCreateInfo color_blend_state {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
     color_blend_state.attachmentCount = (u32)blend_attachments.size();
     color_blend_state.pAttachments = blend_attachments.data();
 
     /* Pipeline dynamic state */
-    const VkDynamicState dynamic_states[] { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynamic_state { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    const VkDynamicState dynamic_states[] {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+    VkPipelineDynamicStateCreateInfo dynamic_state {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
     dynamic_state.dynamicStateCount = sizeof(dynamic_states) / sizeof(VkDynamicState);
     dynamic_state.pDynamicStates = dynamic_states;
 
     /* Pipeline creation info */
-    VkGraphicsPipelineCreateInfo pipeline_ci { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+    VkGraphicsPipelineCreateInfo pipeline_ci {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
     pipeline_ci.pNext = &dynamic_rendering;
     pipeline_ci.stageCount = 2u;
     pipeline_ci.pStages = stages;

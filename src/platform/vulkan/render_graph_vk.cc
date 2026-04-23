@@ -384,13 +384,24 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
 
     /* Depth attachment */
     VkRenderingAttachmentInfoKHR depth_attachment { VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-    if (node.depth_stencil_image.is_null() == false) {
-        const ImageSlot& image = bank.images.get(node.depth_stencil_image);
+    if (node.depth_image.is_null() == false) {
+        const ImageSlot& image = bank.images.get(node.depth_image);
         depth_attachment.imageView = image.view;
         depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depth_attachment.loadOp = translate::load_operation(node.depth_load_op);
         depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depth_attachment.clearValue.depthStencil = {1.0f, 0};
+    }
+
+    /* Stencil attachment */
+    VkRenderingAttachmentInfoKHR stencil_attachment {VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO};
+    if (node.stencil_image.is_null() == false) {
+        const ImageSlot& image = bank.images.get(node.stencil_image);
+        stencil_attachment.imageView = image.view;
+        stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+        stencil_attachment.loadOp = translate::load_operation(node.stencil_load_op);
+        stencil_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        stencil_attachment.clearValue.depthStencil = {1.0f, 0};
     }
 
     /* Get the render area */
@@ -407,7 +418,8 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
     rendering.layerCount = 1u;
     rendering.colorAttachmentCount = (u32)color_attachments.size();
     rendering.pColorAttachments = color_attachments.data();
-    if (node.depth_stencil_image.is_null() == false) rendering.pDepthAttachment = &depth_attachment;
+    if (node.depth_image.is_null() == false) rendering.pDepthAttachment = &depth_attachment;
+    if (node.stencil_image.is_null() == false) rendering.pStencilAttachment = &stencil_attachment;
 
     /* Upload Push Constants. */
     if (node.range_size != 0u) {
