@@ -38,6 +38,7 @@ RasterNode& RasterNode::depth_stencil(Image image, bool test, bool write, Stenci
     depth_stencil_image = image;
     depth_test = test;
     depth_write = write;
+    stencil_state = s_state;
     return *this;
 }
 
