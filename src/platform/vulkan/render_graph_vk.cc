@@ -397,7 +397,7 @@ Result<void> RenderGraph::queue_raster_node(const GraphExecution& graph, const R
         if (bank.textures.get(image.texture).format == TextureFormat::D24UnormS8Uint) {
             stencil_attachment.imageView = image.view;
             stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
-            stencil_attachment.loadOp = translate::load_operation(node.stencil_load_op);
+            stencil_attachment.loadOp = translate::load_operation(node.stencil_state.load_op);
             stencil_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             stencil_attachment.clearValue.depthStencil = {1.0f, 0};
         }
