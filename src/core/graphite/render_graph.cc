@@ -165,12 +165,12 @@ Result<void> AgnRenderGraph::end_graph() {
         for (u32 j = 0u; j < node->dependencies.size(); ++j) {
             /* Get the dependency and its version */
             const Dependency& dep = node->dependencies[j];
-            const u32 id = dependency_key(dep);
+            const u32 id = dependency_key(dep, bank);
             const u32 dep_version = meta.versions[j];
-            const u32 dep_source = meta.sources[j];
+            const u32 dep_source = meta.sources[j].node;
 
             /* Log the resource key and version */
-            const bool readonly = has_flag(dep.flags, DependencyFlags::Readonly);
+            const bool readonly = dep.usage == DependencyUsage::Readonly;
             if (readonly) printf("   R 0x%X, v%u", id, dep_version);
             else printf("  RW 0x%X, v%u", id, dep_version);
             

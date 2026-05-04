@@ -41,6 +41,8 @@ VkPipelineStageFlags2 stage_mask(DependencyUsage usage, DependencyStages stages,
 VkImageLayout desired_image_layout(const Dependency& dep, TextureUsage usage) {
     switch (dep.usage) {
         case DependencyUsage::Readonly:
+            if (has_flag(usage, TextureUsage::DepthStencil) && has_flag(usage, TextureUsage::Sampled))
+                return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
             /* If texture is used as readonly resource, Sampled gets priority. */
             if (has_flag(usage, TextureUsage::Sampled)) return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             if (has_flag(usage, TextureUsage::Storage)) return VK_IMAGE_LAYOUT_GENERAL;

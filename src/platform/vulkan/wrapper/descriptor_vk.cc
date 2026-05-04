@@ -315,6 +315,7 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                 case ResourceType::Image: {
                     ImageSlot& image = bank.images.get(dst_dep.resource);
                     const TextureSlot& texture = bank.textures.get(image.texture);
+
                     VkImageMemoryBarrier2& barrier = tex_barriers.emplace_back(VkImageMemoryBarrier2 { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 });
                     barrier.srcStageMask = src_stage;
                     barrier.srcAccessMask = src_access;
@@ -325,6 +326,14 @@ Result<void> wave_sync_descriptors(const RenderGraph& rg, u32 start, u32 end) {
                     image.layout = barrier.newLayout;
                     barrier.image = texture.image;
                     barrier.subresourceRange = image.sub_range;
+                    
+                    if (has_flag(texture.usage, TextureUsage::DepthStencil)) {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+                        for (auto& sibling_handle : texture.images) {
+                            ImageSlot& sibling = bank.images.get(sibling_handle);
+                            sibling.layout = barrier.newLayout;
+                        }
+                    }
                     break;
                 }
                 case ResourceType::Sampler: break;

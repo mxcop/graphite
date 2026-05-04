@@ -172,8 +172,8 @@ struct ImageSlot {
 
     /* Image view */
     VkImageView view {};
-    VkImageSubresourceRange sub_range {};
     VkImageLayout layout {};
+    VkImageSubresourceRange sub_range {};
 
     /* Metadata */
     u32 requested_mip = 0u;
