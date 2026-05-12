@@ -141,6 +141,60 @@ VkFormat texture_format(TextureFormat format) {
     }
 }
 
+/* Convert the platform-agnostic texture format and extent to Vulkan size in bytes. */
+VkDeviceSize texture_size(Size3D extent, TextureFormat format) {
+    VkDeviceSize size = extent.x * extent.y;
+    size = extent.is_2d() ? size : size * extent.z;
+
+    switch (format) {
+        case TextureFormat::RGBA8Unorm:
+            size *= 4 * 1; /* 1 byte per channel */
+            break;
+        case TextureFormat::RG32Uint:
+            size *= 2 * 4; /* 4 bytes per channel */
+            break;
+        case TextureFormat::RG16Sfloat:
+            size *= 2 * 2; /* 2 bytes per channel */
+            break;
+        case TextureFormat::RGBA16Sfloat:
+            size *= 4 * 2; /* 2 bytes per channel */
+            break;
+        case TextureFormat::RGBA32Sfloat:
+            size *= 4 * 4; /* 4 bytes per channel */
+            break;
+        case TextureFormat::R32Sfloat:
+            size *= 1 * 4; /* 4 bytes per channel */
+            break;
+        default:
+            break;
+    }
+
+    return size;
+}
+
+/* Retrieve the amount of channels the platform-agnostic texture format has. */
+u32 texture_channels(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R32Sfloat:
+            return 1;
+        case TextureFormat::RG32Uint:
+        case TextureFormat::RG16Sfloat:
+            return 2;
+        case TextureFormat::RG11B10Ufloat:
+            return 3;
+        case TextureFormat::RGBA8Unorm:
+        case TextureFormat::RGBA16Sfloat:
+        case TextureFormat::RGBA32Sfloat:
+            return 4;
+        case TextureFormat::D32Sfloat:
+            return 1;
+        case TextureFormat::D24UnormS8Uint:
+            return 2;
+        default:
+            return 0;
+    }
+}
+
 /* Convert the platform-agnostic stencil op to Vulkan stencil op. */
 VkStencilOp stencil_op(StencilOp op) { 
     switch (op) {

@@ -89,6 +89,9 @@ public:
     /* Upload data to a GPU texture resource. */
     PLATFORM_SPECIFIC Result<void> upload_texture(Image& image, const void* data, const u64 size);
 
+    /* Copy texture resource data to a host-visible pointer. */
+    PLATFORM_SPECIFIC Result<void> readback_texture(Image& image, void** data, int* width, int* height, int* channels);
+
     /* Get the texture which an image was created from. */
     PLATFORM_SPECIFIC Texture get_texture(Image image);
 

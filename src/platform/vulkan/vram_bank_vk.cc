@@ -869,6 +869,94 @@ Result<void> VRAMBank::upload_texture(Image& image, const void* data, const u64 
     return Ok();
 }
 
+Result<void> VRAMBank::readback_texture(Image& image, void** data, int* width, int* height, int* channels) {
+    /* Make sure the texture can be transfered from */
+    ImageSlot& image_slot = images.get(image);
+    const TextureSlot& texture_slot = textures.get(image_slot.texture);
+    if (has_flag(texture_slot.usage, TextureUsage::TransferSrc) == false)
+        return Err("the texture flags don't support transferring from.");
+
+    *width = texture_slot.size.x;
+    *height = texture_slot.size.y;
+    *channels = translate::texture_channels(texture_slot.format);
+
+    /* Staging buffer creation info */
+    VkBufferCreateInfo staging_buffer_ci {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+    staging_buffer_ci.size = translate::texture_size(texture_slot.size, texture_slot.format);
+    staging_buffer_ci.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    staging_buffer_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    staging_buffer_ci.queueFamilyIndexCount = 1u;
+    staging_buffer_ci.pQueueFamilyIndices = &gpu->queue_families.queue_combined;
+
+    /* Staging memory allocation info */
+    VmaAllocationCreateInfo alloc_ci {};
+    alloc_ci.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT;
+    alloc_ci.usage = VMA_MEMORY_USAGE_AUTO;
+
+    /* Create the staging buffer & allocate it using VMA */
+    VkBuffer staging_buffer;
+    VmaAllocation alloc;
+    if (vmaCreateBuffer(vma_allocator, &staging_buffer_ci, &alloc_ci, &staging_buffer, &alloc, nullptr) != VK_SUCCESS)
+        return Err("failed to create staging buffer");
+
+    /* Create an image layout transition barrier */
+    VkImageMemoryBarrier2 image_barrier {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
+    image_barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    image_barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+    image_barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    image_barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    image_barrier.oldLayout = image_slot.layout;
+    image_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    image_barrier.image = texture_slot.image;
+    image_barrier.subresourceRange = image_slot.sub_range;
+
+    /* Restore the original layout afterwards */
+    VkImageMemoryBarrier2 to_original = image_barrier;
+    to_original.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+    to_original.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+    to_original.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    to_original.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+    to_original.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    to_original.newLayout = image_slot.layout; /* original layout */
+
+    /* Render target dependency info */
+    VkDependencyInfo dep_info {VK_STRUCTURE_TYPE_DEPENDENCY_INFO};
+    dep_info.imageMemoryBarrierCount = 1u;
+    dep_info.pImageMemoryBarriers = &image_barrier;
+
+    VkBufferImageCopy region {};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;    /* tightly packed */
+    region.bufferImageHeight = 0;  /* tightly packed */
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {std::max(texture_slot.size.x, 1u), std::max(texture_slot.size.y, 1u), std::max(texture_slot.size.z, 1u)};
+
+    if (begin_upload() == false) return Err("failed to begin upload."); /* Begin recording commands */
+    vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
+    vkCmdCopyImageToBuffer(upload_cmd, texture_slot.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer, 1u, &region);
+
+    dep_info.pImageMemoryBarriers = &to_original;
+    vkCmdPipelineBarrier2KHR(upload_cmd, &dep_info);
+    if (end_upload() == false) return Err("failed to end upload."); /* End recording commands */
+
+    /* Allocate user pointer */
+    *data = malloc((size_t)staging_buffer_ci.size);
+
+    /* Copy staging buffer to user pointer */
+    void* staging_memory = nullptr;
+    vmaMapMemory(vma_allocator, alloc, &staging_memory);
+    memcpy(*data, staging_memory, staging_buffer_ci.size);
+    vmaUnmapMemory(vma_allocator, alloc);
+
+    vmaDestroyBuffer(vma_allocator, staging_buffer, alloc); /* Destroy staging buffer */
+
+    return Ok();
+}
+
 Texture VRAMBank::get_texture(Image image) { 
     return images.get(image).texture; 
 }

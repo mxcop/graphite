@@ -39,6 +39,12 @@ VkDescriptorType buffer_descriptor_type(BufferUsage usage);
 /* Convert the platform-agnostic texture format to Vulkan texture format. */
 VkFormat texture_format(TextureFormat format);
 
+/* Convert the platform-agnostic texture format and extent to Vulkan size in bytes. */
+VkDeviceSize texture_size(Size3D extent, TextureFormat format);
+
+/* Retrieve the amount of channels the platform-agnostic texture format has. */
+u32 texture_channels(TextureFormat format);
+
 /* Convert the platform-agnostic stencil op to Vulkan stencil op. */
 VkStencilOp stencil_op(StencilOp op);
 
