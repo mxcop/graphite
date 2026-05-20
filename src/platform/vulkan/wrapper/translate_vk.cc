@@ -132,8 +132,8 @@ VkFormat texture_format(TextureFormat format) {
             return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
         case TextureFormat::D32Sfloat:
             return VK_FORMAT_D32_SFLOAT;
-        case TextureFormat::D24UnormS8Uint:
-            return VK_FORMAT_D24_UNORM_S8_UINT;
+        case TextureFormat::D16UnormS8Uint:
+            return VK_FORMAT_D16_UNORM_S8_UINT;
         case TextureFormat::R32Sfloat:
             return VK_FORMAT_R32_SFLOAT;
         default:
@@ -188,7 +188,7 @@ u32 texture_channels(TextureFormat format) {
             return 4;
         case TextureFormat::D32Sfloat:
             return 1;
-        case TextureFormat::D24UnormS8Uint:
+        case TextureFormat::D16UnormS8Uint:
             return 2;
         default:
             return 0;
@@ -261,7 +261,17 @@ VkStencilOpState stencil_op_state(StencilState state) {
 bool is_depth_format(TextureFormat format) {
     switch (format) {
         case TextureFormat::D32Sfloat:
-        case TextureFormat::D24UnormS8Uint:
+        case TextureFormat::D16UnormS8Uint:
+            return true;
+        default:
+            return false;
+    }
+}
+
+/* Check if the platform-agnostic format is a stencil format. */
+bool is_stencil_format(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::D16UnormS8Uint:
             return true;
         default:
             return false;
@@ -277,6 +287,18 @@ VkImageUsageFlags texture_usage(TextureUsage usage) {
     if (has_flag(usage, TextureUsage::TransferSrc)) flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     if (has_flag(usage, TextureUsage::ColorAttachment)) flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     if (has_flag(usage, TextureUsage::DepthStencil)) flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    return flags;
+}
+
+/* Convert the platform-agnostic texture usage to texture feature flags. */
+VkFormatFeatureFlags texture_feature_flags(TextureUsage usage) {
+    VkFormatFeatureFlags flags = 0x00;
+    if (has_flag(usage, TextureUsage::Storage)) flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+    if (has_flag(usage, TextureUsage::Sampled)) flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+    if (has_flag(usage, TextureUsage::TransferDst)) flags |= VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+    if (has_flag(usage, TextureUsage::TransferSrc)) flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+    if (has_flag(usage, TextureUsage::ColorAttachment)) flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+    if (has_flag(usage, TextureUsage::DepthStencil)) flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
     return flags;
 }
 

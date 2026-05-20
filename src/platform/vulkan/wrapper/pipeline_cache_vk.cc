@@ -261,7 +261,7 @@ Result<Pipeline> PipelineCache::get_pipeline(const std::string_view path, const 
         dynamic_rendering.depthAttachmentFormat = translate::texture_format(depth_texture.format);
 
         /* Check for a stencil attachment */
-        if (depth_texture.format == TextureFormat::D24UnormS8Uint) {
+        if (translate::is_stencil_format(depth_texture.format)) {
             depth_stencil_state.stencilTestEnable = node.stencil_state.test;
             dynamic_rendering.stencilAttachmentFormat = translate::texture_format(depth_texture.format);
 

@@ -17,17 +17,17 @@ ENUM_CLASS_FLAGS(TextureUsage);
 
 /* Texture formats. */
 enum class TextureFormat : u32 {
-    Invalid = 0u,   /* Invalid texture format. */
-    RGBA8Unorm,     /* RGBA 8 bits per channel, unsigned normalized. */
-    RG32Uint,       /* RG 32 bits per channel, unsigned integer. */
-    RG16Sfloat,     /* RG 16 bits per channel, signed float. */
-    RGBA16Sfloat,   /* RGBA 16 bits per channel, signed float. */
-    RGBA32Sfloat,   /* RGBA 16 bits per channel, signed float. */
-    RG11B10Ufloat,  /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
-    R32Sfloat,      /* R 32 bits, signed float. */
-    D32Sfloat,      /* Depth 32 bits, signed float. */
-    D24UnormS8Uint, /* Depth 24 bits, unsigned normalized. Stencil 8 bits Unsigned Integer. */
-    EnumLimit       /* Anything above or equal is invalid. */
+    Invalid = 0u,    /* Invalid texture format. */
+    RGBA8Unorm,      /* RGBA 8 bits per channel, unsigned normalized. */
+    RG32Uint,        /* RG 32 bits per channel, unsigned integer. */
+    RG16Sfloat,      /* RG 16 bits per channel, signed float. */
+    RGBA16Sfloat,    /* RGBA 16 bits per channel, signed float. */
+    RGBA32Sfloat,    /* RGBA 16 bits per channel, signed float. */
+    RG11B10Ufloat,   /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
+    R32Sfloat,       /* R 32 bits, signed float. */
+    D32Sfloat,       /* Depth 32 bits, signed float. */
+    D16UnormS8Uint,  /* Depth 16 bits, unorm, stencil 8 bits unsigned integer. */
+    EnumLimit        /* Anything above or equal is invalid. */
 };
 
 /* Texture meta data. */

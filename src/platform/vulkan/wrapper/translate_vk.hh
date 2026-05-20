@@ -57,8 +57,14 @@ VkStencilOpState stencil_op_state(StencilState state);
 /* Check if the platform-agnostic format is a depth format. */
 bool is_depth_format(TextureFormat format);
 
+/* Check if the platform-agnostic format is a stencil format. */
+bool is_stencil_format(TextureFormat format);
+
 /* Convert the platform-agnostic texture usage to texture usage flags. */
 VkImageUsageFlags texture_usage(TextureUsage usage);
+
+/* Convert the platform-agnostic texture usage to texture feature flags. */
+VkFormatFeatureFlags texture_feature_flags(TextureUsage usage);
 
 /* Convert the platform-agnostic filter to Vulkan sampler filter. */
 VkFilter sampler_filter(Filter filter);

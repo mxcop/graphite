@@ -383,6 +383,19 @@ Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, T
     resource.data.size = size;
     resource.data.meta = meta;
 
+    /* Check for hardware support */
+    VkFormatProperties props {};
+    vkGetPhysicalDeviceFormatProperties(gpu->physical_device, format, &props);
+    const VkFormatFeatureFlags requested = translate::texture_feature_flags(usage);
+    VkImageTiling tiling {};
+    if (props.optimalTilingFeatures & requested) {
+        tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else if (props.linearTilingFeatures & requested) {
+        tiling = VK_IMAGE_TILING_LINEAR;
+    } else {
+        return Err("hardware texture format and usage not supported.");
+    }
+
     /* Image creation info */
     VkImageCreateInfo texture_ci { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     texture_ci.imageType = size.is_2d() ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
@@ -391,7 +404,7 @@ Result<Texture> VRAMBank::create_texture(std::string name, TextureUsage usage, T
     texture_ci.mipLevels = std::max(1u, meta.mips);
     texture_ci.arrayLayers = std::max(1u, meta.arrays);
     texture_ci.samples = VK_SAMPLE_COUNT_1_BIT; /* No MSAA */
-    texture_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+    texture_ci.tiling = tiling;
     texture_ci.usage = translate::texture_usage(usage);
     texture_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -421,7 +434,7 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_
     TextureSlot& texture_slot = textures.get(texture);
     texture_slot.images.push_back(resource.handle);
     
-    if (is_stencil && texture_slot.format != TextureFormat::D24UnormS8Uint)
+    if (is_stencil && !translate::is_stencil_format(texture_slot.format))
         return Err("cannot create stencil image for texture without stencil format.");
 
     if (is_depth && !translate::is_depth_format(texture_slot.format))
@@ -437,7 +450,7 @@ Result<Image> VRAMBank::create_image(std::string name, Texture texture, bool is_
     else
         sub_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; /* Depth Write Image View*/
 
-    if (texture_slot.format == TextureFormat::D24UnormS8Uint) /* if DepthStencil texture, make the Depth Write Image View a DepthStencil image View */
+    if (translate::is_stencil_format(texture_slot.format)) /* if DepthStencil texture, make the Depth Write Image View a DepthStencil image View */
         sub_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 
     if (is_stencil) sub_range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT; /* Stencil Only Image View */
