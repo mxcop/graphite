@@ -26,7 +26,8 @@ enum class TextureFormat : u32 {
     RG11B10Ufloat,   /* RG 11 bits per channel, B 10 bits per channel, unsigned float. */
     R32Sfloat,       /* R 32 bits, signed float. */
     D32Sfloat,       /* Depth 32 bits, signed float. */
-    D16UnormS8Uint,  /* Depth 16 bits, unorm, stencil 8 bits unsigned integer. */
+    D24UnormS8Uint,  /* Depth 24 bits, unsigned normalized, stencil 8 bits unsigned integer */
+    D32SfloatS8Uint, /* Depth 32 bits, signed float, stencil 8 bits unsigned integer. */
     EnumLimit        /* Anything above or equal is invalid. */
 };
 
