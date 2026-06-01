@@ -200,9 +200,15 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     VkSurfaceFormatKHR* formats = new VkSurfaceFormatKHR[format_count] {};
     vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->physical_device, resource.data.surface, &format_count, formats);
 
-    /* Find an RGBA8 unorm format */
+    /* Find an RGB8 or BGRA8 unorm format */
+    resource.data.format = VK_FORMAT_UNDEFINED;
     for (u32 i = 0u; i < format_count; ++i) {
         if (formats[i].format == VK_FORMAT_R8G8B8A8_UNORM) {
+            resource.data.format = formats[i].format;
+            resource.data.color_space = formats[i].colorSpace;
+            break;
+        }
+        if (formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
             resource.data.format = formats[i].format;
             resource.data.color_space = formats[i].colorSpace;
             break;
@@ -211,8 +217,9 @@ Result<RenderTarget> VRAMBank::create_render_target(const TargetDesc& target, bo
     delete[] formats; /* Free the formats */
 
     /* Make sure we found the format we need */
-    if (resource.data.format != VK_FORMAT_R8G8B8A8_UNORM) {
-        return Err("failed to find rgba unorm surface format.");
+    if (resource.data.format == VK_FORMAT_UNDEFINED) {
+        vkDestroySurfaceKHR(gpu->instance, resource.data.surface, nullptr);
+        return Err("failed to find rgba or bgra unorm surface format.");
     }
 
     /* Get the available surface presentation modes */
